@@ -1,0 +1,29 @@
+Plan de desarrollo (escalonado)
+🔸 Fase 1 — MVP tracking (crítica)
+auth Spotify
+polling básico
+guardar canciones únicas
+evitar duplicados
+objetivo: dataset fiable
+
+🔸 Fase 2 — eventos reales
+medir duración
+detectar skips
+tabla listening_events
+🔸 Fase 3 — enriquecimiento
+audio features
+metadata completa
+🔸 Fase 4 — generación simple
+playlists por:
+top tracks
+recientes
+🔸 Fase 5 — motor avanzado
+sistema de filtros configurable
+queries dinámicas
+🔸 Fase 6 — automatización
+jobs periódicos
+actualización automática de playlists
+🔸 Fase 7 — escalado
+migrar a PostgreSQL
+optimización queries
+caché
