@@ -57,7 +57,7 @@ class SimpleDB:
         self.cursor.execute(f"PRAGMA table_info({table})")
         columns = [col[1] for col in self.cursor.fetchall()]
         # data
-        self.cursor.execute(f"SELECT * FROM {table}")
+        self.cursor.execute(f"SELECT * FROM {table} ORDER BY played_at DESC")
         rows = self.cursor.fetchall()
         if not rows:
             print(f"\n[!] table '{table}' empty")
