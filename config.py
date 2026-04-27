@@ -1,5 +1,6 @@
 VERBOSE = True
 
+# TODO: Move these to environment variables for better security and flexibility
 CLIENT_ID = "1562b563518b40848fa76d89a37609a3"
 CLIENT_SECRET = "ba1248d2aac04918aab2a7af32978113"
 REDIRECT_URI = "http://127.0.0.1:8888/"
