@@ -32,6 +32,26 @@ class SimpleDB:
         self.conn.commit()
         print(f"Table '{table}' cleared") if VERBOSE else None
 
+    def insert(self, table: str, data: Dict[str, Any], print_only_insert=False):
+        cols = ", ".join(data.keys())
+        placeholders = ", ".join(["?"] * len(data))
+        values = list(data.values())
+
+        query = f"""
+        INSERT OR IGNORE INTO {table} ({cols})
+        VALUES ({placeholders})
+        """
+        self.cursor.execute(query, values)
+        self.conn.commit()
+
+        inserted = self.cursor.rowcount > 0
+
+        if VERBOSE:
+            if inserted:
+                print(f"[INSERTED] {table}: {data}")
+            else:
+                print(f"[IGNORED - DUPLICATE] {table}: {data}") if not print_only_insert else None
+
     def print_table(self, table: str):
         # column names
         self.cursor.execute(f"PRAGMA table_info({table})")
@@ -53,22 +73,3 @@ class SimpleDB:
             print(" | ".join(f"{str(item):<15}" for item in row))
         print("-" * len(header_line) + "\n")
 
-    def insert(self, table: str, data: Dict[str, Any], print_only_insert=False):
-        cols = ", ".join(data.keys())
-        placeholders = ", ".join(["?"] * len(data))
-        values = list(data.values())
-
-        query = f"""
-        INSERT OR IGNORE INTO {table} ({cols})
-        VALUES ({placeholders})
-        """
-        self.cursor.execute(query, values)
-        self.conn.commit()
-
-        inserted = self.cursor.rowcount > 0
-
-        if VERBOSE:
-            if inserted:
-                print(f"[INSERTED] {table}: {data}")
-            else:
-                print(f"[IGNORED - DUPLICATE] {table}: {data}") if not print_only_insert else None
