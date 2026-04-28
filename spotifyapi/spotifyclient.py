@@ -11,7 +11,7 @@ class SpotifyClient:
                 client_id=CLIENT_ID,
                 client_secret=CLIENT_SECRET,
                 redirect_uri=REDIRECT_URI,
-                scope="user-read-playback-state user-read-recently-played",
+                scope="user-read-playback-state user-read-recently-played user-library-modify user-library-read",
             )
         )
 
@@ -29,3 +29,18 @@ class SpotifyClient:
         except:
             print("Error in SpotifyClient.get_recently_played") if VERBOSE else None
             return None
+
+    def get_saved_tracks(self):
+        all_tracks = []
+        # get first page
+        results = self.sp.current_user_saved_tracks(limit=50)
+        all_tracks.extend(results['items'])
+        # fetching while there is a 'next' page
+        while results['next']:
+            results = self.sp.next(results)
+            all_tracks.extend(results['items'])
+            if VERBOSE:
+                # \r allows us to update the same line in the terminal
+                print(f"Progress: {len(all_tracks)} tracks collected...", end="\r")
+        print(f"\nFinished! Total: {len(all_tracks)} tracks.")
+        return all_tracks
