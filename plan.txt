@@ -2,6 +2,9 @@ Plan de desarrollo (escalonado)
 🔸 Fase 1 — MVP tracking (crítica)
 auth Spotify
 polling básico
+    track.id
+    played_at
+    context.uri
 guardar canciones únicas
 evitar duplicados
 objetivo: dataset fiable
