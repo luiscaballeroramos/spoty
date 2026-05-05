@@ -52,24 +52,43 @@ class SimpleDB:
             else:
                 print(f"[IGNORED - DUPLICATE] {table}: {data}") if not print_only_insert else None
 
-    def print_table(self, table: str):
+    def print_table(self, table: str, limit: int = None, order_asc: str = None, order_desc: str = None, output_file: str = None):
         # column names
         self.cursor.execute(f"PRAGMA table_info({table})")
         columns = [col[1] for col in self.cursor.fetchall()]
         # data
-        self.cursor.execute(f"SELECT * FROM {table} ORDER BY played_at DESC")
+        query = f"SELECT * FROM {table}"
+        if order_asc:
+            query += f" ORDER BY {order_asc} ASC"
+        elif order_desc:
+            query += f" ORDER BY {order_desc} DESC"
+        if limit:
+            query += f" LIMIT {limit}"
+        self.cursor.execute(query)
         rows = self.cursor.fetchall()
         if not rows:
             print(f"\n[!] table '{table}' empty")
             return
-        # format
-        print(f"\n--- Table {table.upper()} ---")
-        # print headers
-        header_line = " | ".join(f"{col:<15}" for col in columns)
-        print(header_line)
-        print("-" * len(header_line))
-        # print rows
+        # Calculate column widths based on the first 10 rows
+        sample_rows = rows[:10]
+        col_widths = [max(len(str(item)) for item in col) for col in zip(*([columns] + sample_rows))]
+        # Prepare output
+        output = []
+        output.append(f"\n--- Table {table.upper()} ---")
+        # headers
+        header_line = " | ".join(f"{col:<{col_widths[i]}}" for i, col in enumerate(columns))
+        output.append(header_line)
+        output.append("-" * len(header_line))
+        # rows
         for row in rows:
-            print(" | ".join(f"{str(item):<15}" for item in row))
-        print("-" * len(header_line) + "\n")
+            output.append(" | ".join(f"{str(item):<{col_widths[i]}}" for i, item in enumerate(row)))
+        output.append("-" * len(header_line) + "\n")
+        # Print to console in chunks
+        chunk_size = 50  # Number of lines to print at a time
+        for i in range(0, len(output), chunk_size):
+            print("\n".join(output[i:i+chunk_size]))
+        # Write to file if output_file is provided
+        if output_file:
+            with open(output_file, "w") as f:
+                f.write("\n".join(output))
 
