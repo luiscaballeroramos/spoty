@@ -1,32 +1,90 @@
-Plan de desarrollo (escalonado)
+Plan de desarrollo
 🔸 Fase 1 — MVP tracking (crítica)
 auth Spotify
 polling básico
+LISTENING_EVENT
     track.id
     played_at
-    context.uri
+    context _source
+            _type
+            _id
+ARTIST > ALBUM > TRACK
+
+ARTIST
+    id
+    name
+[
+* => no se obtienen directamente desde spotify, pero se pueden obtener con smarter playlists
+    *end_year
+    *followers
+    *images (list of links)
+    *popularity (0-100)
+    *start_year
+]
+
+ALBUM
+    id
+    name
+    artists(list)
+    tracks (list)
+    total_tracks
+[
+* => no se obtienen directamente desde spotify, pero se pueden obtener con smarter playlists
+    *disc_number
+    *images (list of links)
+    *popularity
+    ¿?release_date¿?
+    release_date_precision
+    *release_decade
+    *release_year
+]
+
+¿?*track_number into disc¿?
+
+TRACK
+    id
+    name
+    duration_ms
+    album   _id
+            _track
+    artists_ids (list)
+[
+* => no se obtienen directamente desde spotify, pero se pueden obtener con smarter playlists
+    *acousticness (0-1)
+    *danceability (0-1)
+    *energy (0-1)
+    explicit (bool)
+    *genres (list)
+    images (list of links)
+    *intrumentalness(0-1)
+    *key
+    *liveness (0-1)
+    *loudness(0-1)
+    *mode
+    *popularity (0-100)
+    *speechiness (0-1)
+    *tempo (0-1)
+    *time_signature
+    *valence (0-1)
+]
 guardar canciones únicas
 evitar duplicados
 objetivo: dataset fiable
 
-🔸 Fase 2 — eventos reales
-medir duración
-detectar skips
-tabla listening_events
-🔸 Fase 3 — enriquecimiento
+🔸 Fase 2 — enriquecimiento
 audio features
 metadata completa
-🔸 Fase 4 — generación simple
+🔸 Fase 3 — generación simple
 playlists por:
 top tracks
 recientes
-🔸 Fase 5 — motor avanzado
+🔸 Fase 4 — motor avanzado
 sistema de filtros configurable
 queries dinámicas
-🔸 Fase 6 — automatización
+🔸 Fase 5 — automatización
 jobs periódicos
 actualización automática de playlists
-🔸 Fase 7 — escalado
+🔸 Fase 6 — escalado
 migrar a PostgreSQL
 optimización queries
 caché
