@@ -1,7 +1,6 @@
 from typing import List, Optional
 
 from register.db import SimpleDB
-from spotifyapi.spotifyclient import SpotifyClient
 import json
 
 class Artist:
