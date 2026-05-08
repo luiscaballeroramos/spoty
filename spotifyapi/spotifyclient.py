@@ -1,7 +1,9 @@
 import spotipy
-from spotipy.oauth2 import SpotifyOAuth
+from ast import List
 
 from config import CLIENT_ID, CLIENT_SECRET, REDIRECT_URI, VERBOSE
+from register.artist import Artist
+from spotipy.oauth2 import SpotifyOAuth
 
 
 class SpotifyClient:
@@ -14,6 +16,22 @@ class SpotifyClient:
                 scope="user-read-playback-state user-read-recently-played",
             )
         )
+
+    def get_artist_byid(self, artist_id: str) -> Artist:
+        artist = self.sp.artist(artist_id)
+        images = [img['url'] for img in artist['images']] if 'images' in artist else []
+        return Artist(id=artist_id, name=artist['name'], images=images)
+
+    def get_artists_bytrackid(self, track_id: str):
+        track = self.sp.track(track_id)
+        artists = []
+        # Adjusted to handle the structure of the Spotify API response
+        if 'artists' in track:  # Removed 'track' key assumption
+            for artist in track['artists']:
+                artist_info = self.sp.artist(artist['id'])
+                images=[img['url'] for img in artist_info['images']] if 'images' in artist_info else []
+                artists.append(Artist(id=artist['id'], name=artist_info['name'], images=images))
+        return artists
 
     def get_currently_playing(self):
         try:
@@ -29,3 +47,5 @@ class SpotifyClient:
         except:
             print("Error in SpotifyClient.get_recently_played") if VERBOSE else None
             return None
+
+
