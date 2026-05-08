@@ -1,14 +1,14 @@
 from datetime import datetime
 import time
 
-from config import DBNAME, DBSCHEMA, UTC_OFFSET, VERBOSE
+from config import DBNAME, DBSCHEMA_LISTENINGEVENT, UTC_OFFSET, VERBOSE
 from register.db import SimpleDB
 from register.listeningevent import ListeningEvent
 from spotifyapi.spotifyclient import SpotifyClient
 
 def register_listeningevents():
     spotify = SpotifyClient()
-    db = SimpleDB(DBNAME, DBSCHEMA)
+    db = SimpleDB(DBNAME, DBSCHEMA_LISTENINGEVENT)
     print("Starting Spotify tracker...")
     # loop to get currently playing every 10 minutes and save to db
     try:
