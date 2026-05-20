@@ -41,12 +41,24 @@ def print_listening_events(limit: int = None):
     db_=SimpleDB(dbname)
     db_.print_table("listening_events", order_desc="played_at", output_file=output_file, limit=limit)
 
+def print_tracks(limit: int = None):
+    dbname=DBNAME
+    output_file= dbname.replace(".db", "") + "_tracks.txt"
+    db_=SimpleDB(dbname)
+    db_.print_table("tracks", order_desc="popularity", output_file=output_file, limit=limit)
+
+def print_albums(limit: int = None):
+    dbname=DBNAME
+    output_file= dbname.replace(".db", "") + "_albums.txt"
+    db_=SimpleDB(dbname)
+    db_.print_table("albums", order_desc="release_year", output_file=output_file, limit=limit)
 
 def print_artists(limit: int = None):
     dbname=DBNAME
     output_file= dbname.replace(".db", "") + "_artists.txt"
     db_=SimpleDB(dbname)
     db_.print_table("artists", order_desc="followers", output_file=output_file, limit=limit)
+
 
 if __name__ == "__main__":
     client = SpotifyClient()
@@ -62,11 +74,17 @@ if __name__ == "__main__":
     # _print_as_tree(recently_played)
 
 
-    # # Print last 10 listening events
-    # print_listening_events(limit = 10)
+    # Print last 10 listening events
+    print_listening_events(limit = 10)
 
-    # # Print top 10 artists by followers
-    # print_artists(limit = 10)
+    # Print top 10 tracks
+    print_tracks(limit = 10)
+
+    # Print top 10 albums
+    print_albums(limit = 10)
+
+    # Print top 10 artists
+    print_artists(limit = 10)
 
     # # Replace with any valid track ID/URI/URL
     # print('TRACK')
