@@ -34,14 +34,11 @@ DBSCHEMA_ALBUM = {
         "id": "TEXT PRIMARY KEY NOT NULL",
         "name": "TEXT NOT NULL",
         "artists": "TEXT NOT NULL",  # JSON serialized list of artist IDs
-        "tracks": "TEXT NOT NULL",  # JSON serialized list of track IDs
+        "tracks": "TEXT",  # JSON serialized list of track IDs
         "total_tracks": "INTEGER NOT NULL",
         "disc_number": "INTEGER",
         "images": "TEXT",  # JSON serialized list of image URLs
         "popularity": "INTEGER",
-        "release_date": "TEXT",
-        "release_date_precision": "TEXT",
-        "release_decade": "INTEGER",
         "release_year": "INTEGER"
     }
 }
