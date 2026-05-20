@@ -17,9 +17,10 @@ def register_listeningevents():
     try:
         while True:
             print(f"Fetching recently played tracks at {datetime.now()}") if VERBOSE else None
-            recently_played = spotify.get_recently_played(limit=50)
+            recently_played = spotify.get_recently_played(limit=5)
             if recently_played and 'items' in recently_played:
                 for item in recently_played['items']:
+                    print('--------------------------------') if VERBOSE else None
                     # track
                     track = item['track']
                     track_id= track['id']
@@ -38,8 +39,8 @@ def register_listeningevents():
                         artists_ids=track_artists_ids,
                         explicit=track_explicit
                     )
-                    print(f'Save TRACK: {track_name} ({track_id})') if VERBOSE else None
-                    # _track.save(db, print_only_insert=True)
+                    # print(f'Save TRACK: {track_name} ({track_id})') if VERBOSE else None
+                    _track.save(db, print_only_insert=True)
                     # album
                     album=track['album']
                     album_id=album['id']
@@ -47,17 +48,20 @@ def register_listeningevents():
                     album_artists_ids=[artist['id'] for artist in album['artists']]
                     album_total_tracks=album['total_tracks']
                     album_images=[img['url'] for img in album['images']] if 'images' in album else []
-                    # album_release_date=album['release_date']
-                    # album_release_date_precision=album['release_date_precision']
+                    album_release_date=album['release_date']
+                    album_release_date_precision=album['release_date_precision']
                     _album=Album(
                         id=album_id,
                         name=album_name,
                         artists=album_artists_ids,
+                        tracks=[track_id],  # only save the current track, update later
                         total_tracks=album_total_tracks,
-                        images=album_images
+                        images=album_images,
+                        release_date=album_release_date,
+                        release_date_precision=album_release_date_precision
                     )
-                    print(f'Save ALBUM: {album_name} ({album_id})') if VERBOSE else None
-                    # _album.save(db, print_only_insert=True)
+                    # print(f'Save ALBUM: {album_name} ({album_id}) of year {_album.release_year}') if VERBOSE else None
+                    _album.save(db, print_only_insert=True)
                     # artists
                     artists=[]
                     for artist in track['artists'] + album['artists']:
@@ -68,21 +72,21 @@ def register_listeningevents():
                             name=artist_name
                         )
                         artists.append(_artist)
-                        print(f'Save ARTIST: {artist_name} ({artist_id})') if VERBOSE else None
-                        # _artist.save(db, print_only_insert=True)
+                        # print(f'Save ARTIST: {artist_name} ({artist_id})') if VERBOSE else None
+                        _artist.save(db, print_only_insert=True)
 
 
 
                     # event
                     date = datetime.fromisoformat(item['played_at'].replace('Z', UTC_OFFSET))
-                    context_uri = item['track']['context']['uri'] if item['track']['context'] else None
+                    context_uri = item['context']['uri'] if item['context'] else None
                     event = ListeningEvent(
                         track_id=track_id,
                         played_at=date,
                         context_uri=context_uri
                     )
-                    print(f'Save LISTENING EVENT: {track_name} at {date}') if VERBOSE else None
-                    # event.save(db, print_only_insert=True)
+                    # print(f'Save LISTENING EVENT: {track_name} at {date}') if VERBOSE else None
+                    event.save(db, print_only_insert=True)
             time.sleep(600)
     except KeyboardInterrupt:
         print("Spotify tracker stopped by user.")
