@@ -34,6 +34,35 @@ class SimpleDB:
         self.conn.commit()
         print(f"Table '{table}' cleared") if VERBOSE else None
 
+    def edit(self, table: str, id: str, data: Dict[str, Any], print_only_updated=False, print_columns: list = None):
+        # check if id exist in db
+        self.cursor.execute(f"SELECT * FROM {table} WHERE id = ?", (id,))
+        if not self.cursor.fetchone():
+            print(f"[NOT UPDATED] {table} with id {id} does not exist in db") if VERBOSE else None
+            return False
+        # check if update is necessary
+        set_clause = ", ".join([f"{col} = ?" for col in data.keys()])
+        values = list(data.values()) + [id]
+        query = f"SELECT * FROM {table} WHERE id = ?"
+        self.cursor.execute(query, (id,))
+        existing_data = self.cursor.fetchone()
+        if all(existing_data[col] == data[col] for col in data.keys()):
+            print(f"[NOT UPDATED] {table} with id {id} already has the same data") if VERBOSE else None
+            return False
+        # update record
+        set_clause = ", ".join([f"{col} = ?" for col in data.keys()])
+        values = list(data.values()) + [id]
+        query = f"UPDATE {table} SET {set_clause} WHERE id = ?"
+        self.cursor.execute(query, values)
+        self.conn.commit()
+        if VERBOSE:
+            if print_only_updated:
+                if print_columns:
+                    filtered_data = {key: data[key] for key in print_columns if key in data}
+                    print(f"[UPDATED] {table} with id {id}: {filtered_data}")
+                else:
+                    print(f"[UPDATED] {table} with id {id}: {data}")
+
     def insert(self, table: str, data: Dict[str, Any], print_only_insert=False, print_columns: list = None):
         cols = ", ".join(data.keys())
         placeholders = ", ".join(["?"] * len(data))
