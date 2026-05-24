@@ -4,6 +4,7 @@ from typing import Dict, Any
 from config import VERBOSE, DBSCHEMA
 
 
+
 class SimpleDB:
     def __init__(self, db_path: str):
         self.conn = sqlite3.connect(db_path)
@@ -23,7 +24,11 @@ class SimpleDB:
             query = f"CREATE TABLE IF NOT EXISTS {table} ({', '.join(parts)})"
             self.cursor.execute(query)
         self.conn.commit()
-        print("Database initialized with tables: " + ", ".join(self.schema.keys())) if VERBOSE else None
+        (
+            print("Database initialized with tables: " + ", ".join(self.schema.keys()))
+            if VERBOSE
+            else None
+        )
 
     def count_rows(self, table: str) -> int:
         self.cursor.execute(f"SELECT COUNT(*) FROM {table}")
@@ -91,12 +96,24 @@ class SimpleDB:
                     else:
                         print(f"[IGNORED - DUPLICATE] {table}: {data}")
 
-    def print_table(self, table: str, limit: int = None, order_asc: str = None, order_desc: str = None, output_file: str = None):
+    def print_table(
+        self,
+        table: str,
+        limit: int = None,
+        order_asc: str = None,
+        order_desc: str = None,
+        output_file: str = None,
+    ):
         # column names
         self.cursor.execute(f"PRAGMA table_info({table})")
         columns = [col[1] for col in self.cursor.fetchall()]
         # data
         query = f"SELECT * FROM {table}"
+        (
+            print(f"\n[INFO] number of rows in '{table}': {self.count_rows(table)}")
+            if VERBOSE
+            else None
+        )
         if order_asc:
             query += f" ORDER BY {order_asc} ASC"
         elif order_desc:
@@ -110,24 +127,32 @@ class SimpleDB:
             return
         # Calculate column widths based on the first 10 rows
         sample_rows = rows[:10]
-        col_widths = [max(len(str(item)) for item in col) for col in zip(*([columns] + sample_rows))]
+        col_widths = [
+            max(len(str(item)) for item in col)
+            for col in zip(*([columns] + sample_rows))
+        ]
         # Prepare output
         output = []
         output.append(f"\n--- Table {table.upper()} ---")
         # headers
-        header_line = " | ".join(f"{col:<{col_widths[i]}}" for i, col in enumerate(columns))
+        header_line = " | ".join(
+            f"{col:<{col_widths[i]}}" for i, col in enumerate(columns)
+        )
         output.append(header_line)
         output.append("-" * len(header_line))
         # rows
         for row in rows:
-            output.append(" | ".join(f"{str(item):<{col_widths[i]}}" for i, item in enumerate(row)))
+            output.append(
+                " | ".join(
+                    f"{str(item):<{col_widths[i]}}" for i, item in enumerate(row)
+                )
+            )
         output.append("-" * len(header_line) + "\n")
         # Print to console in chunks
         chunk_size = 50  # Number of lines to print at a time
         for i in range(0, len(output), chunk_size):
-            print("\n".join(output[i:i+chunk_size]))
+            print("\n".join(output[i : i + chunk_size]))
         # Write to file if output_file is provided
         if output_file:
             with open(output_file, "w") as f:
                 f.write("\n".join(output))
-

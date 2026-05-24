@@ -9,6 +9,7 @@ from register.track import Track
 from register.listeningevent import ListeningEvent
 from spotifyapi.spotifyclient import SpotifyClient
 
+
 def register_listeningevents():
     spotify = SpotifyClient()
     db = SimpleDB(DBNAME)
@@ -81,9 +82,7 @@ def register_listeningevents():
                     date = datetime.fromisoformat(item['played_at'].replace('Z', UTC_OFFSET))
                     context_uri = item['context']['uri'] if item['context'] else None
                     event = ListeningEvent(
-                        track_id=track_id,
-                        played_at=date,
-                        context_uri=context_uri
+                        track_id=track_id, played_at=date, context_uri=context_uri
                     )
                     # print(f'Save LISTENING EVENT: {track_name} at {date}') if VERBOSE else None
                     event.save(db, print_only_insert=True)
