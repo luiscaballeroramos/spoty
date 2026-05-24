@@ -1,0 +1,123 @@
+CURRENTLY PLAYING
+└── is_playing
+│   ├── True
+└── timestamp
+│   ├── 1778253964897
+└── context
+│   ├── external_urls
+│   │   ├── spotify
+│   │       └── https://open.spotify.com/playlist/4kgU2maKjbsJrZqfNjDOkt
+│   ├── href
+│   │   ├── https://api.spotify.com/v1/playlists/4kgU2maKjbsJrZqfNjDOkt
+│   ├── type
+│   │   ├── playlist
+│   ├── uri
+│       └── spotify:playlist:4kgU2maKjbsJrZqfNjDOkt
+└── progress_ms
+│   ├── 11945
+└── item
+│   ├── album
+│   │   ├── album_type
+│   │   │   ├── album
+│   │   ├── artists
+│   │   │   ├── [0]
+│   │   │       └── external_urls
+│   │   │       │   ├── spotify
+│   │   │       │       └── https://open.spotify.com/artist/44E0JWHttieVoD6vUHWoa2
+│   │   │       └── href
+│   │   │       │   ├── https://api.spotify.com/v1/artists/44E0JWHttieVoD6vUHWoa2
+│   │   │       └── id
+│   │   │       │   ├── 44E0JWHttieVoD6vUHWoa2
+│   │   │       └── name
+│   │   │       │   ├── Dj Spinna
+│   │   │       └── type
+│   │   │       │   ├── artist
+│   │   │       └── uri
+│   │   │           └── spotify:artist:44E0JWHttieVoD6vUHWoa2
+│   │   ├── external_urls
+│   │   │   ├── spotify
+│   │   │       └── https://open.spotify.com/album/3aox8zNEJht01ZeRBV94Pe
+│   │   ├── href
+│   │   │   ├── https://api.spotify.com/v1/albums/3aox8zNEJht01ZeRBV94Pe
+│   │   ├── id
+│   │   │   ├── 3aox8zNEJht01ZeRBV94Pe
+│   │   ├── images
+│   │   │   ├── [0]
+│   │   │   │   ├── height
+│   │   │   │   │   ├── 640
+│   │   │   │   ├── url
+│   │   │   │   │   ├── https://i.scdn.co/image/ab67616d0000b273552eb4cf7b2b69dadf9bc681
+│   │   │   │   ├── width
+│   │   │   │       └── 640
+│   │   │   ├── [1]
+│   │   │   │   ├── height
+│   │   │   │   │   ├── 300
+│   │   │   │   ├── url
+│   │   │   │   │   ├── https://i.scdn.co/image/ab67616d00001e02552eb4cf7b2b69dadf9bc681
+│   │   │   │   ├── width
+│   │   │   │       └── 300
+│   │   │   ├── [2]
+│   │   │       └── height
+│   │   │       │   ├── 64
+│   │   │       └── url
+│   │   │       │   ├── https://i.scdn.co/image/ab67616d00004851552eb4cf7b2b69dadf9bc681
+│   │   │       └── width
+│   │   │           └── 64
+│   │   ├── name
+│   │   │   ├── 1996 Beat Tape, Vol 1
+│   │   ├── release_date
+│   │   │   ├── 2018-06-15
+│   │   ├── release_date_precision
+│   │   │   ├── day
+│   │   ├── total_tracks
+│   │   │   ├── 18
+│   │   ├── type
+│   │   │   ├── album
+│   │   ├── uri
+│   │       └── spotify:album:3aox8zNEJht01ZeRBV94Pe
+│   ├── artists
+│   │   ├── [0]
+│   │       └── external_urls
+│   │       │   ├── spotify
+│   │       │       └── https://open.spotify.com/artist/44E0JWHttieVoD6vUHWoa2
+│   │       └── href
+│   │       │   ├── https://api.spotify.com/v1/artists/44E0JWHttieVoD6vUHWoa2
+│   │       └── id
+│   │       │   ├── 44E0JWHttieVoD6vUHWoa2
+│   │       └── name
+│   │       │   ├── Dj Spinna
+│   │       └── type
+│   │       │   ├── artist
+│   │       └── uri
+│   │           └── spotify:artist:44E0JWHttieVoD6vUHWoa2
+│   ├── disc_number
+│   │   ├── 1
+│   ├── duration_ms
+│   │   ├── 132178
+│   ├── explicit
+│   │   ├── False
+│   ├── external_urls
+│   │   ├── spotify
+│   │       └── https://open.spotify.com/track/4x0PSmIKrYJ3MDXD8tvGET
+│   ├── href
+│   │   ├── https://api.spotify.com/v1/tracks/4x0PSmIKrYJ3MDXD8tvGET
+│   ├── id
+│   │   ├── 4x0PSmIKrYJ3MDXD8tvGET
+│   ├── is_local
+│   │   ├── False
+│   ├── name
+│   │   ├── Bleepers
+│   ├── preview_url
+│   │   ├── None
+│   ├── track_number
+│   │   ├── 1
+│   ├── type
+│   │   ├── track
+│   ├── uri
+│       └── spotify:track:4x0PSmIKrYJ3MDXD8tvGET
+└── currently_playing_type
+│   ├── track
+└── actions
+    └── disallows
+        └── resuming
+            └── True

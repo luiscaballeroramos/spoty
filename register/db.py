@@ -1,14 +1,16 @@
 import sqlite3
 from typing import Dict, Any
 
-from config import VERBOSE
+from config import VERBOSE, DBSCHEMA
+
 
 
 class SimpleDB:
-    def __init__(self, db_path: str, schema: Dict[str, Dict[str, str]]):
+    def __init__(self, db_path: str):
         self.conn = sqlite3.connect(db_path)
+        self.conn.row_factory = sqlite3.Row  # Set row_factory to return rows as dictionaries
         self.cursor = self.conn.cursor()
-        self.schema = schema
+        self.schema = DBSCHEMA
         self.create_tables()
 
     def create_tables(self):
@@ -37,11 +39,39 @@ class SimpleDB:
         self.conn.commit()
         print(f"Table '{table}' cleared") if VERBOSE else None
 
-    def insert(self, table: str, data: Dict[str, Any], print_only_insert=False):
+    def edit(self, table: str, id: str, data: Dict[str, Any], print_only_updated=False, print_columns: list = None):
+        # check if id exist in db
+        self.cursor.execute(f"SELECT * FROM {table} WHERE id = ?", (id,))
+        if not self.cursor.fetchone():
+            print(f"[NOT UPDATED] {table} with id {id} does not exist in db") if VERBOSE else None
+            return False
+        # check if update is necessary
+        set_clause = ", ".join([f"{col} = ?" for col in data.keys()])
+        values = list(data.values()) + [id]
+        query = f"SELECT * FROM {table} WHERE id = ?"
+        self.cursor.execute(query, (id,))
+        existing_data = self.cursor.fetchone()
+        if all(existing_data[col] == data[col] for col in data.keys()):
+            print(f"[NOT UPDATED] {table} with id {id} already has the same data") if VERBOSE else None
+            return False
+        # update record
+        set_clause = ", ".join([f"{col} = ?" for col in data.keys()])
+        values = list(data.values()) + [id]
+        query = f"UPDATE {table} SET {set_clause} WHERE id = ?"
+        self.cursor.execute(query, values)
+        self.conn.commit()
+        if VERBOSE:
+            if print_only_updated:
+                if print_columns:
+                    filtered_data = {key: data[key] for key in print_columns if key in data}
+                    print(f"[UPDATED] {table} with id {id}: {filtered_data}")
+                else:
+                    print(f"[UPDATED] {table} with id {id}: {data}")
+
+    def insert(self, table: str, data: Dict[str, Any], print_only_insert=False, print_columns: list = None):
         cols = ", ".join(data.keys())
         placeholders = ", ".join(["?"] * len(data))
         values = list(data.values())
-
         query = f"""
         INSERT OR IGNORE INTO {table} ({cols})
         VALUES ({placeholders})
@@ -53,13 +83,18 @@ class SimpleDB:
 
         if VERBOSE:
             if inserted:
-                print(f"[INSERTED] {table}: {data}")
+                if print_columns:
+                    filtered_data = {key: data[key] for key in print_columns if key in data}
+                    print(f"[INSERTED] {table}: {filtered_data}")
+                else:
+                    print(f"[INSERTED] {table}: {data}")
             else:
-                (
-                    print(f"[IGNORED - DUPLICATE] {table}: {data}")
-                    if not print_only_insert
-                    else None
-                )
+                if not print_only_insert:
+                    if print_columns:
+                        filtered_data = {key: data[key] for key in print_columns if key in data}
+                        print(f"[IGNORED - DUPLICATE] {table}: {filtered_data}")
+                    else:
+                        print(f"[IGNORED - DUPLICATE] {table}: {data}")
 
     def print_table(
         self,
