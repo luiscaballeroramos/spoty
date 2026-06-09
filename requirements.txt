@@ -1,2 +1,7 @@
+lameenc
+numpy
+scipy
+soundcard
+sounddevice
 spotipy
 sqlite3
