@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import wave
 
 import lameenc
 import numpy as np
@@ -99,7 +100,58 @@ def record_system_audio_to_mp3(
     return output
 
 
+def record_system_audio_to_wav(
+    output_path: str = "output.wav",
+    duration_seconds: int = 10,
+    sample_rate: int = 48000,
+) -> Path:
+    """Record system audio and save it as a WAV file (PCM 16-bit).
+
+    End-to-end workflow:
+    1) Validate input parameters.
+    2) Capture raw audio frames from system output (loopback).
+    3) Convert float audio to 16-bit PCM.
+    4) Write PCM frames into a WAV container.
+    5) Return the output path.
+    """
+    # Basic validation avoids silent failures and hard-to-debug behavior.
+    if duration_seconds <= 0:
+        raise ValueError("duration_seconds must be > 0")
+
+    if sample_rate <= 0:
+        raise ValueError("sample_rate must be > 0")
+
+    output = Path(output_path)
+    # Ensure destination directory exists before writing the WAV file.
+    output.parent.mkdir(parents=True, exist_ok=True)
+
+    # Convert duration in seconds to number of frames at the chosen sample rate.
+    frame_count = sample_rate * duration_seconds
+    samples = _record_system_audio(frame_count=frame_count, sample_rate=sample_rate)
+
+    # Convert float samples in [-1.0, 1.0] to 16-bit PCM values.
+    samples = np.clip(samples, -1.0, 1.0)
+    pcm_int16 = (samples * 32767.0).astype(np.int16)
+
+    # Ensure data is always 2D to simplify channel handling.
+    if pcm_int16.ndim == 1:
+        pcm_int16 = pcm_int16.reshape(-1, 1)
+
+    channels = pcm_int16.shape[1]
+
+    # Write a standard PCM WAV file (sample width = 2 bytes for int16).
+    with wave.open(str(output), "wb") as wav_file:
+        wav_file.setnchannels(channels)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(sample_rate)
+        wav_file.writeframes(pcm_int16.tobytes())
+
+    return output
+
+
 if __name__ == "__main__":
     # Simple script entrypoint for manual testing.
-    saved_file = record_system_audio_to_mp3(output_path="recording.mp3", duration_seconds=10)
-    print(f"Saved MP3: {saved_file}")
+    saved_mp3 = record_system_audio_to_mp3(output_path="recording.mp3", duration_seconds=10)
+    print(f"Saved MP3: {saved_mp3}")
+    saved_wav = record_system_audio_to_wav(output_path="recording.wav", duration_seconds=10)
+    print(f"Saved WAV: {saved_wav}")
