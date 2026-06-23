@@ -106,17 +106,21 @@ if __name__ == "__main__":
     # print("RECENTLY PLAYED")
     # _print_as_tree(recently_played)
 
-    # Print last 10 listening events
-    print_listening_events(limit=10)
+    # # Print last 10 listening events
+    # print_listening_events(limit=10)
 
-    # Print top 10 tracks
-    print_tracks(limit=10)
+    # # Print top 10 tracks
+    # print_tracks(limit=10)
 
-    # Print top 10 albums
-    print_albums(limit=10)
+    # # Print top 10 albums
+    # print_albums(limit=10)
 
-    # Print top 10 artists
-    print_artists(limit=20)
+    # # Print top 10 artists
+    # print_artists(limit=20)
+
+    # Print first liked songs
+    liked_songs = client.get_liked_songs(limit=1)
+    _print_as_tree(liked_songs)
 
     # # Replace with any valid track ID/URI/URL
     # print('TRACK')
