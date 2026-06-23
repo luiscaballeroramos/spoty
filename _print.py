@@ -4,20 +4,23 @@ from config import DBNAME, DBSCHEMA
 from register.db import SimpleDB
 from spotifyapi.spotifyclient import SpotifyClient
 
+
 def _print_all_properties(obj: Any, prefix: str = "") -> None:
-	if isinstance(obj, dict):
-		for key, value in obj.items():
-			path = f"{prefix}.{key}" if prefix else str(key)
-			print(path)
-			_print_all_properties(value, path)
-	elif isinstance(obj, list):
-		for i, item in enumerate(obj):
-			path = f"{prefix}[{i}]"
-			print(path)
-			_print_all_properties(item, path)
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            path = f"{prefix}.{key}" if prefix else str(key)
+            print(path)
+            _print_all_properties(value, path)
+    elif isinstance(obj, list):
+        for i, item in enumerate(obj):
+            path = f"{prefix}[{i}]"
+            print(path)
+            _print_all_properties(item, path)
 
 
-def _print_as_tree(obj: Any, indent: int = 0, prefix: str = "", is_last: bool = True) -> None:
+def _print_as_tree(
+    obj: Any, indent: int = 0, prefix: str = "", is_last: bool = True
+) -> None:
     branch = "└── " if is_last else "├── "
     if isinstance(obj, dict):
         for i, (key, value) in enumerate(obj.items()):
@@ -36,28 +39,58 @@ def _print_as_tree(obj: Any, indent: int = 0, prefix: str = "", is_last: bool = 
 
 
 def print_listening_events(limit: int = None):
-    dbname=DBNAME
-    output_file= dbname.replace(".db", "") + ".txt"
-    db_=SimpleDB(dbname)
-    db_.print_table("listening_events", order_desc="played_at", output_file=output_file, limit=limit)
+    dbname = DBNAME
+    output_file = dbname.replace(".db", "") + ".txt"
+    db_ = SimpleDB(dbname)
+    db_.print_table(
+        "listening_events", order_desc="played_at", output_file=output_file, limit=limit
+    )
+
 
 def print_tracks(limit: int = None):
-    dbname=DBNAME
-    output_file= dbname.replace(".db", "") + "_tracks.txt"
-    db_=SimpleDB(dbname)
-    db_.print_table("tracks", order_desc="popularity", output_file=output_file, limit=limit)
+    dbname = DBNAME
+    output_file = dbname.replace(".db", "") + "_tracks.txt"
+    db_ = SimpleDB(dbname)
+    db_.print_table(
+        "tracks",
+        order_desc="popularity",
+        output_file=output_file,
+        limit=limit,
+        print_columns=[
+            "id",
+            "name",
+            "duration_ms",
+            "album_id",
+            "album_track",
+            "artists_ids",
+        ],
+    )
+
 
 def print_albums(limit: int = None):
-    dbname=DBNAME
-    output_file= dbname.replace(".db", "") + "_albums.txt"
-    db_=SimpleDB(dbname)
-    db_.print_table("albums", order_desc="release_year", output_file=output_file, limit=limit)
+    dbname = DBNAME
+    output_file = dbname.replace(".db", "") + "_albums.txt"
+    db_ = SimpleDB(dbname)
+    db_.print_table(
+        "albums",
+        order_desc="release_year",
+        output_file=output_file,
+        limit=limit,
+        print_columns=["id", "name", "artists", "release_year", "popularity"],
+    )
+
 
 def print_artists(limit: int = None):
-    dbname=DBNAME
-    output_file= dbname.replace(".db", "") + "_artists.txt"
-    db_=SimpleDB(dbname)
-    db_.print_table("artists", order_desc="followers", output_file=output_file, limit=limit)
+    dbname = DBNAME
+    output_file = dbname.replace(".db", "") + "_artists.txt"
+    db_ = SimpleDB(dbname)
+    db_.print_table(
+        "artists",
+        order_desc="followers",
+        output_file=output_file,
+        limit=limit,
+        print_columns=["id", "name"],
+    )
 
 
 if __name__ == "__main__":
@@ -73,18 +106,17 @@ if __name__ == "__main__":
     # print("RECENTLY PLAYED")
     # _print_as_tree(recently_played)
 
-
     # Print last 10 listening events
-    print_listening_events(limit = 10)
+    print_listening_events(limit=10)
 
     # Print top 10 tracks
-    print_tracks(limit = 10)
+    print_tracks(limit=10)
 
     # Print top 10 albums
-    print_albums(limit = 10)
+    print_albums(limit=10)
 
     # Print top 10 artists
-    print_artists(limit = 10)
+    print_artists(limit=20)
 
     # # Replace with any valid track ID/URI/URL
     # print('TRACK')
