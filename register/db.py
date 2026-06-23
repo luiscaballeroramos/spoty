@@ -103,10 +103,19 @@ class SimpleDB:
         order_asc: str = None,
         order_desc: str = None,
         output_file: str = None,
+        print_columns: list = None,
     ):
         # column names
         self.cursor.execute(f"PRAGMA table_info({table})")
         columns = [col[1] for col in self.cursor.fetchall()]
+        # If print_columns requested, keep only existing columns in that order
+        if print_columns:
+            selected_columns = [c for c in print_columns if c in columns]
+            if not selected_columns:
+                print(f"[!] none of the requested columns {print_columns} exist in '{table}'")
+                return
+        else:
+            selected_columns = columns
         # data
         query = f"SELECT * FROM {table}"
         (
@@ -125,26 +134,29 @@ class SimpleDB:
         if not rows:
             print(f"\n[!] table '{table}' empty")
             return
-        # Calculate column widths based on the first 10 rows
+        # Calculate column widths based on the first 10 rows for selected columns
         sample_rows = rows[:10]
+        # Build rows as lists of values for selected columns
+        sample_values = [[r[c] for c in selected_columns] for r in sample_rows]
         col_widths = [
             max(len(str(item)) for item in col)
-            for col in zip(*([columns] + sample_rows))
+            for col in zip(*([selected_columns] + sample_values))
         ]
         # Prepare output
         output = []
         output.append(f"\n--- Table {table.upper()} ---")
         # headers
         header_line = " | ".join(
-            f"{col:<{col_widths[i]}}" for i, col in enumerate(columns)
+            f"{col:<{col_widths[i]}}" for i, col in enumerate(selected_columns)
         )
         output.append(header_line)
         output.append("-" * len(header_line))
         # rows
         for row in rows:
+            row_values = [row[c] for c in selected_columns]
             output.append(
                 " | ".join(
-                    f"{str(item):<{col_widths[i]}}" for i, item in enumerate(row)
+                    f"{str(item):<{col_widths[i]}}" for i, item in enumerate(row_values)
                 )
             )
         output.append("-" * len(header_line) + "\n")
