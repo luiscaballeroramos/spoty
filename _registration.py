@@ -11,7 +11,10 @@ from spotifyapi.spotifyclient import SpotifyClient
 
 
 def get_missing_track_metadata(db: SimpleDB, spotify: SpotifyClient, limit=1):
-    """Retrieve Spotify metadata for missing tracks and save them to the database."""
+    """
+    Retrieve Spotify metadata for missing tracks and save them to the database.
+    missing track = track_id in listening_events that is not in tracks table
+    """
     query = """
         SELECT DISTINCT le.track_id
         FROM listening_events le
