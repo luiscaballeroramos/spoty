@@ -1,9 +1,17 @@
+import os
+
 VERBOSE = True
 
-# TODO: Move these to environment variables for better security and flexibility
-CLIENT_ID = "1562b563518b40848fa76d89a37609a3"
-CLIENT_SECRET = "ba1248d2aac04918aab2a7af32978113"
-REDIRECT_URI = "http://127.0.0.1:8888/"
+# Load credentials from environment variables.
+# Never store real secrets in source code for public repositories.
+CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
+CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
+REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI", "http://127.0.0.1:8888/")
+
+if not CLIENT_ID or not CLIENT_SECRET:
+    raise ValueError(
+        "Missing Spotify credentials. Set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET as environment variables."
+    )
 
 UTC_OFFSET = "+02:00"  # Adjust this if you want to store times in a specific timezone instead of UTC
 
