@@ -15,7 +15,7 @@ DBSCHEMA_LISTENINGEVENT = {
         "context_source": "TEXT",
         "context_type": "TEXT",
         "context_id": "TEXT",
-        "UNIQUE(track_id, played_at)": ""
+        "UNIQUE(track_id, played_at)": "",
     }
 }
 DBSCHEMA_ARTIST = {
@@ -26,7 +26,7 @@ DBSCHEMA_ARTIST = {
         "followers": "INTEGER",
         "images": "TEXT",
         "popularity": "INTEGER",
-        "start_year": "INTEGER"
+        "start_year": "INTEGER",
     }
 }
 DBSCHEMA_ALBUM = {
@@ -39,7 +39,7 @@ DBSCHEMA_ALBUM = {
         "disc_number": "INTEGER",
         "images": "TEXT",  # JSON serialized list of image URLs
         "popularity": "INTEGER",
-        "release_year": "INTEGER"
+        "release_year": "INTEGER",
     }
 }
 DBSCHEMA_TRACK = {
@@ -65,9 +65,16 @@ DBSCHEMA_TRACK = {
         "speechiness": "REAL",
         "tempo": "REAL",
         "time_signature": "INTEGER",
-        "valence": "REAL"
+        "valence": "REAL",
     }
 }
+DBSCHEMA_LIKED_TRACK = {"liked_tracks": {"id": "TEXT PRIMARY KEY NOT NULL"}}
 
 # Combine schemas
-DBSCHEMA = {**DBSCHEMA_LISTENINGEVENT, **DBSCHEMA_ARTIST, **DBSCHEMA_ALBUM, **DBSCHEMA_TRACK}
+DBSCHEMA = {
+    **DBSCHEMA_LISTENINGEVENT,
+    **DBSCHEMA_ARTIST,
+    **DBSCHEMA_ALBUM,
+    **DBSCHEMA_TRACK,
+    **DBSCHEMA_LIKED_TRACK,
+}

@@ -13,23 +13,21 @@ from spotifyapi.spotifyclient import SpotifyClient
 def get_missing_track_metadata(db: SimpleDB, spotify: SpotifyClient, limit=1):
     """
     Retrieve Spotify metadata for missing tracks and save them to the database.
-    missing track = track_id in listening_events that is not in tracks table
+    Missing tracks are track_ids that appear in listening_events or liked_tracks
+    but are not present in the tracks table.
     """
     query = """
-        SELECT DISTINCT le.track_id
-        FROM listening_events le
-        LEFT JOIN tracks t ON le.track_id = t.id
+        SELECT DISTINCT track_id
+        FROM (
+            SELECT track_id FROM listening_events
+            UNION
+            SELECT id AS track_id FROM liked_tracks
+        ) AS combined
+        LEFT JOIN tracks t ON combined.track_id = t.id
         WHERE t.id IS NULL
     """
     rows = db.cursor.execute(query).fetchall()
     missing_ids = [row["track_id"] for row in rows]
-    (
-        print(
-            f"MISSING METADATA\nFound {len(missing_ids)} missing track metadata entries."
-        )
-        if VERBOSE
-        else None
-    )
     # TODO: si existe no se inserta de nuevo, pero y si lo que seq uiere es ampliar la metadata disponible¿?
     saved_count = 0
     for track_id in missing_ids[:limit]:
@@ -45,7 +43,6 @@ def get_missing_track_metadata(db: SimpleDB, spotify: SpotifyClient, limit=1):
             track_artists_ids = [artist["id"] for artist in track_data["artists"]]
             track_explicit = track_data["explicit"]
             track_popularity = track_data.get("popularity")
-
             # Create and save Track
             _track = Track(
                 id=track_id,
@@ -59,7 +56,7 @@ def get_missing_track_metadata(db: SimpleDB, spotify: SpotifyClient, limit=1):
             )
             _track.save(db, print_only_insert=True)
 
-            # Extract and save album information
+            # Extract album information
             album = track_data["album"]
             album_id = album["id"]
             album_name = album["name"]
@@ -71,7 +68,7 @@ def get_missing_track_metadata(db: SimpleDB, spotify: SpotifyClient, limit=1):
             album_release_date = album.get("release_date")
             album_release_date_precision = album.get("release_date_precision")
             album_popularity = album.get("popularity")
-
+            #  Create and save Album
             _album = Album(
                 id=album_id,
                 name=album_name,
@@ -84,11 +81,11 @@ def get_missing_track_metadata(db: SimpleDB, spotify: SpotifyClient, limit=1):
                 popularity=album_popularity,
             )
             _album.save(db, print_only_insert=True)
-
-            # Extract and save artists (from both track and album)
+            # Extract artists information (from both track and album)
             for artist in track_data["artists"] + album["artists"]:
                 artist_id = artist["id"]
                 artist_name = artist["name"]
+                # Create and save Artist
                 _artist = Artist(id=artist_id, name=artist_name)
                 _artist.save(db, print_only_insert=True)
 
@@ -97,9 +94,59 @@ def get_missing_track_metadata(db: SimpleDB, spotify: SpotifyClient, limit=1):
     print(f"Saved metadata for {saved_count} tracks.") if VERBOSE else None
 
 
+def save_liked_track_ids(limit=50, offset=0):
+    """
+    Fetch liked songs page by page and save their track IDs into the database.
+    The provided limit is treated as the page size for each request. If a full
+    round adds no new IDs, the function restarts from the beginning.
+    """
+    spotify = SpotifyClient()
+    db = SimpleDB(DBNAME)
+
+    page_size = max(1, limit)
+    current_offset = offset
+    saved_count = 0
+
+    while True:
+        liked_response = spotify.get_liked_songs(limit=page_size, offset=current_offset)
+        if not liked_response or "items" not in liked_response:
+            current_offset = 0
+            continue
+
+        items = liked_response["items"]
+        if not items:
+            current_offset = 0
+            continue
+
+        added_this_round = 0
+        for item in items:
+            track = item.get("track")
+            track_id = track.get("id") if track else None
+            if track_id:
+                inserted = db.insert(
+                    "liked_tracks", {"id": track_id}, print_only_insert=True
+                )
+                if inserted:
+                    saved_count += 1
+                    added_this_round += 1
+
+        if added_this_round == 0:
+            current_offset = 0
+            continue
+
+        if len(items) < page_size:
+            current_offset = 0
+            continue
+
+        current_offset += len(items)
+
+        print(f"Saved {saved_count} liked track IDs so far.") if VERBOSE else None
+
+
 def register_listeningevents():
     spotify = SpotifyClient()
     db = SimpleDB(DBNAME)
+    offset_liked_tracks = 0
     print("Starting Spotify tracker...")
     # loop to get currently playing every 10 minutes and save to db
     try:
@@ -180,6 +227,9 @@ def register_listeningevents():
                     event.save(db, print_only_insert=True)
             # get missing metadata for tracks in listening_events that are not in tracks table
             get_missing_track_metadata(db, spotify, limit=1)
+            # # save 50 liked track ids
+            # save_liked_track_ids(limit=50, offset=offset_liked_tracks)
+            # offset_liked_tracks += 50
             # wait 10 minutes
             time.sleep(600 / 2)
     except KeyboardInterrupt:
@@ -188,6 +238,7 @@ def register_listeningevents():
 
 if __name__ == "__main__":
     register_listeningevents()
+    # save_liked_track_ids(limit=50)
     # db = SimpleDB(DBNAME)
     # spotify = SpotifyClient()
     # get_missing_track_metadata(db, spotify, limit=1)
