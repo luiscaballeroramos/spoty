@@ -1,9 +1,54 @@
+import os
+from pathlib import Path
+
+
+def _load_env_file() -> None:
+    env_path = Path(__file__).resolve().with_name(".env")
+    if not env_path.exists():
+        return
+
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+
+        if line.startswith("export "):
+            line = line[len("export ") :].strip()
+
+        if "=" not in line:
+            continue
+
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+
+        if not key or key in os.environ:
+            continue
+
+        if (
+            len(value) >= 2
+            and value[0] == value[-1]
+            and value[0] in {'"', "'"}
+        ):
+            value = value[1:-1]
+
+        os.environ[key] = value
+
+
+_load_env_file()
+
 VERBOSE = True
 
-# TODO: Move these to environment variables for better security and flexibility
-CLIENT_ID = "1562b563518b40848fa76d89a37609a3"
-CLIENT_SECRET = "ba1248d2aac04918aab2a7af32978113"
-REDIRECT_URI = "http://127.0.0.1:8888/"
+# Load credentials from environment variables.
+# Never store real secrets in source code for public repositories.
+CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
+CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
+REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI", "http://127.0.0.1:8888/")
+
+if not CLIENT_ID or not CLIENT_SECRET:
+    raise ValueError(
+        "Missing Spotify credentials. Set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET as environment variables."
+    )
 
 UTC_OFFSET = "+02:00"  # Adjust this if you want to store times in a specific timezone instead of UTC
 
