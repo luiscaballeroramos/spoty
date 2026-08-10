@@ -1,3 +1,4 @@
+import argparse
 from datetime import datetime
 import time
 
@@ -97,7 +98,7 @@ def get_missing_track_metadata(db: SimpleDB, spotify: SpotifyClient, limit=1):
     print(f"Saved metadata for {saved_count} tracks.") if VERBOSE else None
 
 
-def register_listeningevents():
+def register_listeningevents(run_once: bool = False):
     spotify = SpotifyClient()
     db = SimpleDB(DBNAME)
     print("Starting Spotify tracker...")
@@ -180,6 +181,8 @@ def register_listeningevents():
                     event.save(db, print_only_insert=True)
             # get missing metadata for tracks in listening_events that are not in tracks table
             get_missing_track_metadata(db, spotify, limit=1)
+            if run_once:
+                break
             # wait 10 minutes
             time.sleep(600 / 2)
     except KeyboardInterrupt:
@@ -187,7 +190,14 @@ def register_listeningevents():
 
 
 if __name__ == "__main__":
-    register_listeningevents()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--once",
+        action="store_true",
+        help="Run a single fetch/save cycle and exit.",
+    )
+    args = parser.parse_args()
+    register_listeningevents(run_once=args.once)
     # db = SimpleDB(DBNAME)
     # spotify = SpotifyClient()
     # get_missing_track_metadata(db, spotify, limit=1)

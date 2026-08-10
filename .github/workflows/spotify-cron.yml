@@ -1,0 +1,54 @@
+name: Spotify Registration Cron
+
+on:
+  schedule:
+    # Every 10 minutes
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Restore Spotify token cache
+        env:
+          SPOTIFY_CACHE_B64: ${{ secrets.SPOTIFY_CACHE_B64 }}
+        run: |
+          if [ -n "$SPOTIFY_CACHE_B64" ]; then
+            echo "$SPOTIFY_CACHE_B64" | base64 --decode > .cache
+          fi
+
+      - name: Run registration once
+        env:
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+          SPOTIFY_REDIRECT_URI: ${{ secrets.SPOTIFY_REDIRECT_URI }}
+        run: python _registration.py --once
+
+      - name: Commit updated database
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add spotify.db
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: update spotify.db"
+            git push
+          fi
