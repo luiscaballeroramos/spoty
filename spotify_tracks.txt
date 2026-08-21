@@ -1,0 +1,15 @@
+
+--- Table TRACKS ---
+id                     | name                | duration_ms | album_id               | album_track | artists_ids                                                                   
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+1BncfTJAWxrsxyT9culBrj | Experience          | 315426      | 3uJ6D2WOPdjwJ0SrsH9EiG | 12          | ["2uFUBdaVGtyMqckSeCl0Qj", "59r5UU2HOytn9V5uMZ5Vur", "1k1AM2ESRQseVAj6rvBdtx"]
+5y7DaS3jAc9eZzcSOoUIwU | Una Locura          | 230693      | 69iuPQsXel3luOSDNF0q2Q | 9           | ["1i8SpTcr7yvPOmcqrbnVXY", "1vyhD5VmyZ7KMfW5gqLgo5", "37230BxxYs9ksS7OkZw3IU"]
+2Bhmj4XK33InfhqKPxcJ1v | Dile al Amor        | 229360      | 57tmzh0hsnWU8znnvEWJbe | 5           | ["1qto4hHid1P71emI6Fd8xi"]                                                    
+6oyl7ELfrMqXLhGmIjXY9R | Lovumba             | 218413      | 6Hu1DObY1WeKWxHfeaOcFg | 16          | ["4VMYDCV2IEDYJArk749S6m"]                                                    
+6URNgz911jj10KXTFtevcS | Por Que Te Demoras? | 191400      | 4s9iYsrtBIvkZn5AEbUbl0 | 3           | ["2jSGzJw0ebJLu7OLVSOcBP"]                                                    
+7koAf6aZgjO6TS7bipfPD0 | YO y TÚ             | 198153      | 1PxEMXkwLR7sfCMAuX50jM | 1           | ["3m5qlPf2OkihLz3dRYnkPA", "52iwsT98xCoGgiGntTiR7K", "7a0XAaPaK2aDSqa8p3QnC7"]
+1RmJJPvyMSszOQHJ4s03A2 | Call Me             | 171266      | 4C4NIZAWsm3DYkjXY0zkAQ | 3           | ["4fXkvh05wFhuH77MfD4m9o"]                                                    
+0d1NXkdvAOBICBtQHoMkVU | First Time Feeling  | 209693      | 49W5IODWwAo4qfZK0Mo3bP | 1           | ["19lQ2rJLlP71FOKESiMNJT"]                                                    
+64A1s4UbNdMlYSeyKnx8x9 | Lead Me Home        | 235586      | 6VgqRIhVmPYJwgacWQqhFU | 9           | ["21t0aavYGSGFkYYFhu6urk", "7euhIbMlHCCZYE1Xegaobf"]                          
+31Sr3l0OKMn5gG2A1toFpj | Love Again          | 144000      | 7xzCAh3ZbBJLt4MjgkgZ3j | 1           | ["48IWhckCqdKLfS7hFw20x5"]                                                    
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
