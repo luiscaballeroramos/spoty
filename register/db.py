@@ -7,7 +7,6 @@ from psycopg.rows import dict_row
 from config import VERBOSE, DBSCHEMA
 
 
-
 class SimpleDB:
     def __init__(self, db_path: str):
         self.conn = psycopg.connect(db_path, row_factory=dict_row)
@@ -65,7 +64,11 @@ class SimpleDB:
             return False
         # check if update is necessary
         if all(existing_data[col] == data[col] for col in data.keys()):
-            print(f"[NOT UPDATED] {table} with id {id} already has the same data") if VERBOSE else None
+            (
+                print(f"[NOT UPDATED] {table} with id {id} already has the same data")
+                if VERBOSE
+                else None
+            )
             return False
         # update record
         set_clause = sql.SQL(", ").join(
@@ -80,7 +83,9 @@ class SimpleDB:
         if VERBOSE:
             if print_only_updated:
                 if print_columns:
-                    filtered_data = {key: data[key] for key in print_columns if key in data}
+                    filtered_data = {
+                        key: data[key] for key in print_columns if key in data
+                    }
                     print(f"[UPDATED] {table} with id {id}: {filtered_data}")
                 else:
                     print(f"[UPDATED] {table} with id {id}: {data}")
@@ -96,19 +101,24 @@ class SimpleDB:
         self.cursor.execute(query, values)
         self.conn.commit()
 
-        inserted = self.cursor.rowcount > 0
+        self.cursor.execute("SELECT changes()")
+        inserted = self.cursor.fetchone()[0] > 0
 
         if VERBOSE:
             if inserted:
                 if print_columns:
-                    filtered_data = {key: data[key] for key in print_columns if key in data}
+                    filtered_data = {
+                        key: data[key] for key in print_columns if key in data
+                    }
                     print(f"[INSERTED] {table}: {filtered_data}")
                 else:
                     print(f"[INSERTED] {table}: {data}")
             else:
                 if not print_only_insert:
                     if print_columns:
-                        filtered_data = {key: data[key] for key in print_columns if key in data}
+                        filtered_data = {
+                            key: data[key] for key in print_columns if key in data
+                        }
                         print(f"[IGNORED - DUPLICATE] {table}: {filtered_data}")
                     else:
                         print(f"[IGNORED - DUPLICATE] {table}: {data}")
@@ -125,6 +135,7 @@ class SimpleDB:
         self.cursor.execute(query, (table,))
         rows = self.cursor.fetchall()
         return [row["column_name"] for row in rows]
+
 
     def print_table(
         self,
@@ -144,7 +155,9 @@ class SimpleDB:
         if print_columns:
             selected_columns = [c for c in print_columns if c in columns]
             if not selected_columns:
-                print(f"[!] none of the requested columns {print_columns} exist in '{table}'")
+                print(
+                    f"[!] none of the requested columns {print_columns} exist in '{table}'"
+                )
                 return
         else:
             selected_columns = columns
