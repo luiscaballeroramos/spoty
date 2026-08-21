@@ -19,5 +19,18 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Check Spotify credentials
+        env:
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+        run: |
+          test -n "$SPOTIFY_CLIENT_ID" && echo "CLIENT_ID OK" || echo "CLIENT_ID MISSING"
+          test -n "$SPOTIFY_CLIENT_SECRET" && echo "CLIENT_SECRET OK" || echo "CLIENT_SECRET MISSING"
+
       - name: Run registration
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+          SPOTIFY_REDIRECT_URI: ${{ secrets.SPOTIFY_REDIRECT_URI }}
         run: python _registration.py
