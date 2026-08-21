@@ -1,28 +1,46 @@
 import os
+import time
 
 import spotipy
+from spotipy.cache_handler import CacheHandler
 from spotipy.oauth2 import SpotifyOAuth
 
 from config import CLIENT_ID, CLIENT_SECRET, REDIRECT_URI, VERBOSE
 from register.artist import Artist
 
 
+class RefreshTokenCacheHandler(CacheHandler):
+    def __init__(self, refresh_token: str):
+        self.refresh_token = refresh_token
+
+    def get_cached_token(self):
+        return {
+            "refresh_token": self.refresh_token,
+            "access_token": None,
+            "expires_at": 0,
+        }
+
+    def save_token_to_cache(self, token_info):
+        pass
+
+
 class SpotifyClient:
     def __init__(self):
         refresh_token = os.getenv("SPOTIFY_REFRESH_TOKEN")
 
-        oauth_kwargs = {
-            "client_id": CLIENT_ID,
-            "client_secret": CLIENT_SECRET,
-            "redirect_uri": REDIRECT_URI,
-            "scope": "user-read-playback-state user-read-recently-played user-library-read",
-        }
+        cache_handler = None
 
         if refresh_token:
-            oauth_kwargs["refresh_token"] = refresh_token
+            cache_handler = RefreshTokenCacheHandler(refresh_token)
 
         self.sp = spotipy.Spotify(
-            auth_manager=SpotifyOAuth(**oauth_kwargs),
+            auth_manager=SpotifyOAuth(
+                client_id=CLIENT_ID,
+                client_secret=CLIENT_SECRET,
+                redirect_uri=REDIRECT_URI,
+                scope="user-read-playback-state user-read-recently-played user-library-read",
+                cache_handler=cache_handler,
+            ),
             requests_timeout=20,
             retries=2,
             status_retries=2,
@@ -49,7 +67,7 @@ class SpotifyClient:
                 artists.append(
                     Artist(
                         id=artist["id"],
-                        name=artist_info["name"],
+                        name=artist["name"],
                         images=images,
                     )
                 )
@@ -78,11 +96,7 @@ class SpotifyClient:
         try:
             return self.sp.current_user_recently_played(limit=limit)
         except Exception as exc:
-            (
-                print(f"Error in SpotifyClient.get_recently_played: {exc}")
-                if VERBOSE
-                else None
-            )
+            print(f"Error in SpotifyClient.get_recently_played: {exc}") if VERBOSE else None
             return None
 
     def get_liked_songs(self, limit=20, offset=0):
