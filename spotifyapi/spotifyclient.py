@@ -13,7 +13,11 @@ class SpotifyClient:
                 client_secret=CLIENT_SECRET,
                 redirect_uri=REDIRECT_URI,
                 scope="user-read-playback-state user-read-recently-played user-library-read",
-            )
+            ),
+            requests_timeout=20,
+            retries=2,
+            status_retries=2,
+            backoff_factor=0.3,
         )
 
     def get_artist_byid(self, artist_id: str) -> Artist:
@@ -59,8 +63,8 @@ class SpotifyClient:
     def get_recently_played(self, limit=20):
         try:
             return self.sp.current_user_recently_played(limit=limit)
-        except:
-            print("Error in SpotifyClient.get_recently_played") if VERBOSE else None
+        except Exception as exc:
+            print(f"Error in SpotifyClient.get_recently_played: {exc}") if VERBOSE else None
             return None
 
     def get_liked_songs(self, limit=20, offset=0):

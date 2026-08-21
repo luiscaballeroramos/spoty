@@ -2,6 +2,8 @@ import os
 import sqlite3
 import time
 
+"""Legacy SQLite-only utilities kept for maintenance of historical .db files."""
+
 def check_table_schema(db_path, table_name):
     try:
         conn = sqlite3.connect(db_path)
