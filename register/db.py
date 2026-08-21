@@ -1,5 +1,8 @@
-import sqlite3
-from typing import Dict, Any
+from typing import Any, Dict
+
+import psycopg
+from psycopg import sql
+from psycopg.rows import dict_row
 
 from config import VERBOSE, DBSCHEMA
 
@@ -7,8 +10,7 @@ from config import VERBOSE, DBSCHEMA
 
 class SimpleDB:
     def __init__(self, db_path: str):
-        self.conn = sqlite3.connect(db_path)
-        self.conn.row_factory = sqlite3.Row  # Set row_factory to return rows as dictionaries
+        self.conn = psycopg.connect(db_path, row_factory=dict_row)
         self.cursor = self.conn.cursor()
         self.schema = DBSCHEMA
         self.create_tables()
@@ -18,10 +20,14 @@ class SimpleDB:
             parts = []
             for col, typ in cols.items():
                 if col.startswith("UNIQUE"):
-                    parts.append(col)
+                    parts.append(sql.SQL(col))
                 else:
-                    parts.append(f"{col} {typ}")
-            query = f"CREATE TABLE IF NOT EXISTS {table} ({', '.join(parts)})"
+                    parts.append(
+                        sql.SQL("{} {}").format(sql.Identifier(col), sql.SQL(typ))
+                    )
+            query = sql.SQL("CREATE TABLE IF NOT EXISTS {} ({})").format(
+                sql.Identifier(table), sql.SQL(", ").join(parts)
+            )
             self.cursor.execute(query)
         self.conn.commit()
         (
@@ -31,33 +37,44 @@ class SimpleDB:
         )
 
     def count_rows(self, table: str) -> int:
-        self.cursor.execute(f"SELECT COUNT(*) FROM {table}")
-        return self.cursor.fetchone()[0]
+        query = sql.SQL("SELECT COUNT(*) AS total FROM {}").format(sql.Identifier(table))
+        self.cursor.execute(query)
+        row = self.cursor.fetchone()
+        return int(row["total"]) if row else 0
 
     def delete_table(self, table: str):
-        self.cursor.execute(f"DELETE FROM {table}")
+        query = sql.SQL("DELETE FROM {}").format(sql.Identifier(table))
+        self.cursor.execute(query)
         self.conn.commit()
         print(f"Table '{table}' cleared") if VERBOSE else None
 
+    def exists(self, table: str, id: str) -> bool:
+        query = sql.SQL("SELECT 1 FROM {} WHERE id = %s LIMIT 1").format(
+            sql.Identifier(table)
+        )
+        self.cursor.execute(query, (id,))
+        return self.cursor.fetchone() is not None
+
     def edit(self, table: str, id: str, data: Dict[str, Any], print_only_updated=False, print_columns: list = None):
         # check if id exist in db
-        self.cursor.execute(f"SELECT * FROM {table} WHERE id = ?", (id,))
-        if not self.cursor.fetchone():
+        query = sql.SQL("SELECT * FROM {} WHERE id = %s").format(sql.Identifier(table))
+        self.cursor.execute(query, (id,))
+        existing_data = self.cursor.fetchone()
+        if not existing_data:
             print(f"[NOT UPDATED] {table} with id {id} does not exist in db") if VERBOSE else None
             return False
         # check if update is necessary
-        set_clause = ", ".join([f"{col} = ?" for col in data.keys()])
-        values = list(data.values()) + [id]
-        query = f"SELECT * FROM {table} WHERE id = ?"
-        self.cursor.execute(query, (id,))
-        existing_data = self.cursor.fetchone()
         if all(existing_data[col] == data[col] for col in data.keys()):
             print(f"[NOT UPDATED] {table} with id {id} already has the same data") if VERBOSE else None
             return False
         # update record
-        set_clause = ", ".join([f"{col} = ?" for col in data.keys()])
+        set_clause = sql.SQL(", ").join(
+            sql.SQL("{} = %s").format(sql.Identifier(col)) for col in data.keys()
+        )
         values = list(data.values()) + [id]
-        query = f"UPDATE {table} SET {set_clause} WHERE id = ?"
+        query = sql.SQL("UPDATE {} SET {} WHERE id = %s").format(
+            sql.Identifier(table), set_clause
+        )
         self.cursor.execute(query, values)
         self.conn.commit()
         if VERBOSE:
@@ -67,15 +84,15 @@ class SimpleDB:
                     print(f"[UPDATED] {table} with id {id}: {filtered_data}")
                 else:
                     print(f"[UPDATED] {table} with id {id}: {data}")
+        return True
 
     def insert(self, table: str, data: Dict[str, Any], print_only_insert=False, print_columns: list = None):
-        cols = ", ".join(data.keys())
-        placeholders = ", ".join(["?"] * len(data))
+        cols = sql.SQL(", ").join(sql.Identifier(col) for col in data.keys())
+        placeholders = sql.SQL(", ").join(sql.Placeholder() for _ in data)
         values = list(data.values())
-        query = f"""
-        INSERT OR IGNORE INTO {table} ({cols})
-        VALUES ({placeholders})
-        """
+        query = sql.SQL(
+            "INSERT INTO {} ({}) VALUES ({}) ON CONFLICT DO NOTHING"
+        ).format(sql.Identifier(table), cols, placeholders)
         self.cursor.execute(query, values)
         self.conn.commit()
 
@@ -95,6 +112,19 @@ class SimpleDB:
                         print(f"[IGNORED - DUPLICATE] {table}: {filtered_data}")
                     else:
                         print(f"[IGNORED - DUPLICATE] {table}: {data}")
+        return inserted
+
+    def _get_table_columns(self, table: str):
+        query = """
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = current_schema()
+              AND table_name = %s
+            ORDER BY ordinal_position
+        """
+        self.cursor.execute(query, (table,))
+        rows = self.cursor.fetchall()
+        return [row["column_name"] for row in rows]
 
     def print_table(
         self,
@@ -106,8 +136,10 @@ class SimpleDB:
         print_columns: list = None,
     ):
         # column names
-        self.cursor.execute(f"PRAGMA table_info({table})")
-        columns = [col[1] for col in self.cursor.fetchall()]
+        columns = self._get_table_columns(table)
+        if not columns:
+            print(f"\n[!] table '{table}' does not exist")
+            return
         # If print_columns requested, keep only existing columns in that order
         if print_columns:
             selected_columns = [c for c in print_columns if c in columns]
@@ -117,19 +149,24 @@ class SimpleDB:
         else:
             selected_columns = columns
         # data
-        query = f"SELECT * FROM {table}"
+        query = sql.SQL("SELECT * FROM {}").format(sql.Identifier(table))
+        params = []
         (
             print(f"\n[INFO] number of rows in '{table}': {self.count_rows(table)}")
             if VERBOSE
             else None
         )
         if order_asc:
-            query += f" ORDER BY {order_asc} ASC"
+            query += sql.SQL(" ORDER BY {} ASC").format(sql.Identifier(order_asc))
         elif order_desc:
-            query += f" ORDER BY {order_desc} DESC"
+            query += sql.SQL(" ORDER BY {} DESC").format(sql.Identifier(order_desc))
         if limit:
-            query += f" LIMIT {limit}"
-        self.cursor.execute(query)
+            query += sql.SQL(" LIMIT %s")
+            params.append(limit)
+        if params:
+            self.cursor.execute(query, params)
+        else:
+            self.cursor.execute(query)
         rows = self.cursor.fetchall()
         if not rows:
             print(f"\n[!] table '{table}' empty")
@@ -166,5 +203,5 @@ class SimpleDB:
             print("\n".join(output[i : i + chunk_size]))
         # Write to file if output_file is provided
         if output_file:
-            with open(output_file, "w") as f:
+            with open(output_file, "w", encoding="utf-8") as f:
                 f.write("\n".join(output))

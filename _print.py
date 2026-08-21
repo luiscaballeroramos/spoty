@@ -1,6 +1,7 @@
 from typing import Any
+from pathlib import Path
 
-from config import DBNAME, DBSCHEMA
+from config import DBNAME
 from register.db import SimpleDB
 from spotifyapi.spotifyclient import SpotifyClient
 
@@ -38,19 +39,23 @@ def _print_as_tree(
         print(f"{prefix}{branch}{obj}")
 
 
+def _get_output_prefix() -> str:
+    if DBNAME.endswith(".db"):
+        return Path(DBNAME).stem
+    return "spotify"
+
+
 def print_listening_events(limit: int = None):
-    dbname = DBNAME
-    output_file = dbname.replace(".db", "") + ".txt"
-    db_ = SimpleDB(dbname)
+    output_file = f"{_get_output_prefix()}_listening_events.txt"
+    db_ = SimpleDB(DBNAME)
     db_.print_table(
         "listening_events", order_desc="played_at", output_file=output_file, limit=limit
     )
 
 
 def print_tracks(limit: int = None):
-    dbname = DBNAME
-    output_file = dbname.replace(".db", "") + "_tracks.txt"
-    db_ = SimpleDB(dbname)
+    output_file = f"{_get_output_prefix()}_tracks.txt"
+    db_ = SimpleDB(DBNAME)
     db_.print_table(
         "tracks",
         order_desc="popularity",
@@ -68,9 +73,8 @@ def print_tracks(limit: int = None):
 
 
 def print_albums(limit: int = None):
-    dbname = DBNAME
-    output_file = dbname.replace(".db", "") + "_albums.txt"
-    db_ = SimpleDB(dbname)
+    output_file = f"{_get_output_prefix()}_albums.txt"
+    db_ = SimpleDB(DBNAME)
     db_.print_table(
         "albums",
         order_desc="release_year",
@@ -81,9 +85,8 @@ def print_albums(limit: int = None):
 
 
 def print_artists(limit: int = None):
-    dbname = DBNAME
-    output_file = dbname.replace(".db", "") + "_artists.txt"
-    db_ = SimpleDB(dbname)
+    output_file = f"{_get_output_prefix()}_artists.txt"
+    db_ = SimpleDB(DBNAME)
     db_.print_table(
         "artists",
         order_desc="followers",
