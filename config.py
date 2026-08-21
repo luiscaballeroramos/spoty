@@ -64,7 +64,10 @@ if not DATABASE_URL:
     if not pg_sslmode and pg_host.endswith(".neon.tech"):
         pg_sslmode = "require"
     ssl_query = f"?sslmode={quote_plus(pg_sslmode)}" if pg_sslmode else ""
-    DATABASE_URL = "postgresql://neondb_owner:npg_F9mJti7dGkvy@ep-calm-fire-ayoxylsp-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+    DATABASE_URL = (
+        f"postgresql://{quote_plus(pg_user)}:{quote_plus(pg_password)}"
+        f"@{pg_host}:{pg_port}/{pg_database}{ssl_query}"
+    )
 
 # Backward-compatible alias used by existing scripts.
 DBNAME = DATABASE_URL
