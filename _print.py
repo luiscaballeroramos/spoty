@@ -54,9 +54,8 @@ def print_listening_events(limit: int = None):
 
 
 def print_liked_tracks(limit: int = None):
-    dbname = DBNAME
-    output_file = dbname.replace(".db", "") + "_liked_tracks.txt"
-    db_ = SimpleDB(dbname)
+    output_file = f"{_get_output_prefix()}_liked_tracks.txt"
+    db_ = SimpleDB(DBNAME)
     db_.print_table(
         "liked_tracks", order_desc="id", output_file=output_file, limit=limit
     )
@@ -118,8 +117,8 @@ if __name__ == "__main__":
     # print("RECENTLY PLAYED")
     # _print_as_tree(recently_played)
 
-    # # Print last 10 listening events
-    # print_listening_events(limit=10)
+    # Print last 10 listening events
+    print_listening_events(limit=10)
 
     # Print top 10 liked tracks
     print_liked_tracks(limit=10)
@@ -127,11 +126,11 @@ if __name__ == "__main__":
     # Print top 10 tracks
     print_tracks(limit=10)
 
-    # # Print top 10 albums
-    # print_albums(limit=10)
+    # Print top 10 albums
+    print_albums(limit=10)
 
-    # # Print top 10 artists
-    # print_artists(limit=20)
+    # Print top 10 artists
+    print_artists(limit=20)
 
     # # Replace with any valid track ID/URI/URL
     # print('TRACK')

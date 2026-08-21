@@ -36,7 +36,9 @@ class SimpleDB:
         )
 
     def count_rows(self, table: str) -> int:
-        query = sql.SQL("SELECT COUNT(*) AS total FROM {}").format(sql.Identifier(table))
+        query = sql.SQL("SELECT COUNT(*) AS total FROM {}").format(
+            sql.Identifier(table)
+        )
         self.cursor.execute(query)
         row = self.cursor.fetchone()
         return int(row["total"]) if row else 0
@@ -54,13 +56,24 @@ class SimpleDB:
         self.cursor.execute(query, (id,))
         return self.cursor.fetchone() is not None
 
-    def edit(self, table: str, id: str, data: Dict[str, Any], print_only_updated=False, print_columns: list = None):
+    def edit(
+        self,
+        table: str,
+        id: str,
+        data: Dict[str, Any],
+        print_only_updated=False,
+        print_columns: list = None,
+    ):
         # check if id exist in db
         query = sql.SQL("SELECT * FROM {} WHERE id = %s").format(sql.Identifier(table))
         self.cursor.execute(query, (id,))
         existing_data = self.cursor.fetchone()
         if not existing_data:
-            print(f"[NOT UPDATED] {table} with id {id} does not exist in db") if VERBOSE else None
+            (
+                print(f"[NOT UPDATED] {table} with id {id} does not exist in db")
+                if VERBOSE
+                else None
+            )
             return False
         # check if update is necessary
         if all(existing_data[col] == data[col] for col in data.keys()):
@@ -91,18 +104,22 @@ class SimpleDB:
                     print(f"[UPDATED] {table} with id {id}: {data}")
         return True
 
-    def insert(self, table: str, data: Dict[str, Any], print_only_insert=False, print_columns: list = None):
+    def insert(
+        self,
+        table: str,
+        data: Dict[str, Any],
+        print_only_insert=False,
+        print_columns: list = None,
+    ):
         cols = sql.SQL(", ").join(sql.Identifier(col) for col in data.keys())
         placeholders = sql.SQL(", ").join(sql.Placeholder() for _ in data)
         values = list(data.values())
         query = sql.SQL(
-            "INSERT INTO {} ({}) VALUES ({}) ON CONFLICT DO NOTHING"
+            "INSERT INTO {} ({}) VALUES ({}) ON CONFLICT DO NOTHING RETURNING 1"
         ).format(sql.Identifier(table), cols, placeholders)
         self.cursor.execute(query, values)
+        inserted = self.cursor.fetchone() is not None
         self.conn.commit()
-
-        self.cursor.execute("SELECT changes()")
-        inserted = self.cursor.fetchone()[0] > 0
 
         if VERBOSE:
             if inserted:
@@ -135,7 +152,6 @@ class SimpleDB:
         self.cursor.execute(query, (table,))
         rows = self.cursor.fetchall()
         return [row["column_name"] for row in rows]
-
 
     def print_table(
         self,

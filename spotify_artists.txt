@@ -1,0 +1,25 @@
+
+--- Table ARTISTS ---
+id                     | name                       
+----------------------------------------------------
+1t3BkCQTMTGykNPpmj7drk | Honeybear, the Band        
+57cuW31G8gconw4l9iqOty | Zach Deputy                
+2GHXeEEol7BPT31flS6O1B | Eddie 9V                   
+21t0aavYGSGFkYYFhu6urk | The California Honeydrops  
+0YnrslYN9hfy5ZRCQUjMMt | Jesse Roper                
+3u7WZTVUhTgjSKrlqzPfs9 | Mica Millar                
+4fXkvh05wFhuH77MfD4m9o | St. Paul & The Broken Bones
+1NrFTpkB0RvbVLYl0p5Xvc | Nic Hanson                 
+1FcTd89N9ESEOsIDD883Kp | Greyhounds                 
+7BfKzWvOnw7aAUU4NLLRD0 | T Bird and the Breaks      
+1QVWN3ebl1dVgVbMgQPG8K | The Bamboos                
+4e2ZqZk4vYVIwisjBylEoY | The Alex Lucero Band       
+2Ux8BRWypmo461Vdorxx9G | The Deltaz                 
+03rZGNLcaUYnzsTxlXpJ3F | Madison Hughes             
+0hc2qwaU2xy7LUd0FRjcHK | Dirtwire                   
+1Uff91EOsvd99rtAupatMP | Claude Debussy             
+5X5cGjYEmKnuihYXEePQcs | Pascal Rogé                
+1385hLNbrnbCJGokfH2ac2 | Franz Liszt                
+71614brq8tRSUF55BGFIlR | François-René Duchâble     
+0GUFrEry7OHxPMcpjPH9lQ | Phillip-Michael Scales     
+----------------------------------------------------

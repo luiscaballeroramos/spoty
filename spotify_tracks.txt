@@ -1,15 +1,15 @@
 
 --- Table TRACKS ---
-id                     | name                | duration_ms | album_id               | album_track | artists_ids                                                                   
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-1BncfTJAWxrsxyT9culBrj | Experience          | 315426      | 3uJ6D2WOPdjwJ0SrsH9EiG | 12          | ["2uFUBdaVGtyMqckSeCl0Qj", "59r5UU2HOytn9V5uMZ5Vur", "1k1AM2ESRQseVAj6rvBdtx"]
-5y7DaS3jAc9eZzcSOoUIwU | Una Locura          | 230693      | 69iuPQsXel3luOSDNF0q2Q | 9           | ["1i8SpTcr7yvPOmcqrbnVXY", "1vyhD5VmyZ7KMfW5gqLgo5", "37230BxxYs9ksS7OkZw3IU"]
-2Bhmj4XK33InfhqKPxcJ1v | Dile al Amor        | 229360      | 57tmzh0hsnWU8znnvEWJbe | 5           | ["1qto4hHid1P71emI6Fd8xi"]                                                    
-6oyl7ELfrMqXLhGmIjXY9R | Lovumba             | 218413      | 6Hu1DObY1WeKWxHfeaOcFg | 16          | ["4VMYDCV2IEDYJArk749S6m"]                                                    
-6URNgz911jj10KXTFtevcS | Por Que Te Demoras? | 191400      | 4s9iYsrtBIvkZn5AEbUbl0 | 3           | ["2jSGzJw0ebJLu7OLVSOcBP"]                                                    
-7koAf6aZgjO6TS7bipfPD0 | YO y TÚ             | 198153      | 1PxEMXkwLR7sfCMAuX50jM | 1           | ["3m5qlPf2OkihLz3dRYnkPA", "52iwsT98xCoGgiGntTiR7K", "7a0XAaPaK2aDSqa8p3QnC7"]
-1RmJJPvyMSszOQHJ4s03A2 | Call Me             | 171266      | 4C4NIZAWsm3DYkjXY0zkAQ | 3           | ["4fXkvh05wFhuH77MfD4m9o"]                                                    
-0d1NXkdvAOBICBtQHoMkVU | First Time Feeling  | 209693      | 49W5IODWwAo4qfZK0Mo3bP | 1           | ["19lQ2rJLlP71FOKESiMNJT"]                                                    
-64A1s4UbNdMlYSeyKnx8x9 | Lead Me Home        | 235586      | 6VgqRIhVmPYJwgacWQqhFU | 9           | ["21t0aavYGSGFkYYFhu6urk", "7euhIbMlHCCZYE1Xegaobf"]                          
-31Sr3l0OKMn5gG2A1toFpj | Love Again          | 144000      | 7xzCAh3ZbBJLt4MjgkgZ3j | 1           | ["48IWhckCqdKLfS7hFw20x5"]                                                    
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+id                     | name                  | duration_ms | album_id               | album_track | artists_ids               
+--------------------------------------------------------------------------------------------------------------------------------
+4MFOVDBBmO8n26BkYyMQwS | Paying It Forward     | 180286      | 142wQ3h6ZHW9OpXmkUrqQT | 1           | ["1t3BkCQTMTGykNPpmj7drk"]
+3pFcYjsAJYQvh9z0PW5Trj | I'm a Man             | 399202      | 14aEtWUKVlV28aN9d41fsk | 1           | ["57cuW31G8gconw4l9iqOty"]
+49nSH320Ou3ud3K7zCRpwm | 3Am in Chicago        | 216786      | 7mz8dr05yN87xKPWIMMWwt | 2           | ["2GHXeEEol7BPT31flS6O1B"]
+49HP6PJCDdgVIaZMF6qHYg | Good Times            | 243133      | 2smg61fQVg6eoY05xZLDu5 | 14          | ["21t0aavYGSGFkYYFhu6urk"]
+43W4M7GNQaWS2l7b5oQhvA | Sweet Little Caroline | 194458      | 1D5q1fkeVkuZil5oEpL4eX | 1           | ["0YnrslYN9hfy5ZRCQUjMMt"]
+3Nk9yaiSMhy7Q2cXZR1Ub8 | Warning Sign          | 167360      | 0dqLNntNSkqFh75FygLo9g | 4           | ["3u7WZTVUhTgjSKrlqzPfs9"]
+7E5aHZyDDSwaWEN0XYhaB8 | Sushi and Coca-Cola   | 157414      | 6EkqdSW6mNa7c7aCKbWJ38 | 1           | ["4fXkvh05wFhuH77MfD4m9o"]
+3Mq1893rCZ4X4DHPB4hsYw | PLAYA                 | 120058      | 6ubZGjLKzO2r6ZOnkDD3Ed | 1           | ["1NrFTpkB0RvbVLYl0p5Xvc"]
+1b1BAJVx84Co1kOzRFHLBp | Good Enough           | 263706      | 14F2ULfLbQjPWBdGLuBGYF | 1           | ["21t0aavYGSGFkYYFhu6urk"]
+08vwlRF7HBspGUsvzOR7L9 | Good to be Here       | 195707      | 3A4MXh4o3DG3B2do5UghrP | 11          | ["0GUFrEry7OHxPMcpjPH9lQ"]
+--------------------------------------------------------------------------------------------------------------------------------
