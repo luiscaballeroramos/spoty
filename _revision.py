@@ -1,4 +1,3 @@
-import sqlite3
 from config import DBSCHEMA_LISTENINGEVENT
 from register.dbtools import check_table_schema, generate_schema, review_table_byschema
 
@@ -14,6 +13,7 @@ def review_schema(db_path="spotify.db", old_table="listening_events"):
 
 
 if __name__ == "__main__":
+    print("[LEGACY] _revision.py is SQLite-only and does not operate on PostgreSQL.")
     # check schema
     check_schema()
     # review table's schema

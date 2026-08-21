@@ -1,6 +1,12 @@
 from typing import List, Optional
 import json
 
+
+def _bool_to_int(value: Optional[bool]) -> Optional[int]:
+    if value is None:
+        return None
+    return int(value)
+
 class Track:
     def __init__(self,
                  id: str,
@@ -85,7 +91,7 @@ class Track:
                 "acousticness": acousticness if acousticness is not None else self.acousticness,
                 "danceability": danceability if danceability is not None else self.danceability,
                 "energy": energy if energy is not None else self.energy,
-                "explicit": explicit if explicit is not None else self.explicit,
+                "explicit": _bool_to_int(explicit) if explicit is not None else _bool_to_int(self.explicit),
                 "genres": json.dumps(genres) if genres is not None else json.dumps(self.genres),
                 "images": json.dumps(images) if images is not None else json.dumps(self.images),
                 "instrumentalness": instrumentalness if instrumentalness is not None else self.instrumentalness,
@@ -111,7 +117,7 @@ class Track:
             "acousticness": self.acousticness,
             "danceability": self.danceability,
             "energy": self.energy,
-            "explicit": self.explicit,
+            "explicit": _bool_to_int(self.explicit),
             "genres": json.dumps(self.genres),
             "images": json.dumps(self.images),
             "instrumentalness": self.instrumentalness,

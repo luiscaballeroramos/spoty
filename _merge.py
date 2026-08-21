@@ -1,9 +1,9 @@
 import os
-import sqlite3
 
 from register.dbtools import compare_schemas, create_db, list_dbfiles, merge_databases, print_dbsummary
 
 def main(path='', merge = False):
+    print("[LEGACY] _merge.py is SQLite-only and does not operate on PostgreSQL.")
     if path == '':
         path = "."
 
