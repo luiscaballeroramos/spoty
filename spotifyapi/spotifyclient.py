@@ -1,19 +1,28 @@
+import os
+
 import spotipy
+from spotipy.oauth2 import SpotifyOAuth
 
 from config import CLIENT_ID, CLIENT_SECRET, REDIRECT_URI, VERBOSE
 from register.artist import Artist
-from spotipy.oauth2 import SpotifyOAuth
 
 
 class SpotifyClient:
     def __init__(self):
+        refresh_token = os.getenv("SPOTIFY_REFRESH_TOKEN")
+
+        oauth_kwargs = {
+            "client_id": CLIENT_ID,
+            "client_secret": CLIENT_SECRET,
+            "redirect_uri": REDIRECT_URI,
+            "scope": "user-read-playback-state user-read-recently-played user-library-read",
+        }
+
+        if refresh_token:
+            oauth_kwargs["refresh_token"] = refresh_token
+
         self.sp = spotipy.Spotify(
-            auth_manager=SpotifyOAuth(
-                client_id=CLIENT_ID,
-                client_secret=CLIENT_SECRET,
-                redirect_uri=REDIRECT_URI,
-                scope="user-read-playback-state user-read-recently-played user-library-read",
-            ),
+            auth_manager=SpotifyOAuth(**oauth_kwargs),
             requests_timeout=20,
             retries=2,
             status_retries=2,
@@ -28,8 +37,8 @@ class SpotifyClient:
     def get_artists_bytrackid(self, track_id: str):
         track = self.sp.track(track_id)
         artists = []
-        # Adjusted to handle the structure of the Spotify API response
-        if "artists" in track:  # Removed 'track' key assumption
+
+        if "artists" in track:
             for artist in track["artists"]:
                 artist_info = self.sp.artist(artist["id"])
                 images = (
@@ -38,8 +47,13 @@ class SpotifyClient:
                     else []
                 )
                 artists.append(
-                    Artist(id=artist["id"], name=artist_info["name"], images=images)
+                    Artist(
+                        id=artist["id"],
+                        name=artist_info["name"],
+                        images=images,
+                    )
                 )
+
         return artists
 
     def get_track_byid(self, track_id: str):
@@ -56,7 +70,7 @@ class SpotifyClient:
     def get_currently_playing(self):
         try:
             return self.sp.currently_playing()
-        except:
+        except Exception:
             print("Error in SpotifyClient.get_currently_playing") if VERBOSE else None
             return None
 
@@ -64,7 +78,11 @@ class SpotifyClient:
         try:
             return self.sp.current_user_recently_played(limit=limit)
         except Exception as exc:
-            print(f"Error in SpotifyClient.get_recently_played: {exc}") if VERBOSE else None
+            (
+                print(f"Error in SpotifyClient.get_recently_played: {exc}")
+                if VERBOSE
+                else None
+            )
             return None
 
     def get_liked_songs(self, limit=20, offset=0):
