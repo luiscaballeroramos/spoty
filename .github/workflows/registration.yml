@@ -10,7 +10,7 @@ on:
       - '.github/workflows/registration.yml'
 
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "*/10 * * * *"
 
 jobs:
   registration:
