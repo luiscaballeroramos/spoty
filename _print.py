@@ -6,19 +6,6 @@ from register.db import SimpleDB
 from spotifyapi.spotifyclient import SpotifyClient
 
 
-def _print_all_properties(obj: Any, prefix: str = "") -> None:
-    if isinstance(obj, dict):
-        for key, value in obj.items():
-            path = f"{prefix}.{key}" if prefix else str(key)
-            print(path)
-            _print_all_properties(value, path)
-    elif isinstance(obj, list):
-        for i, item in enumerate(obj):
-            path = f"{prefix}[{i}]"
-            print(path)
-            _print_all_properties(item, path)
-
-
 def _print_as_tree(
     obj: Any, indent: int = 0, prefix: str = "", is_last: bool = True
 ) -> None:
