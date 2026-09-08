@@ -1,2 +1,4 @@
 spotipy
 psycopg[binary]
+pandas
+streamlit
