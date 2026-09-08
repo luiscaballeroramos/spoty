@@ -56,6 +56,26 @@ class SimpleDB:
         self.cursor.execute(query, (id,))
         return self.cursor.fetchone() is not None
 
+    def get_all_ids(self, table: str, id_column: str = "id") -> list[str]:
+        query = sql.SQL("SELECT {} FROM {}").format(
+            sql.Identifier(id_column), sql.Identifier(table)
+        )
+        self.cursor.execute(query)
+        rows = self.cursor.fetchall()
+        return [row[id_column] for row in rows]
+
+    def delete_ids(self, table: str, ids: list[str]) -> int:
+        if not ids:
+            return 0
+
+        placeholders = sql.SQL(", ").join(sql.Placeholder() for _ in ids)
+        query = sql.SQL("DELETE FROM {} WHERE id IN ({})").format(
+            sql.Identifier(table), placeholders
+        )
+        self.cursor.execute(query, ids)
+        self.conn.commit()
+        return self.cursor.rowcount
+
     def edit(
         self,
         table: str,
