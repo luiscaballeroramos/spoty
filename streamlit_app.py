@@ -1,4 +1,5 @@
 import json
+import os
 import threading
 from datetime import timedelta, timezone
 
@@ -6,6 +7,25 @@ import pandas as pd
 import streamlit as st
 from psycopg import connect
 from psycopg.rows import dict_row
+
+
+def load_streamlit_secrets_to_env():
+    try:
+        secrets = st.secrets
+    except Exception:
+        return
+
+    neon_url = None
+    try:
+        neon_url = secrets["connections"]["neon"]["url"]
+    except Exception:
+        neon_url = None
+
+    if neon_url:
+        os.environ.setdefault("DATABASE_URL", str(neon_url))
+
+
+load_streamlit_secrets_to_env()
 
 from config import DATABASE_URL
 
