@@ -20,7 +20,12 @@ class SpotifyClient:
                     client_id=CLIENT_ID,
                     client_secret=CLIENT_SECRET,
                     redirect_uri=REDIRECT_URI,
-                    scope="user-read-playback-state user-read-recently-played user-library-read",
+                    scope=
+                    "user-read-playback-state " \
+                    "user-modify-playback-state " \
+                    "user-read-recently-played " \
+                    "user-library-read " \
+                    "user-library-modify"
                 ),
                 requests_timeout=20,
                 retries=2,
