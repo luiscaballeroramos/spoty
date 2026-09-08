@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spoty"
+version = "0.1.0"
+description = "Spotify tracker that stores listening data in PostgreSQL."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "spotipy",
+    "psycopg[binary]",
+]
+
+[project.scripts]
+spoty-register = "_registration:register_listeningevents"
+spoty-currently-playing = "_currently_playing:main"
+spoty-sync-liked = "_liked_tracks:save_liked_track_ids"
+spoty-print-summary = "_print_summary:print_database_summary"
+spoty-print-liked = "_print:print_liked_tracks"
+
+[tool.setuptools]
+py-modules = [
+    "config",
+    "_registration",
+    "_currently_playing",
+    "_liked_tracks",
+    "_missing_data",
+    "_print",
+    "_print_summary",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["register*", "spotifyapi*"]
+namespaces = true
