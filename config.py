@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-from urllib.parse import quote_plus
 
 
 def _load_env_file() -> None:
@@ -53,21 +52,13 @@ if not CLIENT_ID or not CLIENT_SECRET:
 
 UTC_OFFSET = "+02:00"  # Adjust this if you want to store times in a specific timezone instead of UTC
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+
 if not DATABASE_URL:
-    pg_host = os.getenv("PGHOST", "127.0.0.1")
-    pg_port = os.getenv("PGPORT", "5432")
-    pg_database = os.getenv("PGDATABASE", "spoty")
-    pg_user = os.getenv("PGUSER", "postgres")
-    pg_password = os.getenv("PGPASSWORD", "postgres")
-    pg_sslmode = os.getenv("PGSSLMODE")
-    if not pg_sslmode and pg_host.endswith(".neon.tech"):
-        pg_sslmode = "require"
-    ssl_query = f"?sslmode={quote_plus(pg_sslmode)}" if pg_sslmode else ""
-    DATABASE_URL = (
-        f"postgresql://{quote_plus(pg_user)}:{quote_plus(pg_password)}"
-        f"@{pg_host}:{pg_port}/{pg_database}{ssl_query}"
-    )
+    raise ValueError("Missing DATABASE_URL.")
+
+if ".neon.tech" not in DATABASE_URL:
+    raise ValueError("DATABASE_URL must be a Neon URL.")
 
 # Backward-compatible alias used by existing scripts.
 DBNAME = DATABASE_URL
