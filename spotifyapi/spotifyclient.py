@@ -31,6 +31,10 @@ def _create_oauth_manager() -> SpotifyOAuth:
     )
 
 
+def get_oauth_manager() -> SpotifyOAuth:
+    return _create_oauth_manager()
+
+
 def has_cached_oauth_token() -> bool:
     try:
         oauth_manager = _create_oauth_manager()
