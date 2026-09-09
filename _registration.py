@@ -17,6 +17,7 @@ def register_listeningevents():
     inserted_albums = 0
     inserted_artists = 0
     inserted_listening_events = 0
+    skipped_existing_listening_events = 0
     fetched_items = 0
 
     print("Starting Spotify tracker (single run)...")
@@ -34,10 +35,38 @@ def register_listeningevents():
     print(f"Spotify API response received in {elapsed:.2f}s") if VERBOSE else None
     if recently_played and "items" in recently_played:
         fetched_items = len(recently_played["items"])
+        candidate_events = []
+
         for item in recently_played["items"]:
+            track_id = (item.get("track") or {}).get("id")
+            played_at = item.get("played_at")
+
+            if not track_id or not played_at:
+                continue
+
+            date = datetime.fromisoformat(played_at.replace("Z", UTC_OFFSET))
+            played_at_ts = int(date.timestamp())
+            candidate_events.append((item, track_id, date, played_at_ts))
+
+        existing_event_keys = set()
+        if candidate_events:
+            track_ids = list({track_id for _, track_id, _, _ in candidate_events})
+            played_at_values = [played_at_ts for _, _, _, played_at_ts in candidate_events]
+            existing_event_keys = db.get_listening_event_keys(
+                track_ids=track_ids,
+                min_played_at=min(played_at_values),
+                max_played_at=max(played_at_values),
+            )
+
+        for item, track_id, date, played_at_ts in candidate_events:
+            event_key = (track_id, played_at_ts)
+
+            if event_key in existing_event_keys:
+                skipped_existing_listening_events += 1
+                continue
+
             # track
             track = item["track"]
-            track_id = track["id"]
             track_name = track["name"]
             track_duration_ms = track["duration_ms"]
             track_album_id = track["album"]["id"]
@@ -81,24 +110,31 @@ def register_listeningevents():
             if _album.save(db, print_only_insert=True):
                 inserted_albums += 1
             # artists
-            artists = []
             for artist in track["artists"] + album["artists"]:
                 artist_id = artist["id"]
                 artist_name = artist["name"]
                 _artist = Artist(id=artist_id, name=artist_name)
-                artists.append(_artist)
                 # print(f'Save ARTIST: {artist_name} ({artist_id})') if VERBOSE else None
                 if _artist.save(db, print_only_insert=True):
                     inserted_artists += 1
             # event
-            date = datetime.fromisoformat(item["played_at"].replace("Z", UTC_OFFSET))
-            context_uri = item["context"]["uri"] if item["context"] else None
+            context = item.get("context") or {}
+            context_uri = context.get("uri")
             event = ListeningEvent(
                 track_id=track_id, played_at=date, context_uri=context_uri
             )
             # print(f'Save LISTENING EVENT: {track_name} at {date}') if VERBOSE else None
             if event.save(db, print_only_insert=True):
                 inserted_listening_events += 1
+            existing_event_keys.add(event_key)
+
+        (
+            print(
+                f"Skipped {skipped_existing_listening_events} listening events already stored"
+            )
+            if VERBOSE
+            else None
+        )
     else:
         print("No recently played items received.") if VERBOSE else None
     # get missing metadata for tracks in listening_events that are not in tracks table
@@ -111,6 +147,7 @@ def register_listeningevents():
         "inserted_albums": inserted_albums,
         "inserted_artists": inserted_artists,
         "inserted_listening_events": inserted_listening_events,
+        "skipped_existing_listening_events": skipped_existing_listening_events,
     }
 
 

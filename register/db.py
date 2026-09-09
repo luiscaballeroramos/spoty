@@ -64,6 +64,25 @@ class SimpleDB:
         rows = self.cursor.fetchall()
         return [row[id_column] for row in rows]
 
+    def get_listening_event_keys(
+        self,
+        track_ids: list[str],
+        min_played_at: int,
+        max_played_at: int,
+    ) -> set[tuple[str, int]]:
+        if not track_ids:
+            return set()
+
+        query = """
+            SELECT track_id, played_at
+            FROM listening_events
+            WHERE played_at BETWEEN %s AND %s
+              AND track_id = ANY(%s)
+        """
+        self.cursor.execute(query, (min_played_at, max_played_at, track_ids))
+        rows = self.cursor.fetchall()
+        return {(row["track_id"], int(row["played_at"])) for row in rows}
+
     def delete_ids(self, table: str, ids: list[str]) -> int:
         if not ids:
             return 0
