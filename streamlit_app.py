@@ -1,6 +1,5 @@
 import json
 import os
-import threading
 from datetime import timedelta, timezone
 
 import pandas as pd
@@ -42,32 +41,6 @@ st.set_page_config(
 )
 
 register_listeningevents = None
-registration_running = False
-
-
-def _run_registration_task():
-    global registration_running
-
-    try:
-        register_function = get_register_listeningevents()
-        if register_function is None:
-            raise RuntimeError("No se pudo importar la función de registro del repo.")
-
-        register_function()
-    finally:
-        registration_running = False
-
-
-def start_registration():
-    global registration_running
-
-    if registration_running:
-        return
-
-    registration_running = True
-
-    thread = threading.Thread(target=_run_registration_task, daemon=True)
-    thread.start()
 
 
 def get_register_listeningevents():
@@ -83,6 +56,76 @@ def get_register_listeningevents():
 
     register_listeningevents = imported_function
     return register_listeningevents
+
+
+def has_spotify_auth_available() -> bool:
+    if os.getenv("SPOTIFY_REFRESH_TOKEN", "").strip():
+        return True
+
+    try:
+        from spotifyapi.spotifyclient import has_cached_oauth_token
+    except Exception:
+        return False
+
+    return has_cached_oauth_token()
+
+
+def run_registration_with_feedback():
+    register_function = get_register_listeningevents()
+
+    if register_function is None:
+        st.session_state["registration_feedback"] = {
+            "type": "error",
+            "message": "No se pudo importar la función de registro del repo.",
+        }
+        return
+
+    try:
+        with st.spinner("Actualizando datos desde Spotify..."):
+            summary = register_function() or {}
+    except Exception as exc:
+        st.session_state["registration_feedback"] = {
+            "type": "error",
+            "message": f"Actualización fallida: {exc}",
+        }
+        return
+
+    fetched_items = summary.get("fetched_items")
+    inserted_events = summary.get("inserted_listening_events")
+
+    if isinstance(fetched_items, int) and isinstance(inserted_events, int):
+        st.session_state["registration_feedback"] = {
+            "type": "success",
+            "message": (
+                "Actualización completada. "
+                f"Elementos leídos: {fetched_items}. "
+                f"Listening events nuevos: {inserted_events}."
+            ),
+        }
+    else:
+        st.session_state["registration_feedback"] = {
+            "type": "success",
+            "message": "Actualización completada.",
+        }
+
+
+def render_registration_feedback():
+    feedback = st.session_state.get("registration_feedback")
+    if not feedback:
+        return
+
+    message = feedback.get("message")
+    feedback_type = feedback.get("type")
+
+    if not message:
+        return
+
+    if feedback_type == "error":
+        st.error(message)
+    elif feedback_type == "warning":
+        st.warning(message)
+    else:
+        st.success(message)
 
 
 LOCAL_TIMEZONE = timezone(timedelta(hours=4))
@@ -121,18 +164,27 @@ def get_image(images):
 @st.fragment(run_every="10s")
 def spotify_dashboard():
     register_function = get_register_listeningevents()
+    auth_available = has_spotify_auth_available()
+
+    render_registration_feedback()
 
     if register_function is None:
         st.caption(
             "Registro disponible solo si el repo está configurado correctamente."
         )
     else:
-        st.button(
+        if not auth_available:
+            st.warning(
+                "No hay sesión OAuth de Spotify disponible en cache. "
+                "Primero autoriza una vez para generar .cache."
+            )
+
+        if st.button(
             "↻ Actualizar",
             key="register_listeningevents",
-            disabled=registration_running,
-            on_click=start_registration,
-        )
+            disabled=not auth_available,
+        ):
+            run_registration_with_feedback()
 
     rows = query_database("""
         WITH track_stats AS (

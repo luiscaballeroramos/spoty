@@ -13,6 +13,12 @@ from spotifyapi.spotifyclient import SpotifyClient
 def register_listeningevents():
     spotify = SpotifyClient()
     db = SimpleDB(DBNAME)
+    inserted_tracks = 0
+    inserted_albums = 0
+    inserted_artists = 0
+    inserted_listening_events = 0
+    fetched_items = 0
+
     print("Starting Spotify tracker (single run)...")
     (
         print(
@@ -27,6 +33,7 @@ def register_listeningevents():
     elapsed = time.perf_counter() - start_fetch
     print(f"Spotify API response received in {elapsed:.2f}s") if VERBOSE else None
     if recently_played and "items" in recently_played:
+        fetched_items = len(recently_played["items"])
         for item in recently_played["items"]:
             # track
             track = item["track"]
@@ -47,7 +54,8 @@ def register_listeningevents():
                 explicit=track_explicit,
             )
             # print(f'Save TRACK: {track_name} ({track_id})') if VERBOSE else None
-            _track.save(db, print_only_insert=True)
+            if _track.save(db, print_only_insert=True):
+                inserted_tracks += 1
             # album
             album = track["album"]
             album_id = album["id"]
@@ -70,7 +78,8 @@ def register_listeningevents():
                 release_date_precision=album_release_date_precision,
             )
             # print(f'Save ALBUM: {album_name} ({album_id}) of year {_album.release_year}') if VERBOSE else None
-            _album.save(db, print_only_insert=True)
+            if _album.save(db, print_only_insert=True):
+                inserted_albums += 1
             # artists
             artists = []
             for artist in track["artists"] + album["artists"]:
@@ -79,7 +88,8 @@ def register_listeningevents():
                 _artist = Artist(id=artist_id, name=artist_name)
                 artists.append(_artist)
                 # print(f'Save ARTIST: {artist_name} ({artist_id})') if VERBOSE else None
-                _artist.save(db, print_only_insert=True)
+                if _artist.save(db, print_only_insert=True):
+                    inserted_artists += 1
             # event
             date = datetime.fromisoformat(item["played_at"].replace("Z", UTC_OFFSET))
             context_uri = item["context"]["uri"] if item["context"] else None
@@ -87,12 +97,21 @@ def register_listeningevents():
                 track_id=track_id, played_at=date, context_uri=context_uri
             )
             # print(f'Save LISTENING EVENT: {track_name} at {date}') if VERBOSE else None
-            event.save(db, print_only_insert=True)
+            if event.save(db, print_only_insert=True):
+                inserted_listening_events += 1
     else:
         print("No recently played items received.") if VERBOSE else None
     # get missing metadata for tracks in listening_events that are not in tracks table
     # get_missing_track_metadata(db, spotify, limit=1)
     print("Single run completed.")
+
+    return {
+        "fetched_items": fetched_items,
+        "inserted_tracks": inserted_tracks,
+        "inserted_albums": inserted_albums,
+        "inserted_artists": inserted_artists,
+        "inserted_listening_events": inserted_listening_events,
+    }
 
 
 if __name__ == "__main__":
