@@ -1,39 +1,56 @@
 import json
 import os
 from datetime import timedelta, timezone
-from urllib.parse import parse_qs, urlparse
 
 import pandas as pd
 import streamlit as st
 from psycopg import connect
 from psycopg.rows import dict_row
 
+LOCAL_TIMEZONE = timezone(timedelta(hours=4))
+
+
+# Load environment variables from Streamlit secrets if available
+# Database URL is expected to be in:
+# - st.secrets["DATABASE_URL"]
+# - st.secrets["connections"]["neon"]["url"]
 
 def load_streamlit_secrets_to_env():
     try:
         secrets = st.secrets
     except Exception:
         return
-
     database_url = None
     try:
         database_url = secrets["DATABASE_URL"]
     except Exception:
         database_url = None
-
     if not database_url:
         try:
             database_url = secrets["connections"]["neon"]["url"]
         except Exception:
             database_url = None
-
     if database_url:
         os.environ["DATABASE_URL"] = str(database_url).strip()
 
 
 load_streamlit_secrets_to_env()
 
-from config import DATABASE_URL, REDIRECT_URI
+from config import DATABASE_URL
+from spotifyapi.streamlit_auth import (
+    has_spotify_auth_available,
+    process_spotify_oauth_callback,
+    render_oauth_feedback,
+    render_spotify_authorization_section,
+)
+
+try:
+    from _registration import register_listeningevents
+except Exception as exc:
+    register_listeningevents = None
+    register_import_error = exc
+else:
+    register_import_error = None
 
 st.set_page_config(
     page_title="SPOTY",
@@ -41,221 +58,9 @@ st.set_page_config(
     layout="wide",
 )
 
-register_listeningevents = None
-
-
-def get_register_listeningevents():
-    global register_listeningevents
-
-    if register_listeningevents is not None:
-        return register_listeningevents
-
-    try:
-        from _registration import register_listeningevents as imported_function
-    except Exception:
-        return None
-
-    register_listeningevents = imported_function
-    return register_listeningevents
-
-
-def _get_query_param_value(name: str):
-    try:
-        value = st.query_params.get(name)
-    except Exception:
-        params = st.experimental_get_query_params()
-        value = params.get(name)
-
-    if isinstance(value, list):
-        return value[0] if value else None
-
-    return value
-
-
-def _clear_oauth_query_params() -> None:
-    try:
-        query_params = st.query_params
-        for key in ("code", "state", "error"):
-            if key in query_params:
-                del query_params[key]
-        return
-    except Exception:
-        pass
-
-
-def _extract_oauth_code_and_state(raw_callback: str):
-    value = (raw_callback or "").strip()
-    if not value:
-        return None, None
-
-    if value.startswith("http://") or value.startswith("https://"):
-        query_text = urlparse(value).query
-    elif "?" in value:
-        query_text = value.split("?", 1)[1]
-    else:
-        query_text = value
-
-    parsed = parse_qs(query_text)
-    oauth_code = parsed.get("code", [None])[0]
-    oauth_state = parsed.get("state", [None])[0]
-
-    if oauth_code:
-        return oauth_code, oauth_state
-
-    # Allow pasting only the authorization code.
-    return value, None
-
-
-def complete_spotify_oauth_authorization(oauth_code: str, oauth_state: str = None):
-    expected_state = st.session_state.get("spotify_oauth_state")
-    if expected_state and oauth_state and oauth_state != expected_state:
-        st.session_state["oauth_feedback"] = {
-            "type": "error",
-            "message": "El estado OAuth no coincide. Pulsa Autorizar Spotify de nuevo.",
-        }
-        st.session_state.pop("spotify_oauth_state", None)
-        return
-
-    try:
-        from spotifyapi.spotifyclient import get_oauth_manager
-
-        oauth_manager = get_oauth_manager()
-        token_info = oauth_manager.get_access_token(
-            code=oauth_code,
-            as_dict=True,
-            check_cache=False,
-        )
-        if not token_info:
-            raise RuntimeError("Spotify no devolvió un token válido.")
-    except Exception as exc:
-        st.session_state["oauth_feedback"] = {
-            "type": "error",
-            "message": f"No se pudo completar la autorización OAuth: {exc}",
-        }
-    else:
-        st.session_state["oauth_feedback"] = {
-            "type": "success",
-            "message": "Spotify autorizado correctamente. Ya puedes pulsar Actualizar.",
-        }
-        st.session_state["spotify_oauth_manual_callback"] = ""
-    finally:
-        st.session_state.pop("spotify_oauth_state", None)
-
-    try:
-        current = st.experimental_get_query_params()
-        current.pop("code", None)
-        current.pop("state", None)
-        current.pop("error", None)
-        st.experimental_set_query_params(**current)
-    except Exception:
-        pass
-
-
-def process_spotify_oauth_callback() -> None:
-    oauth_error = _get_query_param_value("error")
-    oauth_code = _get_query_param_value("code")
-    oauth_state = _get_query_param_value("state")
-
-    if not oauth_error and not oauth_code:
-        return
-
-    if oauth_error:
-        st.session_state["oauth_feedback"] = {
-            "type": "error",
-            "message": f"Spotify devolvió un error de autorización: {oauth_error}",
-        }
-        st.session_state.pop("spotify_oauth_state", None)
-        _clear_oauth_query_params()
-        return
-
-    complete_spotify_oauth_authorization(oauth_code, oauth_state)
-    _clear_oauth_query_params()
-
-
-def get_spotify_authorize_url():
-    try:
-        from spotifyapi.spotifyclient import get_oauth_manager
-
-        oauth_manager = get_oauth_manager()
-        state = st.session_state.get("spotify_oauth_state")
-        if not state:
-            state = os.urandom(16).hex()
-            st.session_state["spotify_oauth_state"] = state
-        return oauth_manager.get_authorize_url(state=state), None
-    except Exception as exc:
-        return None, str(exc)
-
-
-def render_oauth_feedback():
-    feedback = st.session_state.get("oauth_feedback")
-    if not feedback:
-        return
-
-    message = feedback.get("message")
-    feedback_type = feedback.get("type")
-
-    if not message:
-        return
-
-    if feedback_type == "error":
-        st.error(message)
-    elif feedback_type == "warning":
-        st.warning(message)
-    else:
-        st.success(message)
-
-
-def render_spotify_authorization_section() -> None:
-    authorize_url, auth_error = get_spotify_authorize_url()
-
-    if auth_error:
-        st.error(f"No se pudo iniciar OAuth de Spotify: {auth_error}")
-        return
-
-    st.markdown(f"[🔐 Autorizar Spotify]({authorize_url})")
-    st.caption(
-        "Tras autorizar, Spotify te redirige a esta app y se guardará el token en .cache. "
-        f"Redirect URI configurado: {REDIRECT_URI}"
-    )
-
-    st.caption(
-        "Si aparece ERR_CONNECTION_REFUSED en 127.0.0.1, copia la URL final del navegador "
-        "(la que contiene ?code=...) y pégala aquí para completar OAuth."
-    )
-
-    manual_callback = st.text_input(
-        "Callback OAuth (URL completa o solo code)",
-        key="spotify_oauth_manual_callback",
-        placeholder="http://127.0.0.1:8888/?code=...&state=...",
-    )
-
-    if st.button("Completar autorización", key="complete_spotify_oauth"):
-        oauth_code, oauth_state = _extract_oauth_code_and_state(manual_callback)
-        if not oauth_code:
-            st.session_state["oauth_feedback"] = {
-                "type": "error",
-                "message": "No se encontró el parámetro code en el callback pegado.",
-            }
-        else:
-            complete_spotify_oauth_authorization(oauth_code, oauth_state)
-
-
-def has_spotify_auth_available() -> bool:
-    if os.getenv("SPOTIFY_REFRESH_TOKEN", "").strip():
-        return True
-
-    try:
-        from spotifyapi.spotifyclient import has_cached_oauth_token
-    except Exception:
-        return False
-
-    return has_cached_oauth_token()
-
 
 def run_registration_with_feedback():
-    register_function = get_register_listeningevents()
-
-    if register_function is None:
+    if register_listeningevents is None:
         st.session_state["registration_feedback"] = {
             "type": "error",
             "message": "No se pudo importar la función de registro del repo.",
@@ -264,7 +69,7 @@ def run_registration_with_feedback():
 
     try:
         with st.spinner("Actualizando datos desde Spotify..."):
-            summary = register_function() or {}
+            summary = register_listeningevents() or {}
     except Exception as exc:
         st.session_state["registration_feedback"] = {
             "type": "error",
@@ -310,9 +115,6 @@ def render_registration_feedback():
         st.success(message)
 
 
-LOCAL_TIMEZONE = timezone(timedelta(hours=4))
-
-
 def query_database(query: str):
     with connect(DATABASE_URL, row_factory=dict_row) as conn:
         with conn.cursor() as cur:
@@ -345,16 +147,17 @@ def get_image(images):
 
 @st.fragment(run_every="10s")
 def spotify_dashboard():
-    register_function = get_register_listeningevents()
     auth_available = has_spotify_auth_available()
 
     render_oauth_feedback()
     render_registration_feedback()
 
-    if register_function is None:
+    if register_listeningevents is None:
         st.caption(
             "Registro disponible solo si el repo está configurado correctamente."
         )
+        if register_import_error:
+            st.caption(f"Detalle de importación: {register_import_error}")
     else:
         if not auth_available:
             st.warning(
