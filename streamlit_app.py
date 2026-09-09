@@ -15,14 +15,20 @@ def load_streamlit_secrets_to_env():
     except Exception:
         return
 
-    neon_url = None
+    database_url = None
     try:
-        neon_url = secrets["connections"]["neon"]["url"]
+        database_url = secrets["DATABASE_URL"]
     except Exception:
-        neon_url = None
+        database_url = None
 
-    if neon_url:
-        os.environ.setdefault("DATABASE_URL", str(neon_url))
+    if not database_url:
+        try:
+            database_url = secrets["connections"]["neon"]["url"]
+        except Exception:
+            database_url = None
+
+    if database_url:
+        os.environ["DATABASE_URL"] = str(database_url).strip()
 
 
 load_streamlit_secrets_to_env()
