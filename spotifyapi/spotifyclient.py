@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import requests
 import spotipy
@@ -8,25 +9,57 @@ from register.artist import Artist
 from spotipy.oauth2 import SpotifyOAuth
 
 
+SPOTIFY_SCOPE = (
+    "user-read-playback-state "
+    "user-modify-playback-state "
+    "user-read-recently-played "
+    "user-library-read "
+    "user-library-modify"
+)
+DEFAULT_CACHE_PATH = Path(__file__).resolve().parents[1] / ".cache"
+
+
+def _create_oauth_manager() -> SpotifyOAuth:
+    cache_path = os.getenv("SPOTIPY_CACHE_PATH", "").strip() or str(DEFAULT_CACHE_PATH)
+    return SpotifyOAuth(
+        client_id=CLIENT_ID,
+        client_secret=CLIENT_SECRET,
+        redirect_uri=REDIRECT_URI,
+        scope=SPOTIFY_SCOPE,
+        cache_path=cache_path,
+        open_browser=False,
+    )
+
+
+def has_cached_oauth_token() -> bool:
+    try:
+        oauth_manager = _create_oauth_manager()
+        token_info = oauth_manager.cache_handler.get_cached_token()
+        valid_token = oauth_manager.validate_token(token_info) if token_info else None
+        return bool(valid_token)
+    except Exception:
+        return False
+
+
 class SpotifyClient:
     def __init__(self):
-        refresh_token = os.getenv("SPOTIFY_REFRESH_TOKEN")
+        refresh_token = os.getenv("SPOTIFY_REFRESH_TOKEN", "").strip()
 
         if refresh_token:
             self.sp = self._create_client_from_refresh_token(refresh_token)
         else:
+            oauth_manager = _create_oauth_manager()
+            token_info = oauth_manager.cache_handler.get_cached_token()
+            valid_token = oauth_manager.validate_token(token_info) if token_info else None
+
+            if not valid_token:
+                raise RuntimeError(
+                    "No hay token OAuth de Spotify disponible en cache. "
+                    "Autoriza una vez para generar el archivo .cache."
+                )
+
             self.sp = spotipy.Spotify(
-                auth_manager=SpotifyOAuth(
-                    client_id=CLIENT_ID,
-                    client_secret=CLIENT_SECRET,
-                    redirect_uri=REDIRECT_URI,
-                    scope=
-                    "user-read-playback-state " \
-                    "user-modify-playback-state " \
-                    "user-read-recently-played " \
-                    "user-library-read " \
-                    "user-library-modify"
-                ),
+                auth_manager=oauth_manager,
                 requests_timeout=20,
                 retries=2,
                 status_retries=2,
