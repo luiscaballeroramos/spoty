@@ -1,6 +1,7 @@
 import json
 import os
 from datetime import timedelta, timezone
+from urllib.parse import parse_qs, urlparse
 
 import pandas as pd
 import streamlit as st
@@ -81,32 +82,31 @@ def _clear_oauth_query_params() -> None:
     except Exception:
         pass
 
-    try:
-        current = st.experimental_get_query_params()
-        current.pop("code", None)
-        current.pop("state", None)
-        current.pop("error", None)
-        st.experimental_set_query_params(**current)
-    except Exception:
-        pass
+
+def _extract_oauth_code_and_state(raw_callback: str):
+    value = (raw_callback or "").strip()
+    if not value:
+        return None, None
+
+    if value.startswith("http://") or value.startswith("https://"):
+        query_text = urlparse(value).query
+    elif "?" in value:
+        query_text = value.split("?", 1)[1]
+    else:
+        query_text = value
+
+    parsed = parse_qs(query_text)
+    oauth_code = parsed.get("code", [None])[0]
+    oauth_state = parsed.get("state", [None])[0]
+
+    if oauth_code:
+        return oauth_code, oauth_state
+
+    # Allow pasting only the authorization code.
+    return value, None
 
 
-def process_spotify_oauth_callback() -> None:
-    oauth_error = _get_query_param_value("error")
-    oauth_code = _get_query_param_value("code")
-    oauth_state = _get_query_param_value("state")
-
-    if not oauth_error and not oauth_code:
-        return
-
-    if oauth_error:
-        st.session_state["oauth_feedback"] = {
-            "type": "error",
-            "message": f"Spotify devolvió un error de autorización: {oauth_error}",
-        }
-        _clear_oauth_query_params()
-        return
-
+def complete_spotify_oauth_authorization(oauth_code: str, oauth_state: str = None):
     expected_state = st.session_state.get("spotify_oauth_state")
     if expected_state and oauth_state and oauth_state != expected_state:
         st.session_state["oauth_feedback"] = {
@@ -114,7 +114,6 @@ def process_spotify_oauth_callback() -> None:
             "message": "El estado OAuth no coincide. Pulsa Autorizar Spotify de nuevo.",
         }
         st.session_state.pop("spotify_oauth_state", None)
-        _clear_oauth_query_params()
         return
 
     try:
@@ -138,9 +137,39 @@ def process_spotify_oauth_callback() -> None:
             "type": "success",
             "message": "Spotify autorizado correctamente. Ya puedes pulsar Actualizar.",
         }
+        st.session_state["spotify_oauth_manual_callback"] = ""
     finally:
         st.session_state.pop("spotify_oauth_state", None)
+
+    try:
+        current = st.experimental_get_query_params()
+        current.pop("code", None)
+        current.pop("state", None)
+        current.pop("error", None)
+        st.experimental_set_query_params(**current)
+    except Exception:
+        pass
+
+
+def process_spotify_oauth_callback() -> None:
+    oauth_error = _get_query_param_value("error")
+    oauth_code = _get_query_param_value("code")
+    oauth_state = _get_query_param_value("state")
+
+    if not oauth_error and not oauth_code:
+        return
+
+    if oauth_error:
+        st.session_state["oauth_feedback"] = {
+            "type": "error",
+            "message": f"Spotify devolvió un error de autorización: {oauth_error}",
+        }
+        st.session_state.pop("spotify_oauth_state", None)
         _clear_oauth_query_params()
+        return
+
+    complete_spotify_oauth_authorization(oauth_code, oauth_state)
+    _clear_oauth_query_params()
 
 
 def get_spotify_authorize_url():
@@ -188,6 +217,27 @@ def render_spotify_authorization_section() -> None:
         "Tras autorizar, Spotify te redirige a esta app y se guardará el token en .cache. "
         f"Redirect URI configurado: {REDIRECT_URI}"
     )
+
+    st.caption(
+        "Si aparece ERR_CONNECTION_REFUSED en 127.0.0.1, copia la URL final del navegador "
+        "(la que contiene ?code=...) y pégala aquí para completar OAuth."
+    )
+
+    manual_callback = st.text_input(
+        "Callback OAuth (URL completa o solo code)",
+        key="spotify_oauth_manual_callback",
+        placeholder="http://127.0.0.1:8888/?code=...&state=...",
+    )
+
+    if st.button("Completar autorización", key="complete_spotify_oauth"):
+        oauth_code, oauth_state = _extract_oauth_code_and_state(manual_callback)
+        if not oauth_code:
+            st.session_state["oauth_feedback"] = {
+                "type": "error",
+                "message": "No se encontró el parámetro code en el callback pegado.",
+            }
+        else:
+            complete_spotify_oauth_authorization(oauth_code, oauth_state)
 
 
 def has_spotify_auth_available() -> bool:
