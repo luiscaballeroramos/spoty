@@ -24,4 +24,4 @@ DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/spoty
 streamlit
 F12
 Toogle device toolba (ctrl+shift+M)
-375x765(812-47) there is a white band on top of 47 pixels
+375x765(812-47-34) there is a white band on top of 47 pixels, and a space lost on the bottom of 34 pixels
