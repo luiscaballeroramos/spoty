@@ -40,6 +40,19 @@ st.set_page_config(
     layout="wide",
 )
 
+st.markdown(
+    """
+    <style>
+    [data-testid="stHeader"],
+    [data-testid="stDecoration"],
+    [data-testid="stToolbar"] {
+        display: none !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 PAGE_HOME = "home"
 PAGE_SUMMARY = "summary"
 PAGE_REPRODUCTION = "reproduction"

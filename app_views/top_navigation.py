@@ -10,6 +10,27 @@ def render_top_navigation(
     st.markdown(
         """
         <style>
+        [data-testid="stMainBlockContainer"] {
+            padding-top: 0 !important;
+        }
+
+        [data-testid="stElementContainer"]:has(.st-key-top-navigation),
+        .st-key-top-navigation,
+        .st-key-top-navigation [data-testid="stHorizontalBlock"],
+        .st-key-top-navigation [data-testid="stElementContainer"] {
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+        }
+
+        [data-testid="stVerticalBlock"]:has(.st-key-top-navigation),
+        .st-key-top-navigation [data-testid="stVerticalBlock"] {
+            gap: 0 !important;
+        }
+
+        .st-key-top-navigation [data-testid="stHorizontalBlock"] {
+            row-gap: 0 !important;
+        }
+
         div[data-testid="stHorizontalBlock"]:has(button[kind="secondary"]) button[kind="secondary"] {
             font-size: 1.5rem;
             min-height: 2.6rem;
@@ -38,35 +59,36 @@ def render_top_navigation(
         unsafe_allow_html=True,
     )
 
-    col_home, col_summary, col_reproduction = st.columns(3, gap=None)
+    with st.container(key="top-navigation"):
+        col_home, col_summary, col_reproduction = st.columns(3, gap=None)
 
-    with col_home:
-        if st.button(
-            "🏠 Inicio",
-            key="top_nav_home",
-            help="Inicio",
-            type="secondary",
-            use_container_width=True,
-        ):
-            on_home_click()
+        with col_home:
+            if st.button(
+                "🏠 Inicio",
+                key="top_nav_home",
+                help="Inicio",
+                type="secondary",
+                use_container_width=True,
+            ):
+                on_home_click()
 
-    with col_summary:
-        if st.button(
-            "📊 Summary",
-            key="top_nav_summary",
-            help="Summary",
-            type="secondary",
-            use_container_width=True,
-        ):
-            on_summary_click()
+        with col_summary:
+            if st.button(
+                "📊 Summary",
+                key="top_nav_summary",
+                help="Summary",
+                type="secondary",
+                use_container_width=True,
+            ):
+                on_summary_click()
 
-    with col_reproduction:
-        if st.button(
-            "⏯️ Reproducción",
-            key="top_nav_reproduction",
-            help="Reproduction",
-            type="secondary",
-            use_container_width=True,
-        ):
-            on_reproduction_click()
+        with col_reproduction:
+            if st.button(
+                "⏯️ Reproducción",
+                key="top_nav_reproduction",
+                help="Reproduction",
+                type="secondary",
+                use_container_width=True,
+            ):
+                on_reproduction_click()
 
