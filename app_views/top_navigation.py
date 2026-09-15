@@ -38,35 +38,35 @@ def render_top_navigation(
         unsafe_allow_html=True,
     )
 
-    col_home, col_summary, col_reproduction = st.columns(3, gap="small")
+    col_home, col_summary, col_reproduction = st.columns(3, gap=None)
 
     with col_home:
         if st.button(
-            "🏠",
+            "🏠 Inicio",
             key="top_nav_home",
             help="Inicio",
+            type="secondary",
             use_container_width=True,
-            disabled=current_page == "home",
         ):
             on_home_click()
 
     with col_summary:
         if st.button(
-            "📊",
+            "📊 Summary",
             key="top_nav_summary",
             help="Summary",
+            type="secondary",
             use_container_width=True,
-            disabled=current_page == "summary",
         ):
             on_summary_click()
 
     with col_reproduction:
         if st.button(
-            "⏯️",
+            "⏯️ Reproducción",
             key="top_nav_reproduction",
             help="Reproduction",
+            type="secondary",
             use_container_width=True,
-            disabled=current_page == "reproduction",
         ):
             on_reproduction_click()
 
