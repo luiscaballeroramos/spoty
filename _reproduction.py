@@ -1,7 +1,8 @@
 import time
 from typing import Any
 
-from config import VERBOSE
+from config import DBNAME, VERBOSE
+from register.db import SimpleDB
 from spotifyapi.spotifyclient import SpotifyClient
 
 
@@ -121,7 +122,7 @@ def _get_queue() -> dict[str, Any] | None:
 
 
 def _like_track(track_id: str) -> bool:
-    """Save a track in the current user's library."""
+    """Save a track in the user's Spotify library and local database."""
     if not track_id or not track_id.strip():
         if VERBOSE:
             print("track_id is required")
@@ -130,6 +131,8 @@ def _like_track(track_id: str) -> bool:
     try:
         client = SpotifyClient()
         client.sp.current_user_saved_tracks_add([track_id])
+        db = SimpleDB(DBNAME)
+        db.insert("liked_tracks", {"id": track_id}, print_only_insert=True)
         return True
     except Exception as exc:
         _log_error(f"like track {track_id}", exc)
@@ -137,7 +140,7 @@ def _like_track(track_id: str) -> bool:
 
 
 def _unlike_track(track_id: str) -> bool:
-    """Remove a track from the current user's library."""
+    """Remove a track from the user's Spotify library and local database."""
     if not track_id or not track_id.strip():
         if VERBOSE:
             print("track_id is required")
@@ -146,6 +149,8 @@ def _unlike_track(track_id: str) -> bool:
     try:
         client = SpotifyClient()
         client.sp.current_user_saved_tracks_delete([track_id])
+        db = SimpleDB(DBNAME)
+        db.delete_ids("liked_tracks", [track_id])
         return True
     except Exception as exc:
         _log_error(f"unlike track {track_id}", exc)
