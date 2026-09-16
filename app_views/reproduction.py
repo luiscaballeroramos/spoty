@@ -19,6 +19,24 @@ from spotifyapi.streamlit_auth import (
 )
 
 
+PLAYBACK_REFRESH_MARGIN_MS = 2_000
+
+
+def _has_reached_track_refresh_window(playback: dict) -> bool:
+    if not playback.get("is_playing"):
+        return False
+
+    item = playback.get("item") or {}
+    progress_ms = playback.get("progress_ms")
+    duration_ms = item.get("duration_ms")
+    if not isinstance(progress_ms, (int, float)) or not isinstance(
+        duration_ms, (int, float)
+    ):
+        return False
+
+    return progress_ms + PLAYBACK_REFRESH_MARGIN_MS >= duration_ms
+
+
 def _render_playback_controls(
     is_playing: bool, track_id: str | None, is_track_liked: bool
 ) -> None:
@@ -85,6 +103,7 @@ def _render_playback_controls(
                 st.error("No se pudo avanzar a la siguiente canción.")
 
 
+@st.fragment(run_every=1)
 def render_reproduction_page():
     st.markdown(
         """
@@ -239,6 +258,12 @@ def render_reproduction_page():
 
     item = playback.get("item") or {}
     track_id = item.get("id")
+    if _has_reached_track_refresh_window(playback):
+        refresh_key = (track_id, item.get("duration_ms"))
+        if st.session_state.get("reproduction_refresh_key") != refresh_key:
+            st.session_state["reproduction_refresh_key"] = refresh_key
+            st.rerun(scope="fragment")
+
     pending_library_action = st.session_state.get("pending_library_action") or {}
     is_current_track_pending = bool(
         track_id and pending_library_action.get("track_id") == track_id
