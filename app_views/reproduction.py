@@ -2,7 +2,16 @@ import json
 
 import streamlit as st
 
-from _reproduction import _get_current_playback, _next_track, _pause, _play, _previous_track
+from _reproduction import (
+    _get_current_playback,
+    _is_track_liked,
+    _like_track,
+    _next_track,
+    _pause,
+    _play,
+    _previous_track,
+    _unlike_track,
+)
 from spotifyapi.streamlit_auth import (
     has_spotify_auth_available,
     render_oauth_feedback,
@@ -10,7 +19,9 @@ from spotifyapi.streamlit_auth import (
 )
 
 
-def _render_playback_controls(is_playing: bool) -> None:
+def _render_playback_controls(
+    is_playing: bool, track_id: str | None, is_track_liked: bool
+) -> None:
     play_pause_label = ">||"
     play_pause_help = "Pausar" if is_playing else "Reproducir"
     play_pause_action = _pause if is_playing else _play
@@ -32,17 +43,35 @@ def _render_playback_controls(is_playing: bool) -> None:
                 st.error("No se pudo volver a la canción anterior.")
 
         with play_pause_col:
-            if st.button(
-                play_pause_label,
-                key="reproduction_play_pause",
-                type="primary",
-                help=play_pause_help,
-                use_container_width=True,
-            ):
-                if play_pause_action():
-                    st.rerun()
-                action_label = "pausar" if is_playing else "reanudar"
-                st.error(f"No se pudo {action_label} la reproducción.")
+            with st.container(key="reproduction-cover"):
+                if st.button(
+                    play_pause_label,
+                    key="reproduction_play_pause",
+                    type="primary",
+                    help=play_pause_help,
+                    use_container_width=True,
+                ):
+                    if play_pause_action():
+                        st.rerun()
+                    action_label = "pausar" if is_playing else "reanudar"
+                    st.error(f"No se pudo {action_label} la reproducción.")
+
+                if st.button(
+                    "♥" if is_track_liked else "♡",
+                    key="reproduction_corner_action",
+                    help=(
+                        "Retirar de Liked Songs"
+                        if is_track_liked
+                        else "Añadir a Liked Songs"
+                    ),
+                    disabled=not track_id,
+                ):
+                    if track_id:
+                        st.session_state["pending_library_action"] = {
+                            "track_id": track_id,
+                            "action": "unlike" if is_track_liked else "like",
+                        }
+                        st.rerun()
 
         with next_col:
             if st.button(
@@ -106,6 +135,9 @@ def render_reproduction_page():
             padding: 0 !important;
             min-height: 0;
         }
+        .st-key-reproduction-controls [data-testid="stVerticalBlock"]:has(> .st-key-reproduction_play_pause) {
+            position: relative !important;
+        }
         .st-key-reproduction-controls [data-testid="stHorizontalBlock"] > [data-testid="stVerticalBlock"] {
             display: flex;
             height: min(calc(100vh - 8.5rem), 32vw) !important;
@@ -167,6 +199,26 @@ def render_reproduction_page():
         .st-key-reproduction_next [data-testid="stTooltipHoverTarget"] {
             justify-content: center !important;
         }
+        .st-key-reproduction_corner_action {
+            position: absolute !important;
+            left: 0.75rem;
+            bottom: 0.75rem;
+            width: 3rem !important;
+            z-index: 2;
+        }
+        .st-key-reproduction_corner_action [data-testid="stButton"] button {
+            width: 3rem !important;
+            height: 3rem !important;
+            min-height: 3rem !important;
+            aspect-ratio: 1;
+            padding: 0 !important;
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.72) !important;
+            color: white !important;
+            font-size: 1.6rem !important;
+            opacity: 1 !important;
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -186,6 +238,15 @@ def render_reproduction_page():
     is_playing = bool(playback.get("is_playing"))
 
     item = playback.get("item") or {}
+    track_id = item.get("id")
+    pending_library_action = st.session_state.get("pending_library_action") or {}
+    is_current_track_pending = bool(
+        track_id and pending_library_action.get("track_id") == track_id
+    )
+    if is_current_track_pending:
+        is_track_liked = pending_library_action.get("action") == "like"
+    else:
+        is_track_liked = bool(track_id and _is_track_liked(track_id))
     track_name = item.get("name")
     artists = item.get("artists") or []
     artist_names = [artist.get("name") for artist in artists if artist.get("name")]
@@ -221,4 +282,30 @@ def render_reproduction_page():
     else:
         st.caption("No hay una pista activa en este momento.")
 
-    _render_playback_controls(is_playing=is_playing)
+    if st.session_state.pop("liked_track_saved", False):
+        st.toast("Canción añadida a Liked Songs y a la base de datos.")
+    if st.session_state.pop("liked_track_error", False):
+        st.error("No se pudo guardar la canción en Liked Songs.")
+    if st.session_state.pop("unliked_track_saved", False):
+        st.toast("Canción retirada de Liked Songs y de la base de datos.")
+    if st.session_state.pop("unliked_track_error", False):
+        st.error("No se pudo retirar la canción de Liked Songs.")
+
+    _render_playback_controls(
+        is_playing=is_playing,
+        track_id=track_id,
+        is_track_liked=is_track_liked,
+    )
+
+    pending_library_action = st.session_state.pop("pending_library_action", None)
+    if pending_library_action:
+        pending_track_id = pending_library_action["track_id"]
+        action = pending_library_action["action"]
+        action_succeeded = (
+            _like_track(pending_track_id)
+            if action == "like"
+            else _unlike_track(pending_track_id)
+        )
+        result_key = f"{'liked' if action == 'like' else 'unliked'}_track_{'saved' if action_succeeded else 'error'}"
+        st.session_state[result_key] = True
+        st.rerun()
