@@ -133,7 +133,7 @@ def get_spotify_authorize_url():
 
 
 def render_oauth_feedback():
-    feedback = st.session_state.get("oauth_feedback")
+    feedback = st.session_state.pop("oauth_feedback", None)
     if not feedback:
         return
 
@@ -143,12 +143,8 @@ def render_oauth_feedback():
     if not message:
         return
 
-    if feedback_type == "error":
-        st.error(message)
-    elif feedback_type == "warning":
-        st.warning(message)
-    else:
-        st.success(message)
+    icons = {"error": "❌", "warning": "⚠️", "success": "✅"}
+    st.toast(message, icon=icons.get(feedback_type, "ℹ️"))
 
 
 def render_spotify_authorization_section() -> None:

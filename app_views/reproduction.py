@@ -1,4 +1,5 @@
 import json
+import time
 
 import streamlit as st
 
@@ -20,6 +21,12 @@ from spotifyapi.streamlit_auth import (
 
 
 PLAYBACK_REFRESH_MARGIN_MS = 2_000
+PLAYBACK_FRAGMENT_INTERVAL_SECONDS = 1
+PLAYBACK_PAUSED_POLL_SECONDS = 5
+PLAYBACK_CONTROL_REFRESH_SECONDS = 4
+PLAYBACK_CACHE_KEY = "reproduction_playback_cache"
+PLAYBACK_FORCE_REFRESH_UNTIL_KEY = "reproduction_force_refresh_until"
+LIKED_CACHE_KEY = "reproduction_liked_cache"
 
 
 def _has_reached_track_refresh_window(playback: dict) -> bool:
@@ -35,6 +42,82 @@ def _has_reached_track_refresh_window(playback: dict) -> bool:
         return False
 
     return progress_ms + PLAYBACK_REFRESH_MARGIN_MS >= duration_ms
+
+
+def _copy_playback_with_estimated_progress(
+    playback: dict, fetched_at: float, now: float
+) -> dict:
+    estimated_playback = dict(playback)
+    if not playback.get("is_playing"):
+        return estimated_playback
+
+    item = playback.get("item") or {}
+    progress_ms = playback.get("progress_ms")
+    duration_ms = item.get("duration_ms")
+    if not isinstance(progress_ms, (int, float)) or not isinstance(
+        duration_ms, (int, float)
+    ):
+        return estimated_playback
+
+    elapsed_ms = (now - fetched_at) * 1000
+    estimated_playback["progress_ms"] = min(
+        int(progress_ms + elapsed_ms), int(duration_ms)
+    )
+    return estimated_playback
+
+
+def _get_playback() -> dict:
+    now = time.monotonic()
+    force_refresh_until = st.session_state.get(PLAYBACK_FORCE_REFRESH_UNTIL_KEY, 0)
+    should_force_refresh = now < force_refresh_until
+    if force_refresh_until and not should_force_refresh:
+        st.session_state.pop(PLAYBACK_FORCE_REFRESH_UNTIL_KEY, None)
+
+    cached = st.session_state.get(PLAYBACK_CACHE_KEY)
+    if cached and not should_force_refresh:
+        playback = cached["playback"]
+        item = playback.get("item") or {}
+        progress_ms = playback.get("progress_ms")
+        duration_ms = item.get("duration_ms")
+        elapsed_ms = (now - cached["fetched_at"]) * 1000
+
+        if not playback.get("is_playing"):
+            if elapsed_ms < PLAYBACK_PAUSED_POLL_SECONDS * 1000:
+                return playback
+        elif (
+            isinstance(progress_ms, (int, float))
+            and isinstance(duration_ms, (int, float))
+            and progress_ms + elapsed_ms < duration_ms + PLAYBACK_REFRESH_MARGIN_MS
+        ):
+            return _copy_playback_with_estimated_progress(
+                playback, cached["fetched_at"], now
+            )
+        elif not isinstance(progress_ms, (int, float)) or not isinstance(
+            duration_ms, (int, float)
+        ):
+            return playback
+
+    playback = _get_current_playback() or {}
+    st.session_state[PLAYBACK_CACHE_KEY] = {
+        "playback": playback,
+        "fetched_at": now,
+    }
+    return playback
+
+
+def _invalidate_playback_cache() -> None:
+    st.session_state.pop(PLAYBACK_CACHE_KEY, None)
+
+
+def _request_playback_refresh_window() -> None:
+    st.session_state[PLAYBACK_FORCE_REFRESH_UNTIL_KEY] = (
+        time.monotonic() + PLAYBACK_CONTROL_REFRESH_SECONDS
+    )
+
+
+def refresh_playback_on_page_entry() -> None:
+    _invalidate_playback_cache()
+    _request_playback_refresh_window()
 
 
 def _render_playback_controls(
@@ -57,6 +140,8 @@ def _render_playback_controls(
                 use_container_width=True,
             ):
                 if _previous_track():
+                    _invalidate_playback_cache()
+                    _request_playback_refresh_window()
                     st.rerun()
                 st.error("No se pudo volver a la canción anterior.")
 
@@ -70,6 +155,8 @@ def _render_playback_controls(
                     use_container_width=True,
                 ):
                     if play_pause_action():
+                        _invalidate_playback_cache()
+                        _request_playback_refresh_window()
                         st.rerun()
                     action_label = "pausar" if is_playing else "reanudar"
                     st.error(f"No se pudo {action_label} la reproducción.")
@@ -99,11 +186,13 @@ def _render_playback_controls(
                 use_container_width=True,
             ):
                 if _next_track():
+                    _invalidate_playback_cache()
+                    _request_playback_refresh_window()
                     st.rerun()
                 st.error("No se pudo avanzar a la siguiente canción.")
 
 
-@st.fragment(run_every=10000)
+@st.fragment(run_every=PLAYBACK_FRAGMENT_INTERVAL_SECONDS)
 def render_reproduction_page():
     st.markdown(
         """
@@ -253,16 +342,11 @@ def render_reproduction_page():
         render_spotify_authorization_section()
         return
 
-    playback = _get_current_playback() or {}
+    playback = _get_playback()
     is_playing = bool(playback.get("is_playing"))
 
     item = playback.get("item") or {}
     track_id = item.get("id")
-    if _has_reached_track_refresh_window(playback):
-        refresh_key = (track_id, item.get("duration_ms"))
-        if st.session_state.get("reproduction_refresh_key") != refresh_key:
-            st.session_state["reproduction_refresh_key"] = refresh_key
-            st.rerun(scope="fragment")
 
     pending_library_action = st.session_state.get("pending_library_action") or {}
     is_current_track_pending = bool(
@@ -271,7 +355,10 @@ def render_reproduction_page():
     if is_current_track_pending:
         is_track_liked = pending_library_action.get("action") == "like"
     else:
-        is_track_liked = bool(track_id and _is_track_liked(track_id))
+        liked_cache = st.session_state.setdefault(LIKED_CACHE_KEY, {})
+        if track_id not in liked_cache:
+            liked_cache[track_id] = _is_track_liked(track_id)
+        is_track_liked = bool(track_id and liked_cache[track_id])
     track_name = item.get("name")
     artists = item.get("artists") or []
     artist_names = [artist.get("name") for artist in artists if artist.get("name")]
@@ -331,6 +418,9 @@ def render_reproduction_page():
             if action == "like"
             else _unlike_track(pending_track_id)
         )
+        liked_cache = st.session_state.setdefault(LIKED_CACHE_KEY, {})
+        if action_succeeded:
+            liked_cache[pending_track_id] = action == "like"
         result_key = f"{'liked' if action == 'like' else 'unliked'}_track_{'saved' if action_succeeded else 'error'}"
         st.session_state[result_key] = True
         st.rerun()
