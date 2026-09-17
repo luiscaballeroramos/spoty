@@ -61,8 +61,8 @@ PAGE_STATE_KEY = "spoty_page"
 
 
 def go_to_page(page_name: str):
-    st.session_state[PAGE_STATE_KEY] = page_name
-    st.rerun()
+    if st.session_state.get(PAGE_STATE_KEY) != page_name:
+        st.session_state[PAGE_STATE_KEY] = page_name
 
 
 def go_to_summary_page():
