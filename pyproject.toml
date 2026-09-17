@@ -11,6 +11,8 @@ requires-python = ">=3.9"
 dependencies = [
     "spotipy",
     "psycopg[binary]",
+    "pandas",
+    "matplotlib",
 ]
 
 [project.scripts]
