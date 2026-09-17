@@ -3,7 +3,6 @@ import streamlit as st
 
 def render_top_navigation(
     current_page: str,
-    on_home_click,
     on_summary_click,
     on_reproduction_click,
 ):
@@ -60,17 +59,7 @@ def render_top_navigation(
     )
 
     with st.container(key="top-navigation"):
-        col_home, col_summary, col_reproduction = st.columns(3, gap=None)
-
-        with col_home:
-            if st.button(
-                "🏠 Inicio",
-                key="top_nav_home",
-                help="Inicio",
-                type="secondary",
-                use_container_width=True,
-            ):
-                on_home_click()
+        col_summary, col_reproduction = st.columns(2, gap=None)
 
         with col_summary:
             if st.button(

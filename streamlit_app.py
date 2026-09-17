@@ -1,7 +1,6 @@
 import os
 
 import streamlit as st
-from app_views.home import render_home_page
 from app_views.reproduction import render_reproduction_page
 from app_views.summary import render_summary_page
 from app_views.top_navigation import render_top_navigation
@@ -53,16 +52,15 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-PAGE_HOME = "home"
 PAGE_SUMMARY = "summary"
 PAGE_REPRODUCTION = "reproduction"
-PAGE_OPTIONS = {PAGE_HOME, PAGE_SUMMARY, PAGE_REPRODUCTION}
+PAGE_OPTIONS = {PAGE_SUMMARY, PAGE_REPRODUCTION}
 PAGE_STATE_KEY = "spoty_page"
 
 
 def go_to_page(page_name: str):
-    if st.session_state.get(PAGE_STATE_KEY) != page_name:
-        st.session_state[PAGE_STATE_KEY] = page_name
+    st.session_state[PAGE_STATE_KEY] = page_name
+    st.rerun()
 
 
 def go_to_summary_page():
@@ -73,14 +71,8 @@ def go_to_reproduction_page():
     go_to_page(PAGE_REPRODUCTION)
 
 
-def go_to_home_page():
-    go_to_page(PAGE_HOME)
-
-
 def get_current_page() -> str:
-    page_name = st.session_state.get(PAGE_STATE_KEY, PAGE_HOME)
-    if page_name not in PAGE_OPTIONS:
-        return PAGE_HOME
+    page_name = st.session_state.get(PAGE_STATE_KEY, PAGE_SUMMARY)
     return page_name
 
 
@@ -89,7 +81,6 @@ def render_current_page():
 
     render_top_navigation(
         current_page=current_page,
-        on_home_click=go_to_home_page,
         on_summary_click=go_to_summary_page,
         on_reproduction_click=go_to_reproduction_page,
     )
@@ -99,10 +90,7 @@ def render_current_page():
     elif current_page == PAGE_SUMMARY:
         render_summary_page()
     else:
-        render_home_page(
-            on_reproduction_click=go_to_reproduction_page,
-            on_summary_click=go_to_summary_page,
-        )
+        raise ValueError(f"Unknown page: {current_page}")
 
 
 process_spotify_oauth_callback()
