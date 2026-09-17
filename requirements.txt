@@ -1,4 +1,5 @@
 spotipy
 psycopg[binary]
 pandas
+matplotlib
 streamlit
