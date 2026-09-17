@@ -1,7 +1,10 @@
 import os
 
 import streamlit as st
-from app_views.reproduction import render_reproduction_page
+from app_views.reproduction import (
+    refresh_playback_on_page_entry,
+    render_reproduction_page,
+)
 from app_views.summary import render_summary_page
 from app_views.top_navigation import render_top_navigation
 from spotifyapi.streamlit_auth import process_spotify_oauth_callback
@@ -56,6 +59,7 @@ PAGE_SUMMARY = "summary"
 PAGE_REPRODUCTION = "reproduction"
 PAGE_OPTIONS = {PAGE_SUMMARY, PAGE_REPRODUCTION}
 PAGE_STATE_KEY = "spoty_page"
+PREVIOUS_PAGE_STATE_KEY = "spoty_previous_page"
 
 
 def go_to_page(page_name: str):
@@ -68,6 +72,7 @@ def go_to_summary_page():
 
 
 def go_to_reproduction_page():
+    refresh_playback_on_page_entry()
     go_to_page(PAGE_REPRODUCTION)
 
 
@@ -78,6 +83,7 @@ def get_current_page() -> str:
 
 def render_current_page():
     current_page = get_current_page()
+    previous_page = st.session_state.get(PREVIOUS_PAGE_STATE_KEY)
 
     render_top_navigation(
         current_page=current_page,
@@ -86,11 +92,15 @@ def render_current_page():
     )
 
     if current_page == PAGE_REPRODUCTION:
+        if previous_page != PAGE_REPRODUCTION:
+            refresh_playback_on_page_entry()
         render_reproduction_page()
     elif current_page == PAGE_SUMMARY:
         render_summary_page()
     else:
         raise ValueError(f"Unknown page: {current_page}")
+
+    st.session_state[PREVIOUS_PAGE_STATE_KEY] = current_page
 
 
 process_spotify_oauth_callback()

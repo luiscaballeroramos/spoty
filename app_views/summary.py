@@ -67,7 +67,7 @@ def run_registration_with_feedback():
 
 
 def render_registration_feedback():
-    feedback = st.session_state.get("registration_feedback")
+    feedback = st.session_state.pop("registration_feedback", None)
     if not feedback:
         return
 
@@ -77,12 +77,8 @@ def render_registration_feedback():
     if not message:
         return
 
-    if feedback_type == "error":
-        st.error(message)
-    elif feedback_type == "warning":
-        st.warning(message)
-    else:
-        st.success(message)
+    icons = {"error": "❌", "warning": "⚠️", "success": "✅"}
+    st.toast(message, icon=icons.get(feedback_type, "ℹ️"))
 
 
 def query_database(query: str):
