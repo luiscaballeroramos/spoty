@@ -103,7 +103,7 @@ def _render_playback_controls(
                 st.error("No se pudo avanzar a la siguiente canción.")
 
 
-@st.fragment(run_every=1)
+@st.fragment(run_every=10000)
 def render_reproduction_page():
     st.markdown(
         """
