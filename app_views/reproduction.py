@@ -238,21 +238,27 @@ def render_reproduction_page():
 
         .reproduction-track-info {
             text-align: center;
-            margin: 0.35rem 0 0.75rem;
+            margin: 0.35rem 0 1.25rem;
             padding: 0 1rem;
+            opacity: 1 !important;
         }
         .reproduction-track-title {
-            color: #1f2937;
+            color: white !important;
             font-size: clamp(1.15rem, 3vw, 1.8rem);
             font-weight: 800;
             line-height: 1.2;
             overflow-wrap: anywhere;
+            opacity: 1 !important;
+            text-shadow: none !important;
         }
         .reproduction-track-artists,
         .reproduction-track-empty {
-            color: #64748b;
+            color: white !important;
             font-size: clamp(0.95rem, 2vw, 1.15rem);
             line-height: 1.3;
+            font-weight: 600;
+            opacity: 1 !important;
+            text-shadow: none !important;
         }
 
         .st-key-reproduction-controls [data-testid="stHorizontalBlock"] {
