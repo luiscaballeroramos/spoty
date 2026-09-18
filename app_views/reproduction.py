@@ -236,6 +236,25 @@ def render_reproduction_page():
             margin-bottom: 0.1rem !important;
         }
 
+        .reproduction-track-info {
+            text-align: center;
+            margin: 0.35rem 0 0.75rem;
+            padding: 0 1rem;
+        }
+        .reproduction-track-title {
+            color: #1f2937;
+            font-size: clamp(1.15rem, 3vw, 1.8rem);
+            font-weight: 800;
+            line-height: 1.2;
+            overflow-wrap: anywhere;
+        }
+        .reproduction-track-artists,
+        .reproduction-track-empty {
+            color: #64748b;
+            font-size: clamp(0.95rem, 2vw, 1.15rem);
+            line-height: 1.3;
+        }
+
         .st-key-reproduction-controls [data-testid="stHorizontalBlock"] {
             gap: 0 !important;
         }
@@ -387,12 +406,23 @@ def render_reproduction_page():
         )
 
     if track_name:
-        st.caption(
-            f"Ahora: {track_name}"
-            + (f" - {', '.join(artist_names)}" if artist_names else "")
+        artists_text = ", ".join(artist_names)
+        st.markdown(
+            f"""
+            <div class="reproduction-track-info">
+                <div class="reproduction-track-title">{track_name}</div>
+                {f'<div class="reproduction-track-artists">{artists_text}</div>' if artists_text else ''}
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
     else:
-        st.caption("No hay una pista activa en este momento.")
+        st.markdown(
+            '<div class="reproduction-track-info reproduction-track-empty">'
+            "No hay una pista activa en este momento."
+            "</div>",
+            unsafe_allow_html=True,
+        )
 
     if st.session_state.pop("liked_track_saved", False):
         st.toast("Canción añadida a Liked Songs y a la base de datos.")
