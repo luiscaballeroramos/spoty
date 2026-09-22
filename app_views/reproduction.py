@@ -336,18 +336,18 @@ def render_reproduction_page():
             position: absolute !important;
             left: 0.75rem;
             bottom: 0.75rem;
-            width: 3rem !important;
+            width: 4rem !important;
             z-index: 2;
         }
         .st-key-reproduction_corner_action [data-testid="stButton"] button {
-            width: 3rem !important;
-            height: 3rem !important;
-            min-height: 3rem !important;
+            width: 4rem !important;
+            height: 4rem !important;
+            min-height: 4rem !important;
             aspect-ratio: 1;
             padding: 0 !important;
             border: 1px solid rgba(255, 255, 255, 0.7);
             border-radius: 50%;
-            background: rgba(0, 0, 0, 0.72) !important;
+            background: rgba(0, 0, 0, 0.28) !important;
             color: white !important;
             font-size: 1.6rem !important;
             opacity: 1 !important;
