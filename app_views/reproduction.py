@@ -161,22 +161,29 @@ def _render_playback_controls(
                     action_label = "pausar" if is_playing else "reanudar"
                     st.error(f"No se pudo {action_label} la reproducción.")
 
-                if st.button(
-                    "♥" if is_track_liked else "♡",
-                    key="reproduction_corner_action",
-                    help=(
-                        "Retirar de Liked Songs"
+                with st.container(
+                    key=(
+                        "reproduction-corner-action-liked"
                         if is_track_liked
-                        else "Añadir a Liked Songs"
-                    ),
-                    disabled=not track_id,
+                        else "reproduction-corner-action-unliked"
+                    )
                 ):
-                    if track_id:
-                        st.session_state["pending_library_action"] = {
-                            "track_id": track_id,
-                            "action": "unlike" if is_track_liked else "like",
-                        }
-                        st.rerun()
+                    if st.button(
+                        "♥",
+                        key="reproduction_corner_action",
+                        help=(
+                            "Retirar de Liked Songs"
+                            if is_track_liked
+                            else "Añadir a Liked Songs"
+                        ),
+                        disabled=not track_id,
+                    ):
+                        if track_id:
+                            st.session_state["pending_library_action"] = {
+                                "track_id": track_id,
+                                "action": "unlike" if is_track_liked else "like",
+                            }
+                            st.rerun()
 
         with next_col:
             if st.button(
@@ -351,6 +358,14 @@ def render_reproduction_page():
             color: white !important;
             font-size: 1.6rem !important;
             opacity: 1 !important;
+        }
+        .st-key-reproduction-corner-action-liked
+        .st-key-reproduction_corner_action [data-testid="stButton"] button {
+            color: white !important;
+        }
+        .st-key-reproduction-corner-action-unliked
+        .st-key-reproduction_corner_action [data-testid="stButton"] button {
+            color: #444444 !important;
         }
         </style>
         """,
