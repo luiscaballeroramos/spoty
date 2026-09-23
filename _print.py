@@ -92,7 +92,7 @@ def print_artists(limit: int = None):
 
 
 if __name__ == "__main__":
-    # client = SpotifyClient()
+    client = SpotifyClient()
 
     # # Print currently playing track
     # now=client.get_currently_playing()
@@ -107,8 +107,8 @@ if __name__ == "__main__":
     # # Print last 10 listening events
     # print_listening_events(limit=10)
 
-    # Print top 10 liked tracks
-    print_liked_tracks(limit=None)
+    # # Print top 10 liked tracks
+    # print_liked_tracks(limit=None)
 
     # # Print top 10 tracks
     # print_tracks(limit=10)
@@ -119,10 +119,10 @@ if __name__ == "__main__":
     # # Print top 10 artists
     # print_artists(limit=20)
 
-    # # Replace with any valid track ID/URI/URL
-    # print('TRACK')
-    # track = client.sp.track("3n3Ppam7vgaVa1iaRUc9Lp")
-    # _print_as_tree(track)
+    # Replace with any valid track ID/URI/URL
+    print('TRACK')
+    track = client.sp.track("3n3Ppam7vgaVa1iaRUc9Lp")
+    _print_as_tree(track)
 
     # # Fetch and print artist details
     # print('ARTIST')
