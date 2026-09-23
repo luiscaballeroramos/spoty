@@ -1,3 +1,4 @@
+import html
 import json
 import time
 
@@ -121,7 +122,11 @@ def refresh_playback_on_page_entry() -> None:
 
 
 def _render_playback_controls(
-    is_playing: bool, track_id: str | None, is_track_liked: bool
+    is_playing: bool,
+    track_id: str | None,
+    is_track_liked: bool,
+    track_name: str,
+    artists_text: str,
 ) -> None:
     play_pause_label = ">||"
     play_pause_help = "Pausar" if is_playing else "Reproducir"
@@ -133,6 +138,15 @@ def _render_playback_controls(
         )
 
         with previous_col:
+            st.markdown(
+                """
+                <div class="reproduction-portrait-track-info">
+                    <div class="reproduction-track-title">Canción anterior</div>
+                    <div class="reproduction-track-artists">Artista anterior</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
             if st.button(
                 "<<",
                 key="reproduction_previous",
@@ -147,6 +161,15 @@ def _render_playback_controls(
 
         with play_pause_col:
             with st.container(key="reproduction-cover"):
+                st.markdown(
+                    f"""
+                    <div class="reproduction-portrait-track-info">
+                        <div class="reproduction-track-title">{html.escape(track_name or 'Sin título')}</div>
+                        <div class="reproduction-track-artists">{html.escape(artists_text or 'Artista desconocido')}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
                 if st.button(
                     play_pause_label,
                     key="reproduction_play_pause",
@@ -186,6 +209,15 @@ def _render_playback_controls(
                             st.rerun()
 
         with next_col:
+            st.markdown(
+                """
+                <div class="reproduction-portrait-track-info">
+                    <div class="reproduction-track-title">Canción siguiente</div>
+                    <div class="reproduction-track-artists">Artista siguiente</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
             if st.button(
                 ">>",
                 key="reproduction_next",
@@ -248,6 +280,7 @@ def render_reproduction_page():
             margin: 0.35rem 0 1.25rem;
             padding: 0 1rem;
             opacity: 1 !important;
+            display: none;
         }
         .reproduction-track-title {
             color: white !important;
@@ -266,6 +299,14 @@ def render_reproduction_page():
             font-weight: 600;
             opacity: 1 !important;
             text-shadow: none !important;
+        }
+        .reproduction-portrait-track-info {
+            display: block;
+            text-align: center;
+            min-height: 3.25rem;
+            margin: 0 0 0.35rem;
+            padding: 0 0.5rem;
+            overflow-wrap: anywhere;
         }
 
         .st-key-reproduction-controls [data-testid="stHorizontalBlock"] {
@@ -338,6 +379,54 @@ def render_reproduction_page():
         .st-key-reproduction_previous [data-testid="stTooltipHoverTarget"],
         .st-key-reproduction_next [data-testid="stTooltipHoverTarget"] {
             justify-content: center !important;
+        }
+        @media (orientation: portrait) {
+            .st-key-reproduction-controls {
+                --reproduction-portrait-button-size: min(75vw, calc((100vh - 12rem) / 3));
+            }
+            .st-key-reproduction-controls [data-testid="stHorizontalBlock"] {
+                display: grid !important;
+                grid-template-columns: minmax(0, 1fr) !important;
+                align-items: stretch !important;
+            }
+            .st-key-reproduction-controls .stColumn {
+                width: 100% !important;
+                min-width: 0 !important;
+            }
+            .st-key-reproduction-controls .stColumn > [data-testid="stVerticalBlock"] {
+                width: 100% !important;
+            }
+            .st-key-reproduction-controls [data-testid="stHorizontalBlock"] > [data-testid="stVerticalBlock"] {
+                width: 100% !important;
+                flex: none !important;
+                height: auto !important;
+            }
+            .st-key-reproduction-controls [data-testid="stButton"] button {
+                width: var(--reproduction-portrait-button-size) !important;
+                height: var(--reproduction-portrait-button-size) !important;
+                aspect-ratio: 1 !important;
+            }
+            .st-key-reproduction_play_pause [data-testid="stButton"] {
+                display: flex;
+                justify-content: center;
+            }
+            .st-key-reproduction_previous [data-testid="stButton"] > div:last-child,
+            .st-key-reproduction_play_pause [data-testid="stButton"] > div:last-child,
+            .st-key-reproduction_next [data-testid="stButton"] > div:last-child {
+                display: flex;
+                justify-content: center;
+                width: 100% !important;
+            }
+            .st-key-reproduction_play_pause [data-testid="stButton"] button {
+                width: var(--reproduction-portrait-button-size) !important;
+                aspect-ratio: 1 !important;
+            }
+            .st-key-reproduction_previous [data-testid="stButton"] button,
+            .st-key-reproduction_next [data-testid="stButton"] button {
+                width: var(--reproduction-portrait-button-size) !important;
+                height: var(--reproduction-portrait-button-size) !important;
+                aspect-ratio: 1 !important;
+            }
         }
         .st-key-reproduction_corner_action {
             position: absolute !important;
@@ -438,6 +527,7 @@ def render_reproduction_page():
             unsafe_allow_html=True,
         )
     else:
+        artists_text = ""
         st.markdown(
             '<div class="reproduction-track-info reproduction-track-empty">'
             "No hay una pista activa en este momento."
@@ -458,6 +548,8 @@ def render_reproduction_page():
         is_playing=is_playing,
         track_id=track_id,
         is_track_liked=is_track_liked,
+        track_name=track_name or "",
+        artists_text=artists_text,
     )
 
     pending_library_action = st.session_state.pop("pending_library_action", None)
