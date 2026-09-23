@@ -121,6 +121,16 @@ def _get_queue() -> dict[str, Any] | None:
         return None
 
 
+def _get_recently_played(limit: int = 20) -> dict[str, Any] | None:
+    """Return the user's recently played tracks."""
+    try:
+        client = SpotifyClient()
+        return client.sp.current_user_recently_played(limit=limit)
+    except Exception as exc:
+        _log_error("get recently played tracks", exc)
+        return None
+
+
 def _like_track(track_id: str) -> bool:
     """Save a track in the user's Spotify library and local database."""
     if not track_id or not track_id.strip():

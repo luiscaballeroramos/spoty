@@ -12,6 +12,8 @@ from _reproduction import (
     _pause,
     _play,
     _previous_track,
+    _get_queue,
+    _get_recently_played,
     _unlike_track,
 )
 from spotifyapi.streamlit_auth import (
@@ -28,6 +30,7 @@ PLAYBACK_CONTROL_REFRESH_SECONDS = 4
 PLAYBACK_CACHE_KEY = "reproduction_playback_cache"
 PLAYBACK_FORCE_REFRESH_UNTIL_KEY = "reproduction_force_refresh_until"
 LIKED_CACHE_KEY = "reproduction_liked_cache"
+ADJACENT_TRACKS_CACHE_KEY = "reproduction_adjacent_tracks_cache"
 
 
 def _has_reached_track_refresh_window(playback: dict) -> bool:
@@ -118,7 +121,53 @@ def _request_playback_refresh_window() -> None:
 
 def refresh_playback_on_page_entry() -> None:
     _invalidate_playback_cache()
+    st.session_state.pop(ADJACENT_TRACKS_CACHE_KEY, None)
     _request_playback_refresh_window()
+
+
+def _get_track_artists(track: dict) -> str:
+    artists = track.get("artists") or []
+    return ", ".join(
+        artist.get("name")
+        for artist in artists
+        if isinstance(artist, dict) and artist.get("name")
+    )
+
+
+def _get_track_image_url(track: dict) -> str | None:
+    return next(
+        (
+            image.get("url")
+            for image in (track.get("album") or {}).get("images") or []
+            if isinstance(image, dict) and image.get("url")
+        ),
+        None,
+    )
+
+
+def _get_adjacent_tracks(current_track_id: str | None) -> tuple[dict, dict]:
+    cached = st.session_state.get(ADJACENT_TRACKS_CACHE_KEY)
+    if cached and cached.get("current_track_id") == current_track_id:
+        return cached.get("previous") or {}, cached.get("next") or {}
+
+    previous_track = {}
+    recently_played = _get_recently_played() or {}
+    for entry in recently_played.get("items") or []:
+        track = entry.get("track") or {}
+        if track.get("id") and track.get("id") != current_track_id:
+            previous_track = track
+            break
+
+    queue = _get_queue() or {}
+    next_track = next(
+        (track for track in queue.get("queue") or [] if track.get("id")), {}
+    )
+    st.session_state[ADJACENT_TRACKS_CACHE_KEY] = {
+        "current_track_id": current_track_id,
+        "previous": previous_track,
+        "next": next_track,
+    }
+    return previous_track, next_track
 
 
 def _render_playback_controls(
@@ -127,6 +176,8 @@ def _render_playback_controls(
     is_track_liked: bool,
     track_name: str,
     artists_text: str,
+    previous_track: dict,
+    next_track: dict,
 ) -> None:
     play_pause_label = ">||"
     play_pause_help = "Pausar" if is_playing else "Reproducir"
@@ -138,15 +189,7 @@ def _render_playback_controls(
         )
 
         with previous_col:
-            st.markdown(
-                """
-                <div class="reproduction-portrait-track-info">
-                    <div class="reproduction-track-title">Canción anterior</div>
-                    <div class="reproduction-track-artists">Artista anterior</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+            _render_adjacent_track_info(previous_track, "Canción anterior")
             if st.button(
                 "<<",
                 key="reproduction_previous",
@@ -155,6 +198,7 @@ def _render_playback_controls(
             ):
                 if _previous_track():
                     _invalidate_playback_cache()
+                    st.session_state.pop(ADJACENT_TRACKS_CACHE_KEY, None)
                     _request_playback_refresh_window()
                     st.rerun()
                 st.error("No se pudo volver a la canción anterior.")
@@ -209,15 +253,7 @@ def _render_playback_controls(
                             st.rerun()
 
         with next_col:
-            st.markdown(
-                """
-                <div class="reproduction-portrait-track-info">
-                    <div class="reproduction-track-title">Canción siguiente</div>
-                    <div class="reproduction-track-artists">Artista siguiente</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+            _render_adjacent_track_info(next_track, "Canción siguiente")
             if st.button(
                 ">>",
                 key="reproduction_next",
@@ -226,9 +262,21 @@ def _render_playback_controls(
             ):
                 if _next_track():
                     _invalidate_playback_cache()
+                    st.session_state.pop(ADJACENT_TRACKS_CACHE_KEY, None)
                     _request_playback_refresh_window()
                     st.rerun()
                 st.error("No se pudo avanzar a la siguiente canción.")
+
+
+def _render_adjacent_track_info(track: dict, fallback_title: str) -> None:
+    title = html.escape(track.get("name") or fallback_title)
+    artists = html.escape(_get_track_artists(track) or "Artista desconocido")
+    st.markdown(
+        f'<div class="reproduction-portrait-track-info reproduction-adjacent-info">'
+        f'<div class="reproduction-track-title">{title}</div>'
+        f'<div class="reproduction-track-artists">{artists}</div></div>',
+        unsafe_allow_html=True,
+    )
 
 
 @st.fragment(run_every=PLAYBACK_FRAGMENT_INTERVAL_SECONDS)
@@ -308,6 +356,10 @@ def render_reproduction_page():
             padding: 0 0.5rem;
             overflow-wrap: anywhere;
         }
+        .reproduction-adjacent-info {
+            min-height: 3.25rem;
+            margin: 0 0 0.35rem;
+        }
 
         .st-key-reproduction-controls [data-testid="stHorizontalBlock"] {
             gap: 0 !important;
@@ -344,7 +396,8 @@ def render_reproduction_page():
             color: white;
             text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9);
             background-color: #34495e;
-            background-size: cover;
+            background-size: contain;
+            background-repeat: no-repeat;
             background-position: center;
         }
         .st-key-reproduction-controls [data-testid="stButton"] button * {
@@ -356,11 +409,11 @@ def render_reproduction_page():
         .st-key-reproduction_previous [data-testid="stButton"] button,
         .st-key-reproduction_next [data-testid="stButton"] button {
             width: 75% !important;
-            height: auto !important;
+            height: min(calc(100vh - 13rem), 27vw) !important;
             aspect-ratio: 1;
-            background-image:
-                linear-gradient(rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.5)),
-                url("https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=900&q=85");
+            background-image: linear-gradient(rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.5));
+            background-size: contain;
+            background-repeat: no-repeat;
         }
         .st-key-reproduction_previous [data-testid="stButton"],
         .st-key-reproduction_next [data-testid="stButton"] {
@@ -379,6 +432,23 @@ def render_reproduction_page():
         .st-key-reproduction_previous [data-testid="stTooltipHoverTarget"],
         .st-key-reproduction_next [data-testid="stTooltipHoverTarget"] {
             justify-content: center !important;
+        }
+        @media (orientation: landscape) {
+            .st-key-reproduction-controls .reproduction-portrait-track-info {
+                min-height: 4.25rem !important;
+                margin-bottom: 0.75rem;
+                padding-top: 0.35rem;
+                position: relative;
+                z-index: 3;
+                background: #0d1017;
+            }
+            .st-key-reproduction-cover .reproduction-portrait-track-info {
+                min-height: 4.25rem !important;
+            }
+            .st-key-reproduction_previous [data-testid="stButton"] button,
+            .st-key-reproduction_next [data-testid="stButton"] button {
+                height: min(calc(100vh - 14rem), 26vw) !important;
+            }
         }
         @media (orientation: portrait) {
             .st-key-reproduction-controls {
@@ -500,6 +570,25 @@ def render_reproduction_page():
         ),
         None,
     )
+    previous_track, next_track = _get_adjacent_tracks(track_id)
+
+    adjacent_images_css = ""
+    previous_image_url = _get_track_image_url(previous_track)
+    next_image_url = _get_track_image_url(next_track)
+    if previous_image_url:
+        adjacent_images_css += (
+            f'.st-key-reproduction_previous [data-testid="stButton"] button '
+            f'{{ background-image: linear-gradient(rgba(0, 0, 0, 0.28), '
+            f'rgba(0, 0, 0, 0.5)), url({json.dumps(previous_image_url)}); }}'
+        )
+    if next_image_url:
+        adjacent_images_css += (
+            f'.st-key-reproduction_next [data-testid="stButton"] button '
+            f'{{ background-image: linear-gradient(rgba(0, 0, 0, 0.28), '
+            f'rgba(0, 0, 0, 0.5)), url({json.dumps(next_image_url)}); }}'
+        )
+    if adjacent_images_css:
+        st.markdown(f"<style>{adjacent_images_css}</style>", unsafe_allow_html=True)
 
     if track_image_url:
         st.markdown(
@@ -550,6 +639,8 @@ def render_reproduction_page():
         is_track_liked=is_track_liked,
         track_name=track_name or "",
         artists_text=artists_text,
+        previous_track=previous_track,
+        next_track=next_track,
     )
 
     pending_library_action = st.session_state.pop("pending_library_action", None)
