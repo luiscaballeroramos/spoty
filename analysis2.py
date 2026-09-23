@@ -2,6 +2,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from matplotlib.patches import Patch
 
 from analysis import load_database_dataframes, prepare_listening_events
 
@@ -26,12 +27,51 @@ def prepare_top_plays(events: pd.DataFrame, limit: int = TOP_LIMIT) -> dict[str,
 	}
 
 
+def prepare_rank_change(events: pd.DataFrame) -> dict[str, tuple[pd.Series, pd.Series]]:
+	"""Return cumulative ranks for the latest day and seven days earlier."""
+	last_day = events["played_at"].max().normalize()
+
+	def rank_until(day: pd.Timestamp) -> dict[str, pd.Series]:
+		period_events = events[events["played_at"] < day + pd.Timedelta(days=1)]
+		return {
+			"Canciones": period_events["track_name"].value_counts().rank(
+				method="min", ascending=False
+			),
+			"Artistas": period_events.explode("artist_names")["artist_names"].value_counts().rank(
+				method="min", ascending=False
+			),
+			"Albumes": period_events["album_name"].value_counts().rank(
+				method="min", ascending=False
+			),
+		}
+
+	current = rank_until(last_day)
+	previous = rank_until(last_day - pd.Timedelta(days=7))
+	return {
+		entity: (current[entity], previous[entity])
+		for entity in current
+	}
+
+
+def prepare_recent_plays(events: pd.DataFrame) -> dict[str, pd.Series]:
+	"""Count plays during the latest seven-day period for each entity type."""
+	last_day = events["played_at"].max().normalize()
+	recent_events = events[events["played_at"] >= last_day - pd.Timedelta(days=6)]
+	return {
+		"Canciones": recent_events["track_name"].value_counts(),
+		"Artistas": recent_events.explode("artist_names")["artist_names"].value_counts(),
+		"Albumes": recent_events["album_name"].value_counts(),
+	}
+
+
 def create_top_100_charts(
 	events: pd.DataFrame,
 	output_path: str = "top_100_listening_summary.png",
 ) -> Path:
 	"""Create and save top charts for tracks, artists, and albums."""
 	top_plays = prepare_top_plays(events)
+	rank_changes = prepare_rank_change(events)
+	recent_plays = prepare_recent_plays(events)
 	output = Path(output_path)
 	output.parent.mkdir(parents=True, exist_ok=True)
 
@@ -48,7 +88,59 @@ def create_top_100_charts(
 	for axis, (entity, ranking) in zip(axes, top_plays.items()):
 		axis.set_facecolor("#f7f4ed")
 		axis.spines[["top", "right"]].set_visible(False)
-		axis.barh(ranking.index, ranking.values, color=colors[entity])
+		recent = recent_plays[entity].reindex(ranking.index, fill_value=0)
+		remaining = ranking - recent
+		axis.barh(
+			ranking.index,
+			recent,
+			color=colors[entity],
+			label="Ultimos 7 dias",
+		)
+		axis.barh(
+			ranking.index,
+			remaining,
+			left=recent,
+			color=colors[entity],
+			alpha=0.45,
+			label="Resto",
+		)
+		axis.legend(
+			handles=[
+				Patch(facecolor=colors[entity], label="Ultimos 7 dias"),
+				Patch(facecolor=colors[entity], alpha=0.45, label="Resto"),
+			],
+			loc="lower right",
+			frameon=False,
+		)
+		current_ranks, previous_ranks = rank_changes[entity]
+		labels = []
+		for name in ranking.index:
+			current_rank = current_ranks.get(name)
+			previous_rank = previous_ranks.get(name)
+			if pd.isna(current_rank):
+				change_label = "—"
+			elif pd.isna(previous_rank):
+				change_label = "▲ nuevo"
+			else:
+				change = int(previous_rank - current_rank)
+				change_label = (
+					f"▲ {change}" if change > 0
+					else f"▼ {abs(change)}" if change < 0
+					else "—"
+				)
+			labels.append(f"{name}  {change_label}")
+		axis.set_yticks(range(len(labels)), labels=labels)
+		for label, name in zip(axis.get_yticklabels(), ranking.index):
+			current_rank = current_ranks.get(name)
+			previous_rank = previous_ranks.get(name)
+			if pd.isna(current_rank):
+				label.set_color("#6b7280")
+			elif pd.isna(previous_rank) or previous_rank > current_rank:
+				label.set_color("#16803c")
+			elif previous_rank < current_rank:
+				label.set_color("#c62828")
+			else:
+				label.set_color("#6b7280")
 		axis.set_title(f"{len(ranking)} {entity.lower()} mas escuchados", fontsize=22)
 		axis.set_xlabel("Reproducciones", fontsize=15)
 		axis.tick_params(axis="y", labelsize=11)
