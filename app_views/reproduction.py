@@ -189,7 +189,6 @@ def _render_playback_controls(
         )
 
         with previous_col:
-            _render_adjacent_track_info(previous_track, "Canción anterior")
             if st.button(
                 "<<",
                 key="reproduction_previous",
@@ -202,18 +201,10 @@ def _render_playback_controls(
                     _request_playback_refresh_window()
                     st.rerun()
                 st.error("No se pudo volver a la canción anterior.")
+            _render_adjacent_track_info(previous_track, "Canción anterior")
 
         with play_pause_col:
             with st.container(key="reproduction-cover"):
-                st.markdown(
-                    f"""
-                    <div class="reproduction-portrait-track-info">
-                        <div class="reproduction-track-title">{html.escape(track_name or 'Sin título')}</div>
-                        <div class="reproduction-track-artists">{html.escape(artists_text or 'Artista desconocido')}</div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
                 if st.button(
                     play_pause_label,
                     key="reproduction_play_pause",
@@ -227,6 +218,16 @@ def _render_playback_controls(
                         st.rerun()
                     action_label = "pausar" if is_playing else "reanudar"
                     st.error(f"No se pudo {action_label} la reproducción.")
+
+                st.markdown(
+                    f"""
+                    <div class="reproduction-portrait-track-info">
+                        <div class="reproduction-track-title">{html.escape(track_name or 'Sin título')}</div>
+                        <div class="reproduction-track-artists">{html.escape(artists_text or 'Artista desconocido')}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
                 with st.container(
                     key=(
@@ -253,7 +254,6 @@ def _render_playback_controls(
                             st.rerun()
 
         with next_col:
-            _render_adjacent_track_info(next_track, "Canción siguiente")
             if st.button(
                 ">>",
                 key="reproduction_next",
@@ -266,6 +266,7 @@ def _render_playback_controls(
                     _request_playback_refresh_window()
                     st.rerun()
                 st.error("No se pudo avanzar a la siguiente canción.")
+            _render_adjacent_track_info(next_track, "Canción siguiente")
 
 
 def _render_adjacent_track_info(track: dict, fallback_title: str) -> None:
