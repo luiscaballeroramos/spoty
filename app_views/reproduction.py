@@ -205,19 +205,44 @@ def _render_playback_controls(
 
         with play_pause_col:
             with st.container(key="reproduction-cover"):
-                if st.button(
-                    play_pause_label,
-                    key="reproduction_play_pause",
-                    type="primary",
-                    help=play_pause_help,
-                    use_container_width=True,
-                ):
-                    if play_pause_action():
-                        _invalidate_playback_cache()
-                        _request_playback_refresh_window()
-                        st.rerun()
-                    action_label = "pausar" if is_playing else "reanudar"
-                    st.error(f"No se pudo {action_label} la reproducción.")
+                with st.container(key="reproduction-cover-art"):
+                    if st.button(
+                        play_pause_label,
+                        key="reproduction_play_pause",
+                        type="primary",
+                        help=play_pause_help,
+                        use_container_width=True,
+                    ):
+                        if play_pause_action():
+                            _invalidate_playback_cache()
+                            _request_playback_refresh_window()
+                            st.rerun()
+                        action_label = "pausar" if is_playing else "reanudar"
+                        st.error(f"No se pudo {action_label} la reproducción.")
+
+                    with st.container(
+                        key=(
+                            "reproduction-corner-action-liked"
+                            if is_track_liked
+                            else "reproduction-corner-action-unliked"
+                        )
+                    ):
+                        if st.button(
+                            "♥",
+                            key="reproduction_corner_action",
+                            help=(
+                                "Retirar de Liked Songs"
+                                if is_track_liked
+                                else "Añadir a Liked Songs"
+                            ),
+                            disabled=not track_id,
+                        ):
+                            if track_id:
+                                st.session_state["pending_library_action"] = {
+                                    "track_id": track_id,
+                                    "action": "unlike" if is_track_liked else "like",
+                                }
+                                st.rerun()
 
                 st.markdown(
                     f"""
@@ -228,30 +253,6 @@ def _render_playback_controls(
                     """,
                     unsafe_allow_html=True,
                 )
-
-                with st.container(
-                    key=(
-                        "reproduction-corner-action-liked"
-                        if is_track_liked
-                        else "reproduction-corner-action-unliked"
-                    )
-                ):
-                    if st.button(
-                        "♥",
-                        key="reproduction_corner_action",
-                        help=(
-                            "Retirar de Liked Songs"
-                            if is_track_liked
-                            else "Añadir a Liked Songs"
-                        ),
-                        disabled=not track_id,
-                    ):
-                        if track_id:
-                            st.session_state["pending_library_action"] = {
-                                "track_id": track_id,
-                                "action": "unlike" if is_track_liked else "like",
-                            }
-                            st.rerun()
 
         with next_col:
             if st.button(
@@ -370,6 +371,9 @@ def render_reproduction_page():
             min-height: 0;
         }
         .st-key-reproduction-controls [data-testid="stVerticalBlock"]:has(> .st-key-reproduction_play_pause) {
+            position: relative !important;
+        }
+        .st-key-reproduction-cover-art {
             position: relative !important;
         }
         .st-key-reproduction-controls [data-testid="stHorizontalBlock"] > [data-testid="stVerticalBlock"] {
