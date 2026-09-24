@@ -91,7 +91,7 @@ def _get_playback() -> dict:
         elif (
             isinstance(progress_ms, (int, float))
             and isinstance(duration_ms, (int, float))
-            and progress_ms + elapsed_ms < duration_ms + PLAYBACK_REFRESH_MARGIN_MS
+            and progress_ms + elapsed_ms + PLAYBACK_REFRESH_MARGIN_MS < duration_ms
         ):
             return _copy_playback_with_estimated_progress(
                 playback, cached["fetched_at"], now
