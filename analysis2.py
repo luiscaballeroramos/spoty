@@ -53,10 +53,10 @@ def prepare_rank_change(events: pd.DataFrame) -> dict[str, tuple[pd.Series, pd.S
 	}
 
 
-def prepare_recent_plays(events: pd.DataFrame) -> dict[str, pd.Series]:
-	"""Count plays during the latest seven-day period for each entity type."""
+def prepare_recent_plays(events: pd.DataFrame, days: int) -> dict[str, pd.Series]:
+	"""Count plays during the latest period for each entity type."""
 	last_day = events["played_at"].max().normalize()
-	recent_events = events[events["played_at"] >= last_day - pd.Timedelta(days=6)]
+	recent_events = events[events["played_at"] >= last_day - pd.Timedelta(days=days - 1)]
 	return {
 		"Canciones": recent_events["track_name"].value_counts(),
 		"Artistas": recent_events.explode("artist_names")["artist_names"].value_counts(),
@@ -71,7 +71,8 @@ def create_top_100_charts(
 	"""Create and save top charts for tracks, artists, and albums."""
 	top_plays = prepare_top_plays(events)
 	rank_changes = prepare_rank_change(events)
-	recent_plays = prepare_recent_plays(events)
+	last_week_plays = prepare_recent_plays(events, days=7)
+	last_month_plays = prepare_recent_plays(events, days=30)
 	output = Path(output_path)
 	output.parent.mkdir(parents=True, exist_ok=True)
 
@@ -88,26 +89,33 @@ def create_top_100_charts(
 	for axis, (entity, ranking) in zip(axes, top_plays.items()):
 		axis.set_facecolor("#f7f4ed")
 		axis.spines[["top", "right"]].set_visible(False)
-		recent = recent_plays[entity].reindex(ranking.index, fill_value=0)
-		remaining = ranking - recent
+		last_week = last_week_plays[entity].reindex(ranking.index, fill_value=0)
+		last_month = last_month_plays[entity].reindex(ranking.index, fill_value=0)
 		axis.barh(
 			ranking.index,
-			recent,
+			ranking,
 			color=colors[entity],
-			label="Ultimos 7 dias",
+			alpha=0.25,
+			label="Total",
 		)
 		axis.barh(
 			ranking.index,
-			remaining,
-			left=recent,
+			last_month,
 			color=colors[entity],
-			alpha=0.45,
-			label="Resto",
+			alpha=0.55,
+			label="Ultimos 30 dias",
+		)
+		axis.barh(
+			ranking.index,
+			last_week,
+			color=colors[entity],
+			label="Ultimos 7 dias",
 		)
 		axis.legend(
 			handles=[
 				Patch(facecolor=colors[entity], label="Ultimos 7 dias"),
-				Patch(facecolor=colors[entity], alpha=0.45, label="Resto"),
+				Patch(facecolor=colors[entity], alpha=0.55, label="Ultimos 30 dias"),
+				Patch(facecolor=colors[entity], alpha=0.25, label="Total"),
 			],
 			loc="lower right",
 			frameon=False,
