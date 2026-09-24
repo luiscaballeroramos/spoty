@@ -77,7 +77,7 @@ def go_to_reproduction_page():
 
 
 def get_current_page() -> str:
-    page_name = st.session_state.get(PAGE_STATE_KEY, PAGE_SUMMARY)
+    page_name = st.session_state.get(PAGE_STATE_KEY, PAGE_REPRODUCTION)
     return page_name
 
 
