@@ -3,6 +3,7 @@ from pathlib import Path
 
 import requests
 
+from metadata_paths import get_metadata_output_dir, save_json
 from spotifyapi.spotifyclient import SpotifyClient
 
 
@@ -15,13 +16,25 @@ client = SpotifyClient()
 # spotify_track_id = "3n3Ppam7vgaVa1iaRUc9Lp"  # Mr. Brightside - The Killers
 spotify_track_id = "3urvSWprIfDCrIgNFrBslY"  # Soleá del amor - Son de la frontera
 
-output_dir = Path(__file__).resolve().parent / "outputs" / spotify_track_id
-output_dir.mkdir(parents=True, exist_ok=True)
-
 track = client.sp.track(spotify_track_id)
 
 title_spotify = track["name"]
 artist_spotify = track["artists"][0]["name"]
+album_spotify = track["album"]
+album_name_spotify = album_spotify["name"]
+
+artist_data = client.sp.artist(track["artists"][0]["id"])
+album_data = client.sp.album(album_spotify["id"])
+
+output_dir = get_metadata_output_dir(
+    Path(__file__).resolve().parent,
+    artist_spotify,
+    album_name_spotify,
+)
+
+save_json(output_dir, "spotify_track.json", track)
+save_json(output_dir, "spotify_artist.json", artist_data)
+save_json(output_dir, "spotify_album.json", album_data)
 
 isrc = track.get("external_ids", {}).get("isrc")
 
@@ -64,17 +77,7 @@ lastfm_data = response.json()
 # 3. GUARDAR RESPUESTA COMPLETA
 # ============================================================
 
-with open(
-    output_dir / "lastfm_track.json",
-    "w",
-    encoding="utf-8",
-) as f:
-    json.dump(
-        lastfm_data,
-        f,
-        indent=4,
-        ensure_ascii=False,
-    )
+save_json(output_dir, "lastfm_track.json", lastfm_data)
 
 
 # ============================================================
@@ -191,16 +194,6 @@ else:
         },
     }
 
-    with open(
-        output_dir / "lastfm_normalized.json",
-        "w",
-        encoding="utf-8",
-    ) as f:
-        json.dump(
-            normalized_data,
-            f,
-            indent=4,
-            ensure_ascii=False,
-        )
+    save_json(output_dir, "lastfm_normalized.json", normalized_data)
 
     print("\nJSON guardados correctamente.")
