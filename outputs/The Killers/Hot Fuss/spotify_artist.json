@@ -1,0 +1,27 @@
+{
+    "external_urls": {
+        "spotify": "https://open.spotify.com/artist/0C0XlULifJtAgn6ZNCW2eu"
+    },
+    "href": "https://api.spotify.com/v1/artists/0C0XlULifJtAgn6ZNCW2eu",
+    "id": "0C0XlULifJtAgn6ZNCW2eu",
+    "images": [
+        {
+            "url": "https://i.scdn.co/image/ab6761610000e5eb207b21f3ed0ee96adce3166a",
+            "height": 640,
+            "width": 640
+        },
+        {
+            "url": "https://i.scdn.co/image/ab67616100005174207b21f3ed0ee96adce3166a",
+            "height": 320,
+            "width": 320
+        },
+        {
+            "url": "https://i.scdn.co/image/ab6761610000f178207b21f3ed0ee96adce3166a",
+            "height": 160,
+            "width": 160
+        }
+    ],
+    "name": "The Killers",
+    "type": "artist",
+    "uri": "spotify:artist:0C0XlULifJtAgn6ZNCW2eu"
+}

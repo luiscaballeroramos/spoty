@@ -1,0 +1,1967 @@
+[
+    {
+        "genres": [
+            {
+                "count": 18,
+                "id": "ceeaa283-5d7b-4202-8d1d-e25d116b2a18",
+                "disambiguation": "",
+                "name": "alternative rock"
+            },
+            {
+                "id": "31aee5bc-c1e8-43d7-a7bc-902df802ccbb",
+                "disambiguation": "",
+                "name": "christmas music",
+                "count": 1
+            },
+            {
+                "disambiguation": "",
+                "id": "52856ec0-9f9b-45f4-ab09-1bb8cc0a98e4",
+                "name": "heartland rock",
+                "count": 4
+            },
+            {
+                "name": "indie rock",
+                "id": "ccd19ebf-052c-4afe-8ad9-fbb0a73f94a7",
+                "disambiguation": "",
+                "count": 8
+            },
+            {
+                "id": "56407f9d-3398-4bf3-bbbd-ea372fa5adeb",
+                "disambiguation": "",
+                "name": "new wave",
+                "count": 4
+            },
+            {
+                "count": 6,
+                "id": "797e2e85-5ffd-495c-a757-8b4079052f0e",
+                "disambiguation": "",
+                "name": "pop rock"
+            },
+            {
+                "count": 4,
+                "disambiguation": "",
+                "id": "b8495241-e3c7-445b-82db-cea5ebe9ea7a",
+                "name": "post-punk revival"
+            },
+            {
+                "count": 2,
+                "name": "rock",
+                "id": "0e3fc579-2d24-4f20-9dae-736e1ec78798",
+                "disambiguation": ""
+            }
+        ],
+        "ipis": [],
+        "area": {
+            "name": "United States",
+            "type": null,
+            "sort-name": "United States",
+            "type-id": null,
+            "id": "489ce91b-6658-3307-9877-795b68554c98",
+            "disambiguation": "",
+            "iso-3166-1-codes": [
+                "US"
+            ]
+        },
+        "life-span": {
+            "ended": false,
+            "begin": "2001",
+            "end": null
+        },
+        "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+        "relations": [
+            {
+                "type": "instrumental supporting musician",
+                "attribute-values": {},
+                "artist": {
+                    "id": "df8796bb-9052-4322-a08a-c082b4dd89ed",
+                    "disambiguation": "",
+                    "sort-name": "Sablay, Ted",
+                    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                    "country": "US",
+                    "name": "Ted Sablay",
+                    "type": "Person"
+                },
+                "ended": false,
+                "source-credit": "",
+                "attributes": [
+                    "guitar",
+                    "keyboard"
+                ],
+                "attribute-ids": {
+                    "guitar": "63021302-86cd-4aee-80df-2270d54f4978",
+                    "keyboard": "95b0c3d2-9606-4ef5-a019-9b7437f3adda"
+                },
+                "attribute-credits": {},
+                "target-credit": "",
+                "direction": "backward",
+                "end": null,
+                "begin": "2006",
+                "target-type": "artist",
+                "type-id": "ed6a7891-ce70-4e08-9839-1f2f62270497"
+            },
+            {
+                "artist": {
+                    "disambiguation": "",
+                    "id": "6203514d-c65d-4511-9686-9cc931610045",
+                    "country": null,
+                    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                    "sort-name": "Whited, Rob",
+                    "type": "Person",
+                    "name": "Rob Whited"
+                },
+                "ended": false,
+                "type": "instrumental supporting musician",
+                "attribute-values": {},
+                "target-credit": "",
+                "attribute-credits": {},
+                "source-credit": "",
+                "attribute-ids": {
+                    "percussion": "8e9abdf1-0afc-4544-b201-c6fa768d01f4"
+                },
+                "attributes": [
+                    "percussion"
+                ],
+                "direction": "backward",
+                "type-id": "ed6a7891-ce70-4e08-9839-1f2f62270497",
+                "target-type": "artist",
+                "begin": "2006",
+                "end": null
+            },
+            {
+                "attribute-credits": {},
+                "target-credit": "",
+                "source-credit": "",
+                "attribute-ids": {
+                    "saxophone": "a9ed16cd-b8cb-4256-9c41-93f5f0458c49"
+                },
+                "attributes": [
+                    "saxophone"
+                ],
+                "artist": {
+                    "disambiguation": "saxophonist",
+                    "id": "3bda189f-d64e-4d9c-a9c5-57a3f62fe0f7",
+                    "sort-name": "Marth, Tommy",
+                    "country": "US",
+                    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                    "name": "Tommy Marth",
+                    "type": "Person"
+                },
+                "ended": true,
+                "type": "instrumental supporting musician",
+                "attribute-values": {},
+                "type-id": "ed6a7891-ce70-4e08-9839-1f2f62270497",
+                "begin": "2008",
+                "end": "2010",
+                "target-type": "artist",
+                "direction": "backward"
+            },
+            {
+                "target-type": "artist",
+                "begin": "2008",
+                "end": "2010",
+                "type-id": "ed6a7891-ce70-4e08-9839-1f2f62270497",
+                "direction": "backward",
+                "attributes": [
+                    "guitar",
+                    "keyboard",
+                    "violin"
+                ],
+                "attribute-ids": {
+                    "violin": "089f123c-0f7d-4105-a64e-49de81ca8fa4",
+                    "keyboard": "95b0c3d2-9606-4ef5-a019-9b7437f3adda",
+                    "guitar": "63021302-86cd-4aee-80df-2270d54f4978"
+                },
+                "source-credit": "",
+                "target-credit": "",
+                "attribute-credits": {},
+                "attribute-values": {},
+                "type": "instrumental supporting musician",
+                "ended": true,
+                "artist": {
+                    "country": "US",
+                    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                    "sort-name": "Suen, Ray",
+                    "id": "ccddee91-342c-4bcf-afd3-d71d10780785",
+                    "disambiguation": "",
+                    "type": "Person",
+                    "name": "Ray Suen"
+                }
+            },
+            {
+                "type": "instrumental supporting musician",
+                "attribute-values": {},
+                "artist": {
+                    "name": "Jake Blanton",
+                    "type": "Person",
+                    "disambiguation": "American bassist, guitarist, keyboardist, and backing vocalist",
+                    "id": "d4ec3315-ddff-422a-9efd-73eb29f1bbbb",
+                    "sort-name": "Blanton, Jake",
+                    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                    "country": "US"
+                },
+                "ended": false,
+                "source-credit": "",
+                "attributes": [
+                    "bass",
+                    "guitar",
+                    "keyboard"
+                ],
+                "attribute-ids": {
+                    "guitar": "63021302-86cd-4aee-80df-2270d54f4978",
+                    "bass": "6505f98c-f698-4406-8bf4-8ca43d05c36f",
+                    "keyboard": "95b0c3d2-9606-4ef5-a019-9b7437f3adda"
+                },
+                "target-credit": "",
+                "attribute-credits": {},
+                "direction": "backward",
+                "target-type": "artist",
+                "begin": "2011",
+                "end": null,
+                "type-id": "ed6a7891-ce70-4e08-9839-1f2f62270497"
+            },
+            {
+                "type": "instrumental supporting musician",
+                "attribute-values": {},
+                "artist": {
+                    "id": "519303b9-a448-4d2a-a8b5-4f9024a34927",
+                    "disambiguation": "",
+                    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                    "country": "US",
+                    "sort-name": "Karscig, Brian",
+                    "name": "Brian Karscig",
+                    "type": "Person"
+                },
+                "ended": true,
+                "source-credit": "",
+                "attribute-ids": {
+                    "guitar": "63021302-86cd-4aee-80df-2270d54f4978",
+                    "keyboard": "95b0c3d2-9606-4ef5-a019-9b7437f3adda"
+                },
+                "attributes": [
+                    "guitar",
+                    "keyboard"
+                ],
+                "attribute-credits": {},
+                "target-credit": "",
+                "direction": "backward",
+                "end": "2016",
+                "begin": "2016",
+                "target-type": "artist",
+                "type-id": "ed6a7891-ce70-4e08-9839-1f2f62270497"
+            },
+            {
+                "target-credit": "",
+                "attribute-credits": {},
+                "attribute-ids": {
+                    "original": "4fd3b255-a7d7-4424-9a63-40fa543b601c",
+                    "background vocals": "75052401-7340-4e5b-a71d-ea024a128849",
+                    "bass": "6505f98c-f698-4406-8bf4-8ca43d05c36f"
+                },
+                "attributes": [
+                    "background vocals",
+                    "bass",
+                    "original"
+                ],
+                "source-credit": "",
+                "ended": true,
+                "artist": {
+                    "type": "Person",
+                    "name": "Dell Neal",
+                    "sort-name": "Neal, Dell",
+                    "country": null,
+                    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                    "id": "1c6bbfde-91f0-45f9-8deb-7c0d140f8ca4",
+                    "disambiguation": ""
+                },
+                "attribute-values": {},
+                "type": "member of band",
+                "type-id": "5be4c609-9afa-4ea0-910b-12ffb71e3821",
+                "target-type": "artist",
+                "end": "2002",
+                "begin": "2001",
+                "direction": "backward"
+            },
+            {
+                "source-credit": "",
+                "attribute-ids": {
+                    "membranophone": "3bccb7eb-cbca-42cd-b0ac-a5e959df7221",
+                    "original": "4fd3b255-a7d7-4424-9a63-40fa543b601c"
+                },
+                "attributes": [
+                    "membranophone",
+                    "original"
+                ],
+                "attribute-credits": {},
+                "target-credit": "",
+                "type": "member of band",
+                "attribute-values": {},
+                "artist": {
+                    "country": "US",
+                    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                    "sort-name": "Norcross, Matt",
+                    "disambiguation": "",
+                    "id": "60186bf6-69c2-4d42-9a3d-09b95043b050",
+                    "name": "Matt Norcross",
+                    "type": "Person"
+                },
+                "ended": true,
+                "begin": "2001",
+                "end": "2002",
+                "target-type": "artist",
+                "type-id": "5be4c609-9afa-4ea0-910b-12ffb71e3821",
+                "direction": "backward"
+            },
+            {
+                "type-id": "5be4c609-9afa-4ea0-910b-12ffb71e3821",
+                "target-type": "artist",
+                "end": null,
+                "begin": "2001",
+                "direction": "backward",
+                "target-credit": "",
+                "attribute-credits": {},
+                "source-credit": "",
+                "attributes": [
+                    "keyboard",
+                    "lead vocals",
+                    "original"
+                ],
+                "attribute-ids": {
+                    "keyboard": "95b0c3d2-9606-4ef5-a019-9b7437f3adda",
+                    "original": "4fd3b255-a7d7-4424-9a63-40fa543b601c",
+                    "lead vocals": "8e2a3255-87c2-4809-a174-98cb3704f1a5"
+                },
+                "artist": {
+                    "id": "5b9dc76b-8574-4cb5-9496-ab1bc0d35c29",
+                    "disambiguation": "",
+                    "country": "US",
+                    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                    "sort-name": "Flowers, Brandon",
+                    "name": "Brandon Flowers",
+                    "type": "Person"
+                },
+                "ended": false,
+                "type": "member of band",
+                "attribute-values": {}
+            },
+            {
+                "direction": "backward",
+                "type-id": "5be4c609-9afa-4ea0-910b-12ffb71e3821",
+                "target-type": "artist",
+                "begin": "2001",
+                "end": null,
+                "ended": false,
+                "artist": {
+                    "sort-name": "Keuning, Dave",
+                    "country": "US",
+                    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                    "disambiguation": "",
+                    "id": "78d0dec5-997a-4334-b1a7-dc9c3c4ea1d4",
+                    "type": "Person",
+                    "name": "Dave Keuning"
+                },
+                "attribute-values": {},
+                "type": "member of band",
+                "target-credit": "",
+                "attribute-credits": {},
+                "attributes": [
+                    "background vocals",
+                    "guitar",
+                    "original"
+                ],
+                "attribute-ids": {
+                    "background vocals": "75052401-7340-4e5b-a71d-ea024a128849",
+                    "original": "4fd3b255-a7d7-4424-9a63-40fa543b601c",
+                    "guitar": "63021302-86cd-4aee-80df-2270d54f4978"
+                },
+                "source-credit": ""
+            },
+            {
+                "source-credit": "",
+                "attribute-ids": {
+                    "membranophone": "3bccb7eb-cbca-42cd-b0ac-a5e959df7221"
+                },
+                "attributes": [
+                    "membranophone"
+                ],
+                "target-credit": "",
+                "attribute-credits": {},
+                "type": "member of band",
+                "attribute-values": {},
+                "artist": {
+                    "name": "Brian Havens",
+                    "type": "Person",
+                    "disambiguation": "",
+                    "id": "00609321-fe8a-4a3d-83ae-a961c40839ef",
+                    "country": null,
+                    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                    "sort-name": "Havens, Brian"
+                },
+                "ended": true,
+                "target-type": "artist",
+                "begin": "2002",
+                "end": "2002",
+                "type-id": "5be4c609-9afa-4ea0-910b-12ffb71e3821",
+                "direction": "backward"
+            },
+            {
+                "type-id": "5be4c609-9afa-4ea0-910b-12ffb71e3821",
+                "end": null,
+                "begin": "2002",
+                "target-type": "artist",
+                "direction": "backward",
+                "attribute-credits": {},
+                "target-credit": "",
+                "source-credit": "",
+                "attribute-ids": {
+                    "background vocals": "75052401-7340-4e5b-a71d-ea024a128849",
+                    "bass": "6505f98c-f698-4406-8bf4-8ca43d05c36f"
+                },
+                "attributes": [
+                    "background vocals",
+                    "bass"
+                ],
+                "artist": {
+                    "name": "Mark Stoermer",
+                    "type": "Person",
+                    "id": "e4eaa11a-531e-42fc-8a7b-1e73a816d5c1",
+                    "disambiguation": "",
+                    "sort-name": "Stoermer, Mark",
+                    "country": "US",
+                    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df"
+                },
+                "ended": false,
+                "type": "member of band",
+                "attribute-values": {}
+            },
+            {
+                "end": null,
+                "begin": "2002",
+                "target-type": "artist",
+                "type-id": "5be4c609-9afa-4ea0-910b-12ffb71e3821",
+                "direction": "backward",
+                "source-credit": "",
+                "attributes": [
+                    "membranophone",
+                    "percussion"
+                ],
+                "attribute-ids": {
+                    "percussion": "8e9abdf1-0afc-4544-b201-c6fa768d01f4",
+                    "membranophone": "3bccb7eb-cbca-42cd-b0ac-a5e959df7221"
+                },
+                "attribute-credits": {},
+                "target-credit": "",
+                "type": "member of band",
+                "attribute-values": {},
+                "artist": {
+                    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                    "country": "US",
+                    "sort-name": "Vannucci, Ronnie Jr.",
+                    "disambiguation": "",
+                    "id": "8e8047b7-3f10-43c0-a191-1ddcbae12ec4",
+                    "name": "Ronnie Vannucci Jr.",
+                    "type": "Person"
+                },
+                "ended": false
+            },
+            {
+                "target-credit": "",
+                "source-credit": "",
+                "attribute-ids": {},
+                "attributes": [],
+                "artist": {
+                    "disambiguation": "UK Group",
+                    "id": "30860a89-b4d6-49b5-91b7-0d266bd85e45",
+                    "country": null,
+                    "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                    "sort-name": "GLASSMAPS",
+                    "type": "Group",
+                    "name": "GLASSMAPS"
+                },
+                "ended": false,
+                "type": "supporting musician",
+                "attribute-values": {},
+                "type-id": "88562a60-2550-48f0-8e8e-f54d95c7369a",
+                "target-type": "artist",
+                "end": null,
+                "begin": null,
+                "direction": "backward"
+            },
+            {
+                "direction": "backward",
+                "type-id": "a6f62641-2f58-470e-b02b-88d7b984dc9f",
+                "target-type": "artist",
+                "begin": null,
+                "end": null,
+                "artist": {
+                    "id": "155f9826-0b6e-43ad-a704-e8b42e0aed19",
+                    "disambiguation": "The Killers Tribute",
+                    "sort-name": "Fillers, The",
+                    "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                    "country": null,
+                    "type": "Group",
+                    "name": "The Fillers"
+                },
+                "ended": false,
+                "type": "tribute",
+                "attribute-values": {},
+                "target-credit": "",
+                "source-credit": "",
+                "attribute-ids": {},
+                "attributes": []
+            },
+            {
+                "direction": "backward",
+                "target-type": "artist",
+                "end": null,
+                "begin": null,
+                "type-id": "a6f62641-2f58-470e-b02b-88d7b984dc9f",
+                "type": "tribute",
+                "attribute-values": {},
+                "artist": {
+                    "sort-name": "Killaz UK, The",
+                    "type-id": null,
+                    "country": null,
+                    "id": "3c60225f-2245-4156-9718-f757782c3b92",
+                    "disambiguation": "The Killers Tribute",
+                    "type": null,
+                    "name": "The Killaz UK"
+                },
+                "ended": false,
+                "source-credit": "",
+                "attribute-ids": {},
+                "attributes": [],
+                "target-credit": ""
+            },
+            {
+                "type-id": "a6f62641-2f58-470e-b02b-88d7b984dc9f",
+                "end": null,
+                "begin": null,
+                "target-type": "artist",
+                "direction": "backward",
+                "target-credit": "",
+                "attributes": [],
+                "attribute-ids": {},
+                "source-credit": "",
+                "ended": false,
+                "artist": {
+                    "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                    "country": null,
+                    "sort-name": "Kopycat Killers, The",
+                    "disambiguation": "Tribute Band for The Killers",
+                    "id": "b92e40f3-3f5a-4abf-a335-5f017c806568",
+                    "type": "Group",
+                    "name": "The Kopycat Killers"
+                },
+                "attribute-values": {},
+                "type": "tribute"
+            },
+            {
+                "type": "tribute",
+                "attribute-values": {},
+                "artist": {
+                    "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+                    "country": null,
+                    "sort-name": "The Runaway Killers",
+                    "disambiguation": "The Killers tribute",
+                    "id": "a78be2ff-6789-44cc-938c-d1cda8f8bfc8",
+                    "name": "The Runaway Killers",
+                    "type": "Group"
+                },
+                "ended": false,
+                "source-credit": "",
+                "attribute-ids": {},
+                "attributes": [],
+                "target-credit": "",
+                "direction": "backward",
+                "begin": null,
+                "end": null,
+                "target-type": "artist",
+                "type-id": "a6f62641-2f58-470e-b02b-88d7b984dc9f"
+            },
+            {
+                "type": "vocal supporting musician",
+                "attribute-values": {},
+                "artist": {
+                    "type": "Person",
+                    "name": "Ted Sablay",
+                    "disambiguation": "",
+                    "id": "df8796bb-9052-4322-a08a-c082b4dd89ed",
+                    "country": "US",
+                    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                    "sort-name": "Sablay, Ted"
+                },
+                "ended": false,
+                "source-credit": "",
+                "attributes": [
+                    "background vocals"
+                ],
+                "attribute-ids": {
+                    "background vocals": "75052401-7340-4e5b-a71d-ea024a128849"
+                },
+                "target-credit": "",
+                "attribute-credits": {},
+                "direction": "backward",
+                "target-type": "artist",
+                "end": null,
+                "begin": "2006",
+                "type-id": "610d39a4-3fa0-4848-a8c9-f46d7b5cc02e"
+            },
+            {
+                "direction": "backward",
+                "end": null,
+                "begin": "2006",
+                "target-type": "artist",
+                "type-id": "610d39a4-3fa0-4848-a8c9-f46d7b5cc02e",
+                "type": "vocal supporting musician",
+                "attribute-values": {},
+                "artist": {
+                    "type": "Person",
+                    "name": "Rob Whited",
+                    "disambiguation": "",
+                    "id": "6203514d-c65d-4511-9686-9cc931610045",
+                    "sort-name": "Whited, Rob",
+                    "country": null,
+                    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df"
+                },
+                "ended": false,
+                "source-credit": "",
+                "attribute-ids": {
+                    "background vocals": "75052401-7340-4e5b-a71d-ea024a128849"
+                },
+                "attributes": [
+                    "background vocals"
+                ],
+                "attribute-credits": {},
+                "target-credit": ""
+            },
+            {
+                "type": "vocal supporting musician",
+                "attribute-values": {},
+                "artist": {
+                    "type": "Person",
+                    "name": "Ray Suen",
+                    "country": "US",
+                    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                    "sort-name": "Suen, Ray",
+                    "id": "ccddee91-342c-4bcf-afd3-d71d10780785",
+                    "disambiguation": ""
+                },
+                "ended": true,
+                "source-credit": "",
+                "attribute-ids": {
+                    "background vocals": "75052401-7340-4e5b-a71d-ea024a128849"
+                },
+                "attributes": [
+                    "background vocals"
+                ],
+                "attribute-credits": {},
+                "target-credit": "",
+                "direction": "backward",
+                "begin": "2008",
+                "end": "2010",
+                "target-type": "artist",
+                "type-id": "610d39a4-3fa0-4848-a8c9-f46d7b5cc02e"
+            },
+            {
+                "target-type": "artist",
+                "begin": "2011",
+                "end": null,
+                "type-id": "610d39a4-3fa0-4848-a8c9-f46d7b5cc02e",
+                "direction": "backward",
+                "attribute-ids": {
+                    "background vocals": "75052401-7340-4e5b-a71d-ea024a128849"
+                },
+                "attributes": [
+                    "background vocals"
+                ],
+                "source-credit": "",
+                "target-credit": "",
+                "attribute-credits": {},
+                "attribute-values": {},
+                "type": "vocal supporting musician",
+                "ended": false,
+                "artist": {
+                    "type": "Person",
+                    "name": "Jake Blanton",
+                    "sort-name": "Blanton, Jake",
+                    "country": "US",
+                    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                    "disambiguation": "American bassist, guitarist, keyboardist, and backing vocalist",
+                    "id": "d4ec3315-ddff-422a-9efd-73eb29f1bbbb"
+                }
+            },
+            {
+                "begin": "2016",
+                "end": "2016",
+                "target-type": "artist",
+                "type-id": "610d39a4-3fa0-4848-a8c9-f46d7b5cc02e",
+                "direction": "backward",
+                "source-credit": "",
+                "attributes": [
+                    "background vocals"
+                ],
+                "attribute-ids": {
+                    "background vocals": "75052401-7340-4e5b-a71d-ea024a128849"
+                },
+                "attribute-credits": {},
+                "target-credit": "",
+                "type": "vocal supporting musician",
+                "attribute-values": {},
+                "artist": {
+                    "sort-name": "Karscig, Brian",
+                    "country": "US",
+                    "type-id": "b6e035f4-3ce9-331c-97df-83397230b0df",
+                    "id": "519303b9-a448-4d2a-a8b5-4f9024a34927",
+                    "disambiguation": "",
+                    "type": "Person",
+                    "name": "Brian Karscig"
+                },
+                "ended": true
+            },
+            {
+                "attributes": [],
+                "attribute-ids": {},
+                "source-credit": "",
+                "target-credit": "",
+                "attribute-values": {},
+                "type": "vocal supporting musician",
+                "ended": false,
+                "artist": {
+                    "type": null,
+                    "name": "Nicky Egan",
+                    "sort-name": "Egan, Nicky",
+                    "country": "US",
+                    "type-id": null,
+                    "id": "2db5142c-bc94-4bbc-934a-0f21e7d8b43f",
+                    "disambiguation": ""
+                },
+                "target-type": "artist",
+                "begin": null,
+                "end": null,
+                "type-id": "610d39a4-3fa0-4848-a8c9-f46d7b5cc02e",
+                "direction": "backward"
+            },
+            {
+                "direction": "forward",
+                "url": {
+                    "resource": "https://www.allmusic.com/artist/mn0000670226",
+                    "id": "e87444d4-21c8-492a-bdda-35d658973709"
+                },
+                "type-id": "6b3e3c85-0002-4f34-aca6-80ace0d7e846",
+                "begin": null,
+                "end": null,
+                "target-type": "url",
+                "ended": false,
+                "attribute-values": {},
+                "type": "allmusic",
+                "target-credit": "",
+                "attributes": [],
+                "attribute-ids": {},
+                "source-credit": ""
+            },
+            {
+                "target-type": "url",
+                "begin": null,
+                "end": null,
+                "type-id": "ea45ed3d-2d5e-456e-8c32-94b6f51426e2",
+                "url": {
+                    "resource": "https://www.bandsintown.com/a/52",
+                    "id": "595d10dd-76b2-4408-b4d3-794cc7ba0bb7"
+                },
+                "direction": "forward",
+                "source-credit": "",
+                "attribute-ids": {},
+                "attributes": [],
+                "target-credit": "",
+                "type": "bandsintown",
+                "attribute-values": {},
+                "ended": false
+            },
+            {
+                "direction": "forward",
+                "begin": null,
+                "end": "2020-11-19",
+                "target-type": "url",
+                "url": {
+                    "id": "600ea9ef-e86b-48da-8e7b-328b1900978f",
+                    "resource": "https://www.bbc.co.uk/music/artists/95e1ead9-4d31-4808-a7ac-32c3614c116b"
+                },
+                "type-id": "d028a975-000c-4525-9333-d3c8425e4b54",
+                "attribute-values": {},
+                "type": "BBC Music page",
+                "ended": true,
+                "attributes": [],
+                "attribute-ids": {},
+                "source-credit": "",
+                "target-credit": ""
+            },
+            {
+                "direction": "forward",
+                "target-type": "url",
+                "end": null,
+                "begin": null,
+                "type-id": "4fb0eeec-a6eb-4ae3-ad52-b55765b94e8f",
+                "url": {
+                    "id": "b4a531be-019c-47cb-9161-359ae185c554",
+                    "resource": "https://www.universal-music.co.jp/killers/discography/"
+                },
+                "type": "discography page",
+                "attribute-values": {},
+                "ended": false,
+                "source-credit": "",
+                "attribute-ids": {},
+                "attributes": [],
+                "target-credit": ""
+            },
+            {
+                "target-type": "url",
+                "end": null,
+                "begin": null,
+                "type-id": "4fb0eeec-a6eb-4ae3-ad52-b55765b94e8f",
+                "url": {
+                    "resource": "http://www.thekillersuk.com/index.htm",
+                    "id": "abb9af1b-3ae8-400f-9826-3ea6a6a48b27"
+                },
+                "direction": "forward",
+                "attribute-ids": {},
+                "attributes": [],
+                "source-credit": "",
+                "target-credit": "",
+                "attribute-values": {},
+                "type": "discography page",
+                "ended": false
+            },
+            {
+                "ended": false,
+                "attribute-values": {},
+                "type": "discogs",
+                "target-credit": "",
+                "attributes": [],
+                "attribute-ids": {},
+                "source-credit": "",
+                "direction": "forward",
+                "type-id": "04a5b104-a4c2-4bac-99a1-7b837c37d9e4",
+                "url": {
+                    "resource": "https://www.discogs.com/artist/220651",
+                    "id": "5a76437c-c887-48b3-8bfc-e3a0c3284cba"
+                },
+                "target-type": "url",
+                "begin": null,
+                "end": null
+            },
+            {
+                "direction": "forward",
+                "target-type": "url",
+                "begin": null,
+                "end": null,
+                "type-id": "769085a1-c2f7-4c24-a532-2375a77693bd",
+                "url": {
+                    "resource": "https://open.spotify.com/artist/0C0XlULifJtAgn6ZNCW2eu",
+                    "id": "744c7da2-09df-4b53-bd6b-f16177a2252b"
+                },
+                "type": "free streaming",
+                "attribute-values": {},
+                "ended": false,
+                "source-credit": "",
+                "attributes": [],
+                "attribute-ids": {},
+                "target-credit": ""
+            },
+            {
+                "ended": false,
+                "attribute-values": {},
+                "type": "free streaming",
+                "target-credit": "",
+                "attribute-ids": {},
+                "attributes": [],
+                "source-credit": "",
+                "direction": "forward",
+                "url": {
+                    "resource": "https://www.deezer.com/artist/897",
+                    "id": "394271c0-63a5-491d-bbbd-fa4be5043de7"
+                },
+                "type-id": "769085a1-c2f7-4c24-a532-2375a77693bd",
+                "end": null,
+                "begin": null,
+                "target-type": "url"
+            },
+            {
+                "url": {
+                    "id": "bcf9e798-fa61-4fde-a661-ce063d23bc66",
+                    "resource": "https://commons.wikimedia.org/wiki/File:The_Killers_in_concert.jpg"
+                },
+                "type-id": "221132e9-e30e-43f2-a741-15afc4c5fa7c",
+                "begin": null,
+                "end": null,
+                "target-type": "url",
+                "direction": "forward",
+                "target-credit": "",
+                "source-credit": "",
+                "attribute-ids": {},
+                "attributes": [],
+                "ended": false,
+                "type": "image",
+                "attribute-values": {}
+            },
+            {
+                "target-type": "url",
+                "end": null,
+                "begin": null,
+                "type-id": "94c8b0cc-4477-4106-932c-da60e63de61c",
+                "url": {
+                    "resource": "https://www.imdb.com/name/nm1736962/",
+                    "id": "10cd0845-3877-4a61-a9e3-e91fa1abbfa6"
+                },
+                "direction": "forward",
+                "source-credit": "",
+                "attribute-ids": {},
+                "attributes": [],
+                "target-credit": "",
+                "type": "IMDb",
+                "attribute-values": {},
+                "ended": false
+            },
+            {
+                "type-id": "08db8098-c0df-4b78-82c3-c8697b4bba7f",
+                "url": {
+                    "id": "9dfac377-a546-4e64-b16c-f301996e310e",
+                    "resource": "https://www.last.fm/music/The+Killers"
+                },
+                "target-type": "url",
+                "begin": null,
+                "end": null,
+                "direction": "forward",
+                "target-credit": "",
+                "source-credit": "",
+                "attribute-ids": {},
+                "attributes": [],
+                "ended": false,
+                "type": "last.fm",
+                "attribute-values": {}
+            },
+            {
+                "url": {
+                    "id": "84d94578-73f5-4c24-aaf6-7d825735688b",
+                    "resource": "https://genius.com/artists/The-killers"
+                },
+                "type-id": "e4d73442-3762-45a8-905c-401da65544ed",
+                "end": null,
+                "begin": null,
+                "target-type": "url",
+                "direction": "forward",
+                "target-credit": "",
+                "attributes": [],
+                "attribute-ids": {},
+                "source-credit": "",
+                "ended": false,
+                "attribute-values": {},
+                "type": "lyrics"
+            },
+            {
+                "ended": false,
+                "type": "lyrics",
+                "attribute-values": {},
+                "target-credit": "",
+                "source-credit": "",
+                "attribute-ids": {},
+                "attributes": [],
+                "direction": "forward",
+                "url": {
+                    "id": "be9faee5-64bf-4f3e-9e3f-b8fd6f99630f",
+                    "resource": "https://www.musixmatch.com/artist/The-Killers"
+                },
+                "type-id": "e4d73442-3762-45a8-905c-401da65544ed",
+                "end": null,
+                "begin": null,
+                "target-type": "url"
+            },
+            {
+                "direction": "forward",
+                "target-type": "url",
+                "end": null,
+                "begin": null,
+                "type-id": "bac47923-ecde-4b59-822e-d08f0cd10156",
+                "url": {
+                    "id": "ab4dbbcc-29e5-4aef-9756-6e77773b79f6",
+                    "resource": "https://myspace.com/thekillers"
+                },
+                "type": "myspace",
+                "attribute-values": {},
+                "ended": false,
+                "source-credit": "",
+                "attributes": [],
+                "attribute-ids": {},
+                "target-credit": ""
+            },
+            {
+                "attribute-values": {},
+                "type": "official homepage",
+                "ended": false,
+                "attribute-ids": {},
+                "attributes": [],
+                "source-credit": "",
+                "target-credit": "",
+                "direction": "forward",
+                "end": null,
+                "begin": null,
+                "target-type": "url",
+                "url": {
+                    "resource": "https://www.thekillersmusic.com/",
+                    "id": "c79042fc-dfe5-403d-8e03-6b25b63a8202"
+                },
+                "type-id": "fe33d22f-c3b0-4d68-bd53-a856badf2b15"
+            },
+            {
+                "type-id": "d94fb61c-fa20-4e3c-a19a-71a949fb2c55",
+                "url": {
+                    "id": "01be1c7c-86b0-4e79-9156-973c340bff8e",
+                    "resource": "https://jaxsta.com/profile/428f5906-d5cf-44f6-9793-30868b5f67da"
+                },
+                "target-type": "url",
+                "end": "2025-12-17",
+                "begin": null,
+                "direction": "forward",
+                "target-credit": "",
+                "source-credit": "",
+                "attributes": [],
+                "attribute-ids": {},
+                "ended": true,
+                "type": "other databases",
+                "attribute-values": {}
+            },
+            {
+                "direction": "forward",
+                "target-type": "url",
+                "begin": null,
+                "end": null,
+                "type-id": "d94fb61c-fa20-4e3c-a19a-71a949fb2c55",
+                "url": {
+                    "id": "8c4584b4-780f-4e77-b914-149b73804632",
+                    "resource": "http://id.loc.gov/authorities/names/no2005001016"
+                },
+                "attribute-values": {},
+                "type": "other databases",
+                "ended": false,
+                "attribute-ids": {},
+                "attributes": [],
+                "source-credit": "",
+                "target-credit": ""
+            },
+            {
+                "direction": "forward",
+                "begin": null,
+                "end": null,
+                "target-type": "url",
+                "url": {
+                    "id": "62ab62a6-fbdd-41a3-820e-830e532972b0",
+                    "resource": "http://musicmoz.org/Bands_and_Artists/K/Killers,_The/"
+                },
+                "type-id": "d94fb61c-fa20-4e3c-a19a-71a949fb2c55",
+                "attribute-values": {},
+                "type": "other databases",
+                "ended": false,
+                "attributes": [],
+                "attribute-ids": {},
+                "source-credit": "",
+                "target-credit": ""
+            },
+            {
+                "attribute-values": {},
+                "type": "other databases",
+                "ended": false,
+                "attributes": [],
+                "attribute-ids": {},
+                "source-credit": "",
+                "target-credit": "",
+                "direction": "forward",
+                "end": null,
+                "begin": null,
+                "target-type": "url",
+                "url": {
+                    "resource": "https://catalogue.bnf.fr/ark:/12148/cb145738270",
+                    "id": "f3a72c51-2750-44a9-9252-bebb03e9c143"
+                },
+                "type-id": "d94fb61c-fa20-4e3c-a19a-71a949fb2c55"
+            },
+            {
+                "target-credit": "",
+                "source-credit": "",
+                "attributes": [],
+                "attribute-ids": {},
+                "ended": false,
+                "type": "other databases",
+                "attribute-values": {},
+                "url": {
+                    "resource": "https://d-nb.info/gnd/10297032-4",
+                    "id": "86675c06-7bc5-45c4-9b53-797f02e74dae"
+                },
+                "type-id": "d94fb61c-fa20-4e3c-a19a-71a949fb2c55",
+                "end": null,
+                "begin": null,
+                "target-type": "url",
+                "direction": "forward"
+            },
+            {
+                "target-credit": "",
+                "attributes": [],
+                "attribute-ids": {},
+                "source-credit": "",
+                "ended": false,
+                "attribute-values": {},
+                "type": "other databases",
+                "type-id": "d94fb61c-fa20-4e3c-a19a-71a949fb2c55",
+                "url": {
+                    "resource": "https://imvdb.com/n/the-killers",
+                    "id": "8ffda1df-42e6-4187-a6a3-437faf5d6a89"
+                },
+                "target-type": "url",
+                "end": null,
+                "begin": null,
+                "direction": "forward"
+            },
+            {
+                "type": "other databases",
+                "attribute-values": {},
+                "ended": false,
+                "source-credit": "",
+                "attributes": [],
+                "attribute-ids": {},
+                "target-credit": "",
+                "direction": "forward",
+                "target-type": "url",
+                "begin": null,
+                "end": null,
+                "type-id": "d94fb61c-fa20-4e3c-a19a-71a949fb2c55",
+                "url": {
+                    "id": "bfe0eb7b-7b28-4296-917c-cd8d78c79172",
+                    "resource": "https://rateyourmusic.com/artist/the_killers"
+                }
+            },
+            {
+                "type-id": "d94fb61c-fa20-4e3c-a19a-71a949fb2c55",
+                "url": {
+                    "id": "7a6be3ec-5606-4668-9b82-298eb1e447ce",
+                    "resource": "https://www.45cat.com/artist/the-killers"
+                },
+                "target-type": "url",
+                "begin": null,
+                "end": null,
+                "direction": "forward",
+                "target-credit": "",
+                "attributes": [],
+                "attribute-ids": {},
+                "source-credit": "",
+                "ended": false,
+                "attribute-values": {},
+                "type": "other databases"
+            },
+            {
+                "ended": false,
+                "attribute-values": {},
+                "type": "other databases",
+                "target-credit": "",
+                "attributes": [],
+                "attribute-ids": {},
+                "source-credit": "",
+                "direction": "forward",
+                "url": {
+                    "resource": "https://www.livefans.jp/artists/2255",
+                    "id": "c2caa179-7cda-47ac-9027-24dbe7e067f5"
+                },
+                "type-id": "d94fb61c-fa20-4e3c-a19a-71a949fb2c55",
+                "end": null,
+                "begin": null,
+                "target-type": "url"
+            },
+            {
+                "direction": "forward",
+                "target-type": "url",
+                "begin": null,
+                "end": null,
+                "type-id": "d94fb61c-fa20-4e3c-a19a-71a949fb2c55",
+                "url": {
+                    "resource": "https://www.muziekweb.nl/Link/M00000194338/POPULAR/",
+                    "id": "f96a2601-8757-4049-bcd9-a7b1929ce3f7"
+                },
+                "attribute-values": {},
+                "type": "other databases",
+                "ended": false,
+                "attribute-ids": {},
+                "attributes": [],
+                "source-credit": "",
+                "target-credit": ""
+            },
+            {
+                "ended": false,
+                "attribute-values": {},
+                "type": "other databases",
+                "target-credit": "",
+                "attribute-ids": {},
+                "attributes": [],
+                "source-credit": "",
+                "direction": "forward",
+                "url": {
+                    "id": "7b696146-d907-4ede-bafd-678dada828d8",
+                    "resource": "https://www.spirit-of-rock.com/en/band/The_Killers"
+                },
+                "type-id": "d94fb61c-fa20-4e3c-a19a-71a949fb2c55",
+                "begin": null,
+                "end": null,
+                "target-type": "url"
+            },
+            {
+                "direction": "forward",
+                "target-type": "url",
+                "begin": null,
+                "end": null,
+                "type-id": "d94fb61c-fa20-4e3c-a19a-71a949fb2c55",
+                "url": {
+                    "id": "07bb94d1-671d-4dc9-ab75-28b6002b341b",
+                    "resource": "https://www.whosampled.com/The-Killers/"
+                },
+                "attribute-values": {},
+                "type": "other databases",
+                "ended": false,
+                "attribute-ids": {},
+                "attributes": [],
+                "source-credit": "",
+                "target-credit": ""
+            },
+            {
+                "attribute-values": {},
+                "type": "other databases",
+                "ended": false,
+                "attributes": [],
+                "attribute-ids": {},
+                "source-credit": "",
+                "target-credit": "",
+                "direction": "forward",
+                "begin": null,
+                "end": null,
+                "target-type": "url",
+                "url": {
+                    "resource": "https://www.worldcat.org/identities/containsVIAFID/159756623",
+                    "id": "8b4c6824-cf05-4f05-9f4b-62d8e3ed039d"
+                },
+                "type-id": "d94fb61c-fa20-4e3c-a19a-71a949fb2c55"
+            },
+            {
+                "direction": "forward",
+                "begin": null,
+                "end": null,
+                "target-type": "url",
+                "url": {
+                    "resource": "http://www.maniadb.com/artist/125039",
+                    "id": "5e5baaf2-3c81-4df8-b645-123d07ecfc72"
+                },
+                "type-id": "d94fb61c-fa20-4e3c-a19a-71a949fb2c55",
+                "attribute-values": {},
+                "type": "other databases",
+                "ended": false,
+                "attributes": [],
+                "attribute-ids": {},
+                "source-credit": "",
+                "target-credit": ""
+            },
+            {
+                "begin": null,
+                "end": null,
+                "target-type": "url",
+                "url": {
+                    "id": "def4d7e0-af9a-42f5-ad08-2ac6d57efdc7",
+                    "resource": "http://www.musik-sammler.de/artist/9750"
+                },
+                "type-id": "d94fb61c-fa20-4e3c-a19a-71a949fb2c55",
+                "direction": "forward",
+                "attribute-ids": {},
+                "attributes": [],
+                "source-credit": "",
+                "target-credit": "",
+                "attribute-values": {},
+                "type": "other databases",
+                "ended": false
+            },
+            {
+                "target-credit": "",
+                "attributes": [],
+                "attribute-ids": {},
+                "source-credit": "",
+                "ended": true,
+                "attribute-values": {},
+                "type": "purchase for download",
+                "url": {
+                    "id": "122daac0-bcff-44d8-a22c-7d7bbf4dec56",
+                    "resource": "https://play.google.com/store/music/artist?id=A7pnwd4rzxpkoah7nqksv5ljomu"
+                },
+                "type-id": "f8319a2f-f824-4617-81c8-be6560b3b203",
+                "end": "2020-10-12",
+                "begin": null,
+                "target-type": "url",
+                "direction": "forward"
+            },
+            {
+                "direction": "forward",
+                "begin": null,
+                "end": null,
+                "target-type": "url",
+                "url": {
+                    "resource": "https://mora.jp/artist/6895/",
+                    "id": "30bd018a-e779-4c0f-bc17-1674d47f4e7f"
+                },
+                "type-id": "f8319a2f-f824-4617-81c8-be6560b3b203",
+                "attribute-values": {},
+                "type": "purchase for download",
+                "ended": false,
+                "attribute-ids": {},
+                "attributes": [],
+                "source-credit": "",
+                "target-credit": ""
+            },
+            {
+                "url": {
+                    "resource": "https://music.apple.com/us/artist/6483093",
+                    "id": "6e124df4-ad3a-4e5c-b43b-c181c8634a67"
+                },
+                "type-id": "f8319a2f-f824-4617-81c8-be6560b3b203",
+                "begin": null,
+                "end": null,
+                "target-type": "url",
+                "direction": "forward",
+                "target-credit": "",
+                "source-credit": "",
+                "attribute-ids": {},
+                "attributes": [],
+                "ended": false,
+                "type": "purchase for download",
+                "attribute-values": {}
+            },
+            {
+                "target-credit": "",
+                "source-credit": "",
+                "attributes": [],
+                "attribute-ids": {},
+                "ended": false,
+                "type": "purchase for download",
+                "attribute-values": {},
+                "url": {
+                    "resource": "https://open.qobuz.com/artist/46042",
+                    "id": "2899e0e7-e7ac-43c1-8d37-d136835511d0"
+                },
+                "type-id": "f8319a2f-f824-4617-81c8-be6560b3b203",
+                "end": null,
+                "begin": null,
+                "target-type": "url",
+                "direction": "forward"
+            },
+            {
+                "ended": false,
+                "type": "purchase for download",
+                "attribute-values": {},
+                "target-credit": "",
+                "source-credit": "",
+                "attribute-ids": {},
+                "attributes": [],
+                "direction": "forward",
+                "url": {
+                    "id": "61f72798-181d-4f8d-b51e-70ab138c3f2f",
+                    "resource": "https://uk.7digital.com/artist/the-killers"
+                },
+                "type-id": "f8319a2f-f824-4617-81c8-be6560b3b203",
+                "begin": null,
+                "end": null,
+                "target-type": "url"
+            },
+            {
+                "type-id": "f8319a2f-f824-4617-81c8-be6560b3b203",
+                "url": {
+                    "resource": "https://www.beatport.com/artist/the-killers/111591",
+                    "id": "1e73f504-695e-4d31-8dd0-06f9e0798a34"
+                },
+                "target-type": "url",
+                "end": null,
+                "begin": null,
+                "direction": "forward",
+                "target-credit": "",
+                "attributes": [],
+                "attribute-ids": {},
+                "source-credit": "",
+                "ended": false,
+                "attribute-values": {},
+                "type": "purchase for download"
+            },
+            {
+                "direction": "forward",
+                "type-id": "f8319a2f-f824-4617-81c8-be6560b3b203",
+                "url": {
+                    "resource": "https://www.hdtracks.com/#/artist/The%20Killers",
+                    "id": "ba44b5c8-419a-4402-92d7-178ef90309b6"
+                },
+                "target-type": "url",
+                "begin": null,
+                "end": null,
+                "ended": false,
+                "attribute-values": {},
+                "type": "purchase for download",
+                "target-credit": "",
+                "attribute-ids": {},
+                "attributes": [],
+                "source-credit": ""
+            },
+            {
+                "direction": "forward",
+                "type-id": "f8319a2f-f824-4617-81c8-be6560b3b203",
+                "url": {
+                    "id": "386a9115-5994-4a49-b0f8-d34df3a5905a",
+                    "resource": "https://www.junodownload.com/artists/The+Killers/releases/"
+                },
+                "target-type": "url",
+                "begin": null,
+                "end": null,
+                "ended": false,
+                "attribute-values": {},
+                "type": "purchase for download",
+                "target-credit": "",
+                "attributes": [],
+                "attribute-ids": {},
+                "source-credit": ""
+            },
+            {
+                "direction": "forward",
+                "type-id": "f8319a2f-f824-4617-81c8-be6560b3b203",
+                "url": {
+                    "id": "98be51a0-75b8-45b6-95e8-31e6ea892cd2",
+                    "resource": "https://www.melon.com/artist/detail.htm?artistId=166668"
+                },
+                "target-type": "url",
+                "begin": null,
+                "end": null,
+                "ended": false,
+                "type": "purchase for download",
+                "attribute-values": {},
+                "target-credit": "",
+                "source-credit": "",
+                "attributes": [],
+                "attribute-ids": {}
+            },
+            {
+                "target-credit": "",
+                "attributes": [],
+                "attribute-ids": {},
+                "source-credit": "",
+                "ended": false,
+                "attribute-values": {},
+                "type": "purchase for download",
+                "url": {
+                    "resource": "https://www.qobuz.com/gb-en/interpreter/the-killers/46042",
+                    "id": "7cd5d78d-cc3f-4795-b718-27f0b577ba77"
+                },
+                "type-id": "f8319a2f-f824-4617-81c8-be6560b3b203",
+                "end": null,
+                "begin": null,
+                "target-type": "url",
+                "direction": "forward"
+            },
+            {
+                "target-type": "url",
+                "end": null,
+                "begin": null,
+                "type-id": "f8319a2f-f824-4617-81c8-be6560b3b203",
+                "url": {
+                    "id": "08493cd7-98e6-436c-a809-51861268160b",
+                    "resource": "https://www.qobuz.com/us-en/interpreter/the-killers/46042"
+                },
+                "direction": "forward",
+                "source-credit": "",
+                "attribute-ids": {},
+                "attributes": [],
+                "target-credit": "",
+                "type": "purchase for download",
+                "attribute-values": {},
+                "ended": false
+            },
+            {
+                "target-type": "url",
+                "end": "2018-06-30",
+                "begin": null,
+                "type-id": "b6f02157-a9d3-4f24-9057-0675b2dbc581",
+                "url": {
+                    "resource": "http://www.purevolume.com/thekillers",
+                    "id": "ce2746c1-1efd-4573-b534-49314f119e56"
+                },
+                "direction": "forward",
+                "attribute-ids": {},
+                "attributes": [],
+                "source-credit": "",
+                "target-credit": "",
+                "attribute-values": {},
+                "type": "purevolume",
+                "ended": true
+            },
+            {
+                "attribute-values": {},
+                "type": "secondhandsongs",
+                "ended": false,
+                "attribute-ids": {},
+                "attributes": [],
+                "source-credit": "",
+                "target-credit": "",
+                "direction": "forward",
+                "end": null,
+                "begin": null,
+                "target-type": "url",
+                "url": {
+                    "id": "709b0afa-8d15-47e6-865a-6fd8495b03b0",
+                    "resource": "https://secondhandsongs.com/artist/19251"
+                },
+                "type-id": "79c5b84d-a206-4f4c-9832-78c028c312c3"
+            },
+            {
+                "target-credit": "",
+                "attribute-ids": {},
+                "attributes": [],
+                "source-credit": "",
+                "ended": false,
+                "attribute-values": {},
+                "type": "setlistfm",
+                "url": {
+                    "id": "2cfc407f-85f3-4556-9bab-8a99c4fdd8b9",
+                    "resource": "https://www.setlist.fm/setlists/the-killers-23d6e097.html"
+                },
+                "type-id": "bf5d0d5e-27a1-4e94-9df7-3cdc67b3b207",
+                "end": null,
+                "begin": null,
+                "target-type": "url",
+                "direction": "forward"
+            },
+            {
+                "direction": "forward",
+                "begin": null,
+                "end": null,
+                "target-type": "url",
+                "url": {
+                    "resource": "https://twitter.com/thekillers",
+                    "id": "58a715ff-0ed6-4430-a4f0-45c123d018f5"
+                },
+                "type-id": "99429741-f3f6-484b-84f8-23af51991770",
+                "type": "social network",
+                "attribute-values": {},
+                "ended": false,
+                "source-credit": "",
+                "attribute-ids": {},
+                "attributes": [],
+                "target-credit": ""
+            },
+            {
+                "ended": false,
+                "attribute-values": {},
+                "type": "social network",
+                "target-credit": "",
+                "attributes": [],
+                "attribute-ids": {},
+                "source-credit": "",
+                "direction": "forward",
+                "url": {
+                    "resource": "https://www.facebook.com/Thekillers",
+                    "id": "afd0b2e2-dac0-40c4-b099-0d861a05d3f6"
+                },
+                "type-id": "99429741-f3f6-484b-84f8-23af51991770",
+                "end": null,
+                "begin": null,
+                "target-type": "url"
+            },
+            {
+                "direction": "forward",
+                "end": null,
+                "begin": null,
+                "target-type": "url",
+                "url": {
+                    "resource": "https://www.instagram.com/thekillers/",
+                    "id": "26cce220-7a24-402b-b958-9da3c0e3a6f6"
+                },
+                "type-id": "99429741-f3f6-484b-84f8-23af51991770",
+                "type": "social network",
+                "attribute-values": {},
+                "ended": false,
+                "source-credit": "",
+                "attributes": [],
+                "attribute-ids": {},
+                "target-credit": ""
+            },
+            {
+                "target-credit": "",
+                "source-credit": "",
+                "attributes": [],
+                "attribute-ids": {},
+                "ended": false,
+                "type": "songkick",
+                "attribute-values": {},
+                "type-id": "aac9c4bc-a5b9-30b8-9839-e3ac314c6e58",
+                "url": {
+                    "id": "1363b065-8423-486d-87ee-181bdcbbcb61",
+                    "resource": "https://www.songkick.com/artists/555021"
+                },
+                "target-type": "url",
+                "end": null,
+                "begin": null,
+                "direction": "forward"
+            },
+            {
+                "ended": false,
+                "attribute-values": {},
+                "type": "soundcloud",
+                "target-credit": "",
+                "attribute-ids": {},
+                "attributes": [],
+                "source-credit": "",
+                "direction": "forward",
+                "url": {
+                    "id": "1d98b03d-0590-4aae-97c6-3bb237b91338",
+                    "resource": "https://soundcloud.com/thekillers"
+                },
+                "type-id": "89e4a949-0976-440d-bda1-5f772c1e5710",
+                "end": null,
+                "begin": null,
+                "target-type": "url"
+            },
+            {
+                "attribute-ids": {},
+                "attributes": [],
+                "source-credit": "",
+                "target-credit": "",
+                "attribute-values": {},
+                "type": "streaming",
+                "ended": true,
+                "end": "2022-06-08",
+                "begin": null,
+                "target-type": "url",
+                "url": {
+                    "resource": "https://us.napster.com/artist/the-killers",
+                    "id": "33ed2bab-fd91-4a76-8423-57baab18f04d"
+                },
+                "type-id": "63cc5d1f-f096-4c94-a43f-ecb32ea94161",
+                "direction": "forward"
+            },
+            {
+                "begin": null,
+                "end": null,
+                "target-type": "url",
+                "url": {
+                    "resource": "https://music.amazon.com/artists/B00G72A5Z0",
+                    "id": "c4d39283-5f9a-47a0-9da4-419b1333b1b1"
+                },
+                "type-id": "63cc5d1f-f096-4c94-a43f-ecb32ea94161",
+                "direction": "forward",
+                "attribute-ids": {},
+                "attributes": [],
+                "source-credit": "",
+                "target-credit": "",
+                "attribute-values": {},
+                "type": "streaming",
+                "ended": false
+            },
+            {
+                "target-credit": "",
+                "attributes": [],
+                "attribute-ids": {},
+                "source-credit": "",
+                "ended": false,
+                "attribute-values": {},
+                "type": "streaming",
+                "url": {
+                    "resource": "https://music.apple.com/mx/artist/6483093",
+                    "id": "43f801af-6069-47a6-b23f-0257ad56c510"
+                },
+                "type-id": "63cc5d1f-f096-4c94-a43f-ecb32ea94161",
+                "begin": null,
+                "end": null,
+                "target-type": "url",
+                "direction": "forward"
+            },
+            {
+                "type-id": "63cc5d1f-f096-4c94-a43f-ecb32ea94161",
+                "url": {
+                    "id": "6e124df4-ad3a-4e5c-b43b-c181c8634a67",
+                    "resource": "https://music.apple.com/us/artist/6483093"
+                },
+                "target-type": "url",
+                "begin": null,
+                "end": null,
+                "direction": "forward",
+                "target-credit": "",
+                "attribute-ids": {},
+                "attributes": [],
+                "source-credit": "",
+                "ended": false,
+                "attribute-values": {},
+                "type": "streaming"
+            },
+            {
+                "end": null,
+                "begin": null,
+                "target-type": "url",
+                "url": {
+                    "resource": "https://open.qobuz.com/artist/46042",
+                    "id": "2899e0e7-e7ac-43c1-8d37-d136835511d0"
+                },
+                "type-id": "63cc5d1f-f096-4c94-a43f-ecb32ea94161",
+                "direction": "forward",
+                "source-credit": "",
+                "attribute-ids": {},
+                "attributes": [],
+                "target-credit": "",
+                "type": "streaming",
+                "attribute-values": {},
+                "ended": false
+            },
+            {
+                "target-credit": "",
+                "source-credit": "",
+                "attributes": [],
+                "attribute-ids": {},
+                "ended": false,
+                "type": "streaming",
+                "attribute-values": {},
+                "type-id": "63cc5d1f-f096-4c94-a43f-ecb32ea94161",
+                "url": {
+                    "resource": "https://tidal.com/artist/15686",
+                    "id": "2b02478d-caa3-4c70-8849-0aeae11861eb"
+                },
+                "target-type": "url",
+                "end": null,
+                "begin": null,
+                "direction": "forward"
+            },
+            {
+                "direction": "forward",
+                "url": {
+                    "id": "98be51a0-75b8-45b6-95e8-31e6ea892cd2",
+                    "resource": "https://www.melon.com/artist/detail.htm?artistId=166668"
+                },
+                "type-id": "63cc5d1f-f096-4c94-a43f-ecb32ea94161",
+                "begin": null,
+                "end": null,
+                "target-type": "url",
+                "ended": false,
+                "attribute-values": {},
+                "type": "streaming",
+                "target-credit": "",
+                "attributes": [],
+                "attribute-ids": {},
+                "source-credit": ""
+            },
+            {
+                "source-credit": "",
+                "attributes": [],
+                "attribute-ids": {},
+                "target-credit": "",
+                "type": "streaming",
+                "attribute-values": {},
+                "ended": false,
+                "target-type": "url",
+                "end": null,
+                "begin": null,
+                "type-id": "63cc5d1f-f096-4c94-a43f-ecb32ea94161",
+                "url": {
+                    "id": "7cd5d78d-cc3f-4795-b718-27f0b577ba77",
+                    "resource": "https://www.qobuz.com/gb-en/interpreter/the-killers/46042"
+                },
+                "direction": "forward"
+            },
+            {
+                "direction": "forward",
+                "url": {
+                    "resource": "https://www.qobuz.com/us-en/interpreter/the-killers/46042",
+                    "id": "08493cd7-98e6-436c-a809-51861268160b"
+                },
+                "type-id": "63cc5d1f-f096-4c94-a43f-ecb32ea94161",
+                "end": null,
+                "begin": null,
+                "target-type": "url",
+                "ended": false,
+                "attribute-values": {},
+                "type": "streaming",
+                "target-credit": "",
+                "attributes": [],
+                "attribute-ids": {},
+                "source-credit": ""
+            },
+            {
+                "target-credit": "",
+                "source-credit": "",
+                "attributes": [],
+                "attribute-ids": {},
+                "ended": false,
+                "type": "VIAF",
+                "attribute-values": {},
+                "type-id": "e8571dcc-35d4-4e91-a577-a3382fd84460",
+                "url": {
+                    "resource": "http://viaf.org/viaf/141509248",
+                    "id": "96e9b3ea-4811-44ca-852d-f38fb4fc0261"
+                },
+                "target-type": "url",
+                "begin": null,
+                "end": null,
+                "direction": "forward"
+            },
+            {
+                "source-credit": "",
+                "attributes": [],
+                "attribute-ids": {},
+                "target-credit": "",
+                "type": "VIAF",
+                "attribute-values": {},
+                "ended": false,
+                "target-type": "url",
+                "end": null,
+                "begin": null,
+                "type-id": "e8571dcc-35d4-4e91-a577-a3382fd84460",
+                "url": {
+                    "resource": "http://viaf.org/viaf/159756623",
+                    "id": "a82a22be-dc0b-4448-9203-6d54b420df55"
+                },
+                "direction": "forward"
+            },
+            {
+                "direction": "forward",
+                "begin": null,
+                "end": null,
+                "target-type": "url",
+                "url": {
+                    "resource": "https://www.wikidata.org/wiki/Q220730",
+                    "id": "44057349-19c3-4279-a554-cf4576a6dbcb"
+                },
+                "type-id": "689870a4-a1e4-4912-b17f-7b2664215698",
+                "attribute-values": {},
+                "type": "wikidata",
+                "ended": false,
+                "attributes": [],
+                "attribute-ids": {},
+                "source-credit": "",
+                "target-credit": ""
+            },
+            {
+                "type-id": "6a540e5b-58c6-4192-b6ba-dbc71ec8fcf0",
+                "url": {
+                    "id": "0aa18c1c-ca03-4192-97e7-42aed1e72c14",
+                    "resource": "https://www.youtube.com/channel/UCjB3CzA-MwHrDzuXGweNiMg"
+                },
+                "target-type": "url",
+                "end": null,
+                "begin": null,
+                "direction": "forward",
+                "target-credit": "",
+                "attribute-ids": {},
+                "attributes": [],
+                "source-credit": "",
+                "ended": false,
+                "attribute-values": {},
+                "type": "youtube"
+            },
+            {
+                "attributes": [],
+                "attribute-ids": {},
+                "source-credit": "",
+                "target-credit": "",
+                "attribute-values": {},
+                "type": "youtube",
+                "ended": false,
+                "target-type": "url",
+                "begin": null,
+                "end": null,
+                "type-id": "6a540e5b-58c6-4192-b6ba-dbc71ec8fcf0",
+                "url": {
+                    "id": "cf45aa58-2a9d-4847-b5a7-b062d243a7e7",
+                    "resource": "https://www.youtube.com/channel/UCkhyoTaWKuB-Rdbb6Z3Z5DA"
+                },
+                "direction": "forward"
+            }
+        ],
+        "id": "95e1ead9-4d31-4808-a7ac-32c3614c116b",
+        "end-area": null,
+        "aliases": [
+            {
+                "sort-name": "Killers, The",
+                "type-id": null,
+                "locale": null,
+                "begin": null,
+                "end": null,
+                "primary": null,
+                "ended": false,
+                "type": null,
+                "name": "Killers, The"
+            },
+            {
+                "locale": "ja",
+                "end": null,
+                "begin": null,
+                "sort-name": "ザ・キラーズ",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "ザ・キラーズ",
+                "type": "Artist name",
+                "primary": true,
+                "ended": false
+            }
+        ],
+        "tags": [
+            {
+                "count": 18,
+                "name": "alternative rock"
+            },
+            {
+                "count": 2,
+                "name": "big music"
+            },
+            {
+                "name": "christmas music",
+                "count": 1
+            },
+            {
+                "count": 4,
+                "name": "heartland rock"
+            },
+            {
+                "name": "indie rock",
+                "count": 8
+            },
+            {
+                "name": "new wave",
+                "count": 4
+            },
+            {
+                "name": "pop rock",
+                "count": 6
+            },
+            {
+                "name": "post-punk revival",
+                "count": 4
+            },
+            {
+                "count": 2,
+                "name": "rock"
+            }
+        ],
+        "name": "The Killers",
+        "type": "Group",
+        "isnis": [
+            "0000000112543449",
+            "0000000469942637"
+        ],
+        "rating": {
+            "votes-count": 15,
+            "value": 4.25
+        },
+        "country": "US",
+        "sort-name": "Killers, The",
+        "gender-id": null,
+        "begin-area": {
+            "type-id": null,
+            "sort-name": "Las Vegas",
+            "id": "cd22d0ba-c79b-45b3-a8e0-617b240df5f0",
+            "disambiguation": "",
+            "type": null,
+            "name": "Las Vegas"
+        },
+        "gender": null,
+        "disambiguation": "American rock band"
+    }
+]
