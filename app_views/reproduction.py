@@ -31,6 +31,8 @@ PLAYBACK_CACHE_KEY = "reproduction_playback_cache"
 PLAYBACK_FORCE_REFRESH_UNTIL_KEY = "reproduction_force_refresh_until"
 LIKED_CACHE_KEY = "reproduction_liked_cache"
 ADJACENT_TRACKS_CACHE_KEY = "reproduction_adjacent_tracks_cache"
+ADJACENT_TRACK_HISTORY_KEY = "reproduction_adjacent_track_history"
+ADJACENT_PREVIOUS_REQUEST_KEY = "reproduction_previous_request"
 
 
 def _has_reached_track_refresh_window(playback: dict) -> bool:
@@ -122,6 +124,8 @@ def _request_playback_refresh_window() -> None:
 def refresh_playback_on_page_entry() -> None:
     _invalidate_playback_cache()
     st.session_state.pop(ADJACENT_TRACKS_CACHE_KEY, None)
+    st.session_state.pop(ADJACENT_TRACK_HISTORY_KEY, None)
+    st.session_state.pop(ADJACENT_PREVIOUS_REQUEST_KEY, None)
     _request_playback_refresh_window()
 
 
@@ -145,25 +149,53 @@ def _get_track_image_url(track: dict) -> str | None:
     )
 
 
-def _get_adjacent_tracks(current_track_id: str | None) -> tuple[dict, dict]:
+def _get_adjacent_tracks(current_track: dict) -> tuple[dict, dict]:
+    current_track_id = current_track.get("id")
+    if not current_track_id:
+        return {}, {}
+
     cached = st.session_state.get(ADJACENT_TRACKS_CACHE_KEY)
     if cached and cached.get("current_track_id") == current_track_id:
         return cached.get("previous") or {}, cached.get("next") or {}
 
-    previous_track = {}
-    recently_played = _get_recently_played() or {}
-    for entry in recently_played.get("items") or []:
-        track = entry.get("track") or {}
-        if track.get("id") and track.get("id") != current_track_id:
-            previous_track = track
-            break
+    history = st.session_state.setdefault(ADJACENT_TRACK_HISTORY_KEY, {})
+    previous_request = st.session_state.pop(ADJACENT_PREVIOUS_REQUEST_KEY, None)
+    if cached and current_track_id == previous_request:
+        previous_track = history.get(current_track_id) or {}
+    elif cached and (cached.get("current") or {}).get("id"):
+        previous_track = cached["current"]
+    else:
+        recently_played = _get_recently_played() or {}
+        recent_tracks = [
+            entry.get("track") or {} for entry in recently_played.get("items") or []
+        ]
+        for index, track in enumerate(recent_tracks):
+            if track.get("id") and track["id"] not in history:
+                history[track["id"]] = next(
+                    (
+                        older
+                        for older in recent_tracks[index + 1 :]
+                        if older.get("id") and older["id"] != track["id"]
+                    ),
+                    {},
+                )
+        previous_track = next(
+            (
+                track
+                for track in recent_tracks
+                if track.get("id") and track["id"] != current_track_id
+            ),
+            {},
+        )
 
     queue = _get_queue() or {}
     next_track = next(
         (track for track in queue.get("queue") or [] if track.get("id")), {}
     )
+    history[current_track_id] = previous_track
     st.session_state[ADJACENT_TRACKS_CACHE_KEY] = {
         "current_track_id": current_track_id,
+        "current": current_track,
         "previous": previous_track,
         "next": next_track,
     }
@@ -197,7 +229,7 @@ def _render_playback_controls(
             ):
                 if _previous_track():
                     _invalidate_playback_cache()
-                    st.session_state.pop(ADJACENT_TRACKS_CACHE_KEY, None)
+                    st.session_state[ADJACENT_PREVIOUS_REQUEST_KEY] = previous_track.get("id")
                     _request_playback_refresh_window()
                     st.rerun()
                 st.error("No se pudo volver a la canción anterior.")
@@ -263,7 +295,7 @@ def _render_playback_controls(
             ):
                 if _next_track():
                     _invalidate_playback_cache()
-                    st.session_state.pop(ADJACENT_TRACKS_CACHE_KEY, None)
+                    st.session_state.pop(ADJACENT_PREVIOUS_REQUEST_KEY, None)
                     _request_playback_refresh_window()
                     st.rerun()
                 st.error("No se pudo avanzar a la siguiente canción.")
@@ -575,7 +607,7 @@ def render_reproduction_page():
         ),
         None,
     )
-    previous_track, next_track = _get_adjacent_tracks(track_id)
+    previous_track, next_track = _get_adjacent_tracks(item)
 
     adjacent_images_css = ""
     previous_image_url = _get_track_image_url(previous_track)
