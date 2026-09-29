@@ -1,3 +1,5 @@
+import argparse
+from pathlib import Path
 from typing import Literal
 
 import matplotlib.pyplot as plt
@@ -20,6 +22,8 @@ def load_top_plays(
 	"""Load the most played tracks, artists, or albums using a SQL CTE."""
 	if entity_type not in {"artists", "albums", "tracks"}:
 		raise ValueError("entity_type debe ser artistas, albumes o canciones.")
+	if limit < 1:
+		raise ValueError("El limite del top debe ser mayor que cero.")
 
 	query = """
 		WITH plays AS (
@@ -116,7 +120,13 @@ def create_top_plays_chart(
 	if top_plays.empty:
 		raise ValueError("No hay reproducciones para representar.")
 
-	output = output_path or f"top_{len(top_plays)}_{entity_type}.png"
+	output = Path(output_path) if output_path is not None else (
+		Path(__file__).resolve().parent
+		/ "outputs"
+		/ "chart"
+		/ f"top_{len(top_plays)}_{entity_type}.png"
+	)
+	output.parent.mkdir(parents=True, exist_ok=True)
 	ranking = top_plays.sort_values("reproducciones")
 	colors = {
 		"tracks": "#2563a6",
@@ -176,12 +186,34 @@ def create_top_plays_chart(
 	axis.tick_params(axis="y", labelsize=9)
 	figure.savefig(output, dpi=180, bbox_inches="tight", facecolor=figure.get_facecolor())
 	plt.close(figure)
-	return output
+	return str(output)
+
+
+def main(
+	limit: int = TOP_LIMIT,
+	entity_type: Literal["artists", "albums", "tracks"] = ENTITY_TYPE,
+	database_url: str = DATABASE_URL,
+) -> str:
+	top_plays = load_top_plays(
+		database_url=database_url,
+		entity_type=entity_type,
+		limit=limit,
+	)
+	print(f"Top {limit} de {entity_type}:")
+	print(top_plays.to_string(index=False))
+	chart_path = create_top_plays_chart(top_plays, entity_type)
+	print(f"Grafica creada: {chart_path}")
+	return chart_path
 
 
 if __name__ == "__main__":
-	top_plays = load_top_plays()
-	print(f"Top {TOP_LIMIT} de {ENTITY_TYPE}:")
-	print(top_plays.to_string(index=False))
-	chart_path = create_top_plays_chart(top_plays, ENTITY_TYPE)
-	print(f"Grafica creada: {chart_path}")
+	parser = argparse.ArgumentParser(description="Genera un ranking de reproducciones.")
+	parser.add_argument("--limit", type=int, default=TOP_LIMIT, help="Cantidad de elementos del top.")
+	parser.add_argument(
+		"--entity",
+		choices=("artists", "albums", "tracks"),
+		default=ENTITY_TYPE,
+		help="Tipo de elemento que se quiere clasificar.",
+	)
+	arguments = parser.parse_args()
+	main(limit=arguments.limit, entity_type=arguments.entity)
