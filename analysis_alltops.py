@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.patches import Patch
 
-from analysis import load_database_dataframes, prepare_listening_events
+from analysis_listeningevents import load_database_dataframes, prepare_listening_events
 
 
 TOP_LIMIT = 50
@@ -12,6 +12,8 @@ TOP_LIMIT = 50
 
 def prepare_top_plays(events: pd.DataFrame, limit: int = TOP_LIMIT) -> dict[str, pd.Series]:
 	"""Build top-played rankings for tracks, artists, and albums."""
+	if limit < 1:
+		raise ValueError("El limite del top debe ser mayor que cero.")
 	if events.empty:
 		raise ValueError("No hay listening events para representar.")
 
@@ -64,20 +66,28 @@ def prepare_recent_plays(events: pd.DataFrame, days: int) -> dict[str, pd.Series
 	}
 
 
-def create_top_100_charts(
+def create_top_charts(
 	events: pd.DataFrame,
-	output_path: str = "top_100_listening_summary.png",
+	limit: int = TOP_LIMIT,
+	output_path: str | Path | None = None,
 ) -> Path:
 	"""Create and save top charts for tracks, artists, and albums."""
-	top_plays = prepare_top_plays(events)
+	top_plays = prepare_top_plays(events, limit=limit)
 	rank_changes = prepare_rank_change(events)
 	last_week_plays = prepare_recent_plays(events, days=7)
 	last_month_plays = prepare_recent_plays(events, days=30)
-	output = Path(output_path)
+	output = Path(output_path) if output_path is not None else (
+		Path(__file__).resolve().parent
+		/ "outputs"
+		/ "chart"
+		/ f"top_{limit}_listening_summary.png"
+	)
 	output.parent.mkdir(parents=True, exist_ok=True)
 
 	plt.style.use("seaborn-v0_8-whitegrid")
-	figure, axes = plt.subplots(3, 1, figsize=(18, 42), constrained_layout=True)
+	figure, axes = plt.subplots(
+		3, 1, figsize=(18, max(12, limit * 0.28 * 3)), constrained_layout=True
+	)
 	figure.patch.set_facecolor("#f7f4ed")
 
 	colors = {
@@ -157,7 +167,7 @@ def create_top_100_charts(
 	date_range = (events["played_at"].max() - events["played_at"].min()).days + 1
 	total_hours = events["hours_listened"].sum()
 	figure.suptitle(
-		f"Top {TOP_LIMIT} de escuchas\n"
+		f"Top {limit} de escuchas\n"
 		f"{len(events):,} reproducciones  |  {total_hours:,.1f} horas  |  "
 		f"{len(events) / date_range:,.1f} eventos/dia",
 		fontsize=28,
@@ -172,5 +182,5 @@ def create_top_100_charts(
 if __name__ == "__main__":
 	dataframes = load_database_dataframes()
 	listening_events = prepare_listening_events(dataframes)
-	chart_path = create_top_100_charts(listening_events)
+	chart_path = create_top_charts(listening_events)
 	print(f"Grafica creada: {chart_path.resolve()}")
