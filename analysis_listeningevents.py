@@ -228,8 +228,15 @@ def create_listening_summary_charts(
 			linewidth=2.5,
 			label=entity,
 		)
-	axes[1][0].set_title("Crecimiento acumulado del catalogo")
-	axes[1][0].set_ylabel("Elementos guardados")
+	axes[1][0].plot(
+		daily.index,
+		daily.cumsum(),
+		color="#18794e",
+		linewidth=2.5,
+		label="Listening events",
+	)
+	axes[1][0].set_title("Acumulado del catalogo y listening events")
+	axes[1][0].set_ylabel("Elementos / reproducciones acumulados")
 	axes[1][0].set_ylim(bottom=0)
 	axes[1][0].legend(frameon=False)
 
