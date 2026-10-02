@@ -13,6 +13,7 @@ SPOTIFY_SCOPE = (
     "user-read-playback-state "
     "user-modify-playback-state "
     "user-read-recently-played "
+    "user-top-read "
     "user-library-read "
     "user-library-modify"
 )
@@ -142,6 +143,30 @@ class SpotifyClient:
         except Exception as exc:
             if VERBOSE:
                 print(f"Error in SpotifyClient.get_recently_played: {exc}")
+            return None
+
+    def get_top_tracks(self, limit=20, offset=0, time_range="medium_term"):
+        try:
+            return self.sp.current_user_top_tracks(
+                limit=limit,
+                offset=offset,
+                time_range=time_range,
+            )
+        except Exception as exc:
+            if VERBOSE:
+                print(f"Error in SpotifyClient.get_top_tracks: {exc}")
+            return None
+
+    def get_top_artists(self, limit=20, offset=0, time_range="medium_term"):
+        try:
+            return self.sp.current_user_top_artists(
+                limit=limit,
+                offset=offset,
+                time_range=time_range,
+            )
+        except Exception as exc:
+            if VERBOSE:
+                print(f"Error in SpotifyClient.get_top_artists: {exc}")
             return None
 
     def get_liked_songs(self, limit=20, offset=0):
