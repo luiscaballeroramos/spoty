@@ -1,13 +1,6 @@
 import os
 
 import streamlit as st
-from app_views.reproduction import (
-    refresh_playback_on_page_entry,
-    render_reproduction_page,
-)
-from app_views.summary import render_summary_page
-from app_views.top_navigation import render_top_navigation
-from spotifyapi.streamlit_auth import process_spotify_oauth_callback
 
 
 # Load environment variables from Streamlit secrets if available
@@ -20,6 +13,20 @@ def load_streamlit_secrets_to_env():
         secrets = st.secrets
     except Exception:
         return
+
+    for name in (
+        "SPOTIFY_CLIENT_ID",
+        "SPOTIFY_CLIENT_SECRET",
+        "SPOTIFY_REDIRECT_URI",
+        "SPOTIFY_REFRESH_TOKEN",
+    ):
+        try:
+            value = secrets[name]
+        except Exception:
+            value = None
+        if value:
+            os.environ[name] = str(value).strip()
+
     database_url = None
     try:
         database_url = secrets["DATABASE_URL"]
@@ -35,6 +42,14 @@ def load_streamlit_secrets_to_env():
 
 
 load_streamlit_secrets_to_env()
+
+from app_views.reproduction import (
+    refresh_playback_on_page_entry,
+    render_reproduction_page,
+)
+from app_views.summary import render_summary_page
+from app_views.top_navigation import render_top_navigation
+from spotifyapi.streamlit_auth import process_spotify_oauth_callback
 
 st.set_page_config(
     page_title="luiSPOTY",
