@@ -43,19 +43,23 @@ def load_streamlit_secrets_to_env():
 
 load_streamlit_secrets_to_env()
 
-from app_views.reproduction import (
-    refresh_playback_on_page_entry,
-    render_reproduction_page,
-)
-from app_views.summary import render_summary_page
-from app_views.top_navigation import render_top_navigation
-from spotifyapi.streamlit_auth import process_spotify_oauth_callback
-
 st.set_page_config(
     page_title="luiSPOTY",
     page_icon="🎵",
     layout="wide",
 )
+
+try:
+    from app_views.reproduction import (
+        refresh_playback_on_page_entry,
+        render_reproduction_page,
+    )
+    from app_views.summary import render_summary_page
+    from app_views.top_navigation import render_top_navigation
+    from spotifyapi.streamlit_auth import process_spotify_oauth_callback
+except Exception as exc:
+    st.error(f"No se pudo iniciar la app ({type(exc).__name__}): {exc}")
+    st.stop()
 
 st.markdown(
     """
