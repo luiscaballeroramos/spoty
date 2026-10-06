@@ -211,7 +211,7 @@ def create_top_plays_chart(
 	)
 	axis.barh(
 		positions, ranking["ultimas_24_horas"],
-		left=ranking["reproducciones"] - ranking["ultimas_24_horas"],
+		left=0,
 		color=color,
 		alpha=transparencies["24_hours"],
 		label="Ultimas 24 horas"
