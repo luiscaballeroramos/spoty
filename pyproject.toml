@@ -35,5 +35,5 @@ py-modules = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["register*", "spotifyapi*"]
+include = ["register*", "services*", "spotifyapi*"]
 namespaces = true

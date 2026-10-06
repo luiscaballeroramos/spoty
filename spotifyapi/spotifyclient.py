@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import Any, Callable
 
 import requests
 import spotipy
@@ -47,6 +48,10 @@ def has_cached_oauth_token() -> bool:
 
 
 class SpotifyClient:
+    """
+    Client class for interacting with the Spotify Web API.
+    Handles authentication via OAuth or refresh token and provides methods for accessing artist and track information.
+    """
     def __init__(self):
         refresh_token = os.getenv("SPOTIFY_REFRESH_TOKEN", "").strip()
 
@@ -94,6 +99,22 @@ class SpotifyClient:
             backoff_factor=0.3,
         )
 
+    def _run(
+        self,
+        action: str,
+        operation: Callable[..., Any],
+        *args: Any,
+        command: bool = False,
+        **kwargs: Any,
+    ) -> Any:
+        try:
+            result = operation(*args, **kwargs)
+            return True if command else result
+        except Exception as exc:
+            if VERBOSE:
+                print(f"Error trying to {action}: {exc}")
+            return False if command else None
+
     def get_artist_byid(self, artist_id: str) -> Artist:
         artist = self.sp.artist(artist_id)
         images = [img["url"] for img in artist["images"]] if "images" in artist else []
@@ -122,57 +143,113 @@ class SpotifyClient:
         return artists
 
     def get_track_byid(self, track_id: str):
-        try:
-            return self.sp.track(track_id)
-        except Exception:
-            if VERBOSE:
-                print(f"Error in SpotifyClient.get_track_byid for {track_id}")
-            return None
+        return self._run(f"get track {track_id}", self.sp.track, track_id)
 
     def get_currently_playing(self):
-        try:
-            return self.sp.currently_playing()
-        except Exception:
-            if VERBOSE:
-                print("Error in SpotifyClient.get_currently_playing")
-            return None
+        return self._run("get currently playing", self.sp.currently_playing)
 
     def get_recently_played(self, limit=20):
-        try:
-            return self.sp.current_user_recently_played(limit=limit)
-        except Exception as exc:
-            if VERBOSE:
-                print(f"Error in SpotifyClient.get_recently_played: {exc}")
-            return None
+        return self._run(
+            "get recently played", self.sp.current_user_recently_played, limit=limit
+        )
 
     def get_top_tracks(self, limit=20, offset=0, time_range="medium_term"):
-        try:
-            return self.sp.current_user_top_tracks(
-                limit=limit,
-                offset=offset,
-                time_range=time_range,
-            )
-        except Exception as exc:
-            if VERBOSE:
-                print(f"Error in SpotifyClient.get_top_tracks: {exc}")
-            return None
+        return self._run(
+            "get top tracks",
+            self.sp.current_user_top_tracks,
+            limit=limit,
+            offset=offset,
+            time_range=time_range,
+        )
 
     def get_top_artists(self, limit=20, offset=0, time_range="medium_term"):
-        try:
-            return self.sp.current_user_top_artists(
-                limit=limit,
-                offset=offset,
-                time_range=time_range,
-            )
-        except Exception as exc:
-            if VERBOSE:
-                print(f"Error in SpotifyClient.get_top_artists: {exc}")
-            return None
+        return self._run(
+            "get top artists",
+            self.sp.current_user_top_artists,
+            limit=limit,
+            offset=offset,
+            time_range=time_range,
+        )
 
     def get_liked_songs(self, limit=20, offset=0):
-        try:
-            return self.sp.current_user_saved_tracks(limit=limit, offset=offset)
-        except Exception:
+        return self._run(
+            "get liked songs",
+            self.sp.current_user_saved_tracks,
+            limit=limit,
+            offset=offset,
+        )
+
+    def pause_playback(self) -> bool:
+        return self._run(
+            "pause playback", self.sp.pause_playback, command=True
+        )
+
+    def start_playback(self) -> bool:
+        return self._run("resume playback", self.sp.start_playback, command=True)
+
+    def next_track(self) -> bool:
+        return self._run("skip to next track", self.sp.next_track, command=True)
+
+    def previous_track(self) -> bool:
+        return self._run(
+            "go to previous track", self.sp.previous_track, command=True
+        )
+
+    def shuffle(self, state: bool) -> bool:
+        return self._run("set shuffle", self.sp.shuffle, state, command=True)
+
+    def repeat(self, mode: str) -> bool:
+        normalized_mode = (mode or "").strip().lower()
+        if normalized_mode not in {"off", "track", "context"}:
             if VERBOSE:
-                print("Error in SpotifyClient.get_liked_songs")
-            return None
+                print("Invalid repeat mode. Use: off, track, or context")
+            return False
+        return self._run(
+            f"set repeat mode to {normalized_mode}",
+            self.sp.repeat,
+            normalized_mode,
+            command=True,
+        )
+
+    def get_current_playback(self):
+        return self._run("get current playback", self.sp.current_playback)
+
+    def add_to_queue(self, uri: str, device_id: str | None = None) -> bool:
+        if not uri or not uri.strip():
+            if VERBOSE:
+                print("uri is required")
+            return False
+        return self._run(
+            f"add uri to queue: {uri}",
+            self.sp.add_to_queue,
+            uri=uri,
+            device_id=device_id,
+            command=True,
+        )
+
+    def get_queue(self):
+        return self._run("get queue", self.sp.queue)
+
+    def like_track(self, track_id: str) -> bool:
+        return self._run(
+            f"like track {track_id}",
+            self.sp.current_user_saved_tracks_add,
+            [track_id],
+            command=True,
+        )
+
+    def unlike_track(self, track_id: str) -> bool:
+        return self._run(
+            f"unlike track {track_id}",
+            self.sp.current_user_saved_tracks_delete,
+            [track_id],
+            command=True,
+        )
+
+    def is_track_liked(self, track_id: str) -> bool:
+        response = self._run(
+            f"check liked status for track {track_id}",
+            self.sp.current_user_saved_tracks_contains,
+            [track_id],
+        )
+        return bool(response and response[0])

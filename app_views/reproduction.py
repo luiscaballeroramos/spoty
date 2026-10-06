@@ -4,24 +4,13 @@ import time
 
 import streamlit as st
 
-from _reproduction import (
-    _get_current_playback,
-    _is_track_liked,
-    _like_track,
-    _next_track,
-    _pause,
-    _play,
-    _previous_track,
-    _get_queue,
-    _get_recently_played,
-    _unlike_track,
-)
+from services.reproduction import ReproductionService
+from spotifyapi.spotifyclient import SpotifyClient
 from spotifyapi.streamlit_auth import (
     has_spotify_auth_available,
     render_oauth_feedback,
     render_spotify_authorization_section,
 )
-
 
 PLAYBACK_REFRESH_MARGIN_MS = 2_000
 PLAYBACK_FRAGMENT_INTERVAL_SECONDS = 1
@@ -29,10 +18,26 @@ PLAYBACK_PAUSED_POLL_SECONDS = 5
 PLAYBACK_CONTROL_REFRESH_SECONDS = 4
 PLAYBACK_CACHE_KEY = "reproduction_playback_cache"
 PLAYBACK_FORCE_REFRESH_UNTIL_KEY = "reproduction_force_refresh_until"
+SPOTIFY_CLIENT_CACHE_KEY = "reproduction_spotify_client"
+SPOTIFY_CLIENT_MAX_AGE_SECONDS = 50 * 60
 LIKED_CACHE_KEY = "reproduction_liked_cache"
 ADJACENT_TRACKS_CACHE_KEY = "reproduction_adjacent_tracks_cache"
 ADJACENT_TRACK_HISTORY_KEY = "reproduction_adjacent_track_history"
 ADJACENT_PREVIOUS_REQUEST_KEY = "reproduction_previous_request"
+
+
+def _get_spotify_client() -> SpotifyClient:
+    now = time.monotonic()
+    cached = st.session_state.get(SPOTIFY_CLIENT_CACHE_KEY)
+    if cached and now - cached["created_at"] < SPOTIFY_CLIENT_MAX_AGE_SECONDS:
+        return cached["client"]
+
+    client = SpotifyClient()
+    st.session_state[SPOTIFY_CLIENT_CACHE_KEY] = {
+        "client": client,
+        "created_at": now,
+    }
+    return client
 
 
 def _has_reached_track_refresh_window(playback: dict) -> bool:
@@ -72,7 +77,7 @@ def _copy_playback_with_estimated_progress(
     return estimated_playback
 
 
-def _get_playback() -> dict:
+def _get_playback(client: SpotifyClient) -> dict:
     now = time.monotonic()
     force_refresh_until = st.session_state.get(PLAYBACK_FORCE_REFRESH_UNTIL_KEY, 0)
     should_force_refresh = now < force_refresh_until
@@ -103,7 +108,7 @@ def _get_playback() -> dict:
         ):
             return playback
 
-    playback = _get_current_playback() or {}
+    playback = client.get_current_playback() or {}
     st.session_state[PLAYBACK_CACHE_KEY] = {
         "playback": playback,
         "fetched_at": now,
@@ -149,7 +154,9 @@ def _get_track_image_url(track: dict) -> str | None:
     )
 
 
-def _get_adjacent_tracks(current_track: dict) -> tuple[dict, dict]:
+def _get_adjacent_tracks(
+    client: SpotifyClient, current_track: dict
+) -> tuple[dict, dict]:
     current_track_id = current_track.get("id")
     if not current_track_id:
         return {}, {}
@@ -165,7 +172,7 @@ def _get_adjacent_tracks(current_track: dict) -> tuple[dict, dict]:
     elif cached and (cached.get("current") or {}).get("id"):
         previous_track = cached["current"]
     else:
-        recently_played = _get_recently_played() or {}
+        recently_played = client.get_recently_played() or {}
         recent_tracks = [
             entry.get("track") or {} for entry in recently_played.get("items") or []
         ]
@@ -188,7 +195,7 @@ def _get_adjacent_tracks(current_track: dict) -> tuple[dict, dict]:
             {},
         )
 
-    queue = _get_queue() or {}
+    queue = client.get_queue() or {}
     next_track = next(
         (track for track in queue.get("queue") or [] if track.get("id")), {}
     )
@@ -203,6 +210,7 @@ def _get_adjacent_tracks(current_track: dict) -> tuple[dict, dict]:
 
 
 def _render_playback_controls(
+    client: SpotifyClient,
     is_playing: bool,
     track_id: str | None,
     is_track_liked: bool,
@@ -213,7 +221,7 @@ def _render_playback_controls(
 ) -> None:
     play_pause_label = ">||"
     play_pause_help = "Pausar" if is_playing else "Reproducir"
-    play_pause_action = _pause if is_playing else _play
+    play_pause_action = client.pause_playback if is_playing else client.start_playback
 
     with st.container(key="reproduction-controls"):
         previous_col, play_pause_col, next_col = st.columns(
@@ -227,7 +235,7 @@ def _render_playback_controls(
                 help="Anterior",
                 use_container_width=True,
             ):
-                if _previous_track():
+                if client.previous_track():
                     _invalidate_playback_cache()
                     st.session_state[ADJACENT_PREVIOUS_REQUEST_KEY] = previous_track.get("id")
                     _request_playback_refresh_window()
@@ -293,7 +301,7 @@ def _render_playback_controls(
                 help="Siguiente",
                 use_container_width=True,
             ):
-                if _next_track():
+                if client.next_track():
                     _invalidate_playback_cache()
                     st.session_state.pop(ADJACENT_PREVIOUS_REQUEST_KEY, None)
                     _request_playback_refresh_window()
@@ -578,7 +586,14 @@ def render_reproduction_page():
         render_spotify_authorization_section()
         return
 
-    playback = _get_playback()
+    try:
+        client = _get_spotify_client()
+    except Exception as exc:
+        st.error(f"No se pudo conectar con Spotify: {exc}")
+        return
+
+    reproduction_service = ReproductionService(client)
+    playback = _get_playback(client)
     is_playing = bool(playback.get("is_playing"))
 
     item = playback.get("item") or {}
@@ -593,7 +608,7 @@ def render_reproduction_page():
     else:
         liked_cache = st.session_state.setdefault(LIKED_CACHE_KEY, {})
         if track_id not in liked_cache:
-            liked_cache[track_id] = _is_track_liked(track_id)
+            liked_cache[track_id] = client.is_track_liked(track_id)
         is_track_liked = bool(track_id and liked_cache[track_id])
     track_name = item.get("name")
     artists = item.get("artists") or []
@@ -607,7 +622,7 @@ def render_reproduction_page():
         ),
         None,
     )
-    previous_track, next_track = _get_adjacent_tracks(item)
+    previous_track, next_track = _get_adjacent_tracks(client, item)
 
     adjacent_images_css = ""
     previous_image_url = _get_track_image_url(previous_track)
@@ -671,6 +686,7 @@ def render_reproduction_page():
         st.error("No se pudo retirar la canción de Liked Songs.")
 
     _render_playback_controls(
+        client=client,
         is_playing=is_playing,
         track_id=track_id,
         is_track_liked=is_track_liked,
@@ -685,9 +701,9 @@ def render_reproduction_page():
         pending_track_id = pending_library_action["track_id"]
         action = pending_library_action["action"]
         action_succeeded = (
-            _like_track(pending_track_id)
+            reproduction_service.save_liked_track(pending_track_id)
             if action == "like"
-            else _unlike_track(pending_track_id)
+            else reproduction_service.remove_liked_track(pending_track_id)
         )
         liked_cache = st.session_state.setdefault(LIKED_CACHE_KEY, {})
         if action_succeeded:
