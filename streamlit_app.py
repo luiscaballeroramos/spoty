@@ -54,7 +54,7 @@ try:
         refresh_playback_on_page_entry,
         render_reproduction_page,
     )
-    from app_views.summary import render_summary_page
+    from app_views.summary import render_summary_page, run_registration_with_feedback
     from app_views.top_navigation import render_top_navigation
     from spotifyapi.streamlit_auth import process_spotify_oauth_callback
 except Exception as exc:
@@ -87,6 +87,8 @@ def go_to_page(page_name: str):
 
 
 def go_to_summary_page():
+    if get_current_page() != PAGE_SUMMARY:
+        run_registration_with_feedback()
     go_to_page(PAGE_SUMMARY)
 
 

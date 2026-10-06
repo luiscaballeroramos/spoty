@@ -14,7 +14,6 @@ from spotifyapi.streamlit_auth import (
 )
 
 LOCAL_TIMEZONE = timezone(timedelta(hours=4))
-AUTO_REFRESH_KEY = "summary_auto_refresh_enabled"
 SIGNATURE_KEY = "summary_dashboard_signature"
 LAST_CHANGE_KEY = "summary_last_change_at"
 REFRESH_INTERVAL_SECONDS = 10
@@ -162,9 +161,6 @@ def get_image(images):
 
 @st.fragment(run_every=REFRESH_INTERVAL_LABEL)
 def _watch_summary_changes_fragment():
-    if not st.session_state.get(AUTO_REFRESH_KEY, True):
-        return
-
     try:
         current_signature = query_dashboard_signature()
     except Exception:
@@ -195,19 +191,11 @@ def _render_spotify_dashboard():
         )
         if register_import_error:
             st.caption(f"Detalle de importación: {register_import_error}")
-    else:
-        if not auth_available:
-            st.warning(
-                "No hay sesión OAuth válida de Spotify. Autoriza desde aquí para continuar."
-            )
-            render_spotify_authorization_section()
-
-        if st.button(
-            "↻ Actualizar",
-            key="register_listeningevents",
-            disabled=not auth_available,
-        ):
-            run_registration_with_feedback()
+    elif not auth_available:
+        st.warning(
+            "No hay sesión OAuth válida de Spotify. Autoriza desde aquí para continuar."
+        )
+        render_spotify_authorization_section()
 
     rows = query_database("""
         WITH track_stats AS (
@@ -370,28 +358,5 @@ def _render_spotify_dashboard():
 
 
 def render_summary_page():
-    st.session_state.setdefault(AUTO_REFRESH_KEY, True)
-
-    st.checkbox(
-        f"Auto-actualizar cada {REFRESH_INTERVAL_SECONDS}s",
-        key=AUTO_REFRESH_KEY,
-        help=(
-            "Solo repinta la vista completa cuando detecta cambios reales, "
-            "para evitar parpadeos innecesarios."
-        ),
-    )
-
-    if st.session_state[AUTO_REFRESH_KEY]:
-        _watch_summary_changes_fragment()
-        last_change = st.session_state.get(LAST_CHANGE_KEY)
-        if last_change:
-            st.caption(
-                "Revisión activa cada 10s. "
-                f"Último cambio detectado a las {last_change}."
-            )
-        else:
-            st.caption("Revisión activa cada 10s. Sin cambios detectados todavía.")
-    else:
-        st.caption("Auto-actualización pausada. Usa ↻ Actualizar cuando lo necesites.")
-
+    _watch_summary_changes_fragment()
     _render_spotify_dashboard()
