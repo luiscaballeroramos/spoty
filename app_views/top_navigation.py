@@ -65,7 +65,6 @@ def render_top_navigation(
             if st.button(
                 "📊 Summary",
                 key="top_nav_summary",
-                help="Summary",
                 type="secondary",
                 use_container_width=True,
             ):
@@ -75,7 +74,6 @@ def render_top_navigation(
             if st.button(
                 "⏯️ Reproducción",
                 key="top_nav_reproduction",
-                help="Reproduction",
                 type="secondary",
                 use_container_width=True,
             ):
