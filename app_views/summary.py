@@ -77,7 +77,7 @@ def render_registration_feedback():
         return
 
     icons = {"error": "❌", "warning": "⚠️", "success": "✅"}
-    st.toast(message, icon=icons.get(feedback_type, "ℹ️"))
+    st.toast(message, icon=icons.get(feedback_type, "ℹ️"), duration=5)
 
 
 def query_database(query: str):
