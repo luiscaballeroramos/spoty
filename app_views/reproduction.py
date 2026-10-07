@@ -1,6 +1,7 @@
 import html
 import json
 import time
+from pathlib import Path
 
 import streamlit as st
 
@@ -21,6 +22,8 @@ PLAYBACK_CONTROL_REFRESH_SECONDS = 4
 ADJACENT_TRACKS_POLL_SECONDS = 15
 PLAYBACK_CACHE_KEY = "reproduction_playback_cache"
 PAUSED_PLAYBACK_KEY = "reproduction_paused_playback"
+PERSISTED_PLAYBACK_LOADED_KEY = "reproduction_persisted_playback_loaded"
+PLAYBACK_STATE_PATH = Path(__file__).resolve().parents[1] / ".playback_state.json"
 PLAYBACK_FORCE_REFRESH_UNTIL_KEY = "reproduction_force_refresh_until"
 SPOTIFY_CLIENT_CACHE_KEY = "reproduction_spotify_client"
 SPOTIFY_CLIENT_MAX_AGE_SECONDS = 50 * 60
@@ -28,6 +31,57 @@ LIKED_CACHE_KEY = "reproduction_liked_cache"
 ADJACENT_TRACKS_CACHE_KEY = "reproduction_adjacent_tracks_cache"
 ADJACENT_TRACK_HISTORY_KEY = "reproduction_adjacent_track_history"
 ADJACENT_PREVIOUS_REQUEST_KEY = "reproduction_previous_request"
+
+
+def _load_persisted_playback() -> None:
+    if st.session_state.get(PERSISTED_PLAYBACK_LOADED_KEY):
+        return
+    st.session_state[PERSISTED_PLAYBACK_LOADED_KEY] = True
+
+    try:
+        saved_state = json.loads(PLAYBACK_STATE_PATH.read_text(encoding="utf-8"))
+        playback = saved_state.get("playback")
+        if not isinstance(playback, dict) or not playback.get("item"):
+            return
+
+        paused_at_epoch = saved_state.get("paused_at_epoch")
+        if isinstance(paused_at_epoch, (int, float)):
+            paused_elapsed = max(0, time.time() - paused_at_epoch)
+            playback["paused_at"] = time.monotonic() - paused_elapsed
+        st.session_state[PAUSED_PLAYBACK_KEY] = playback
+    except (OSError, json.JSONDecodeError, AttributeError):
+        return
+
+
+def _persist_playback(playback: dict) -> None:
+    if not playback.get("item"):
+        return
+
+    snapshot = dict(playback)
+    paused_at = snapshot.pop("paused_at", None)
+    saved_state = {
+        "playback": snapshot,
+        "paused_at_epoch": (
+            time.time() - (time.monotonic() - paused_at)
+            if isinstance(paused_at, (int, float))
+            else None
+        ),
+    }
+    temporary_path = PLAYBACK_STATE_PATH.with_suffix(".tmp")
+    try:
+        temporary_path.write_text(
+            json.dumps(saved_state, ensure_ascii=True), encoding="utf-8"
+        )
+        temporary_path.replace(PLAYBACK_STATE_PATH)
+    except OSError:
+        temporary_path.unlink(missing_ok=True)
+
+
+def _clear_persisted_playback() -> None:
+    try:
+        PLAYBACK_STATE_PATH.unlink(missing_ok=True)
+    except OSError:
+        return
 
 
 def _get_spotify_client() -> SpotifyClient:
@@ -86,6 +140,7 @@ def _copy_playback_with_estimated_progress(
 
 
 def _get_playback(client: SpotifyClient) -> dict:
+    _load_persisted_playback()
     now = time.monotonic()
     force_refresh_until = st.session_state.get(PLAYBACK_FORCE_REFRESH_UNTIL_KEY, 0)
     should_force_refresh = now < force_refresh_until
@@ -127,6 +182,21 @@ def _get_playback(client: SpotifyClient) -> dict:
             or playback.get("is_playing")
         ):
             st.session_state.pop(PAUSED_PLAYBACK_KEY, None)
+            saved_playback = None
+    if playback.get("item"):
+        saved_item_id = (saved_playback or {}).get("item", {}).get("id")
+        if (
+            not playback.get("is_playing")
+            and saved_playback
+            and saved_item_id == playback["item"].get("id")
+        ):
+            if saved_playback.get("paused_at") is not None:
+                playback["paused_at"] = saved_playback["paused_at"]
+            if saved_playback.get("queue_uris"):
+                playback["queue_uris"] = saved_playback["queue_uris"]
+        elif not playback.get("is_playing"):
+            playback["paused_at"] = now
+        _persist_playback(playback)
     st.session_state[PLAYBACK_CACHE_KEY] = {
         "playback": playback,
         "fetched_at": now,
@@ -264,6 +334,8 @@ def _render_playback_controls(
             ):
                 if client.previous_track():
                     _invalidate_playback_cache()
+                    st.session_state.pop(PAUSED_PLAYBACK_KEY, None)
+                    _clear_persisted_playback()
                     st.session_state[ADJACENT_PREVIOUS_REQUEST_KEY] = previous_track.get("id")
                     _request_playback_refresh_window()
                     st.rerun()
@@ -299,6 +371,7 @@ def _render_playback_controls(
                                         if track.get("uri", "").startswith("spotify:track:")
                                     ][:99]
                                 st.session_state[PAUSED_PLAYBACK_KEY] = saved_playback
+                                _persist_playback(saved_playback)
                         else:
                             snapshot = (
                                 st.session_state.get(PAUSED_PLAYBACK_KEY)
@@ -496,6 +569,7 @@ def _render_playback_controls(
                 if succeeded:
                     _invalidate_playback_cache()
                     st.session_state.pop(PAUSED_PLAYBACK_KEY, None)
+                    _clear_persisted_playback()
                     st.session_state.pop(ADJACENT_PREVIOUS_REQUEST_KEY, None)
                     _request_playback_refresh_window()
                     st.rerun()
