@@ -179,16 +179,37 @@ class SpotifyClient:
             offset=offset,
         )
 
-    def pause_playback(self) -> bool:
+    def pause_playback(self, device_id: str | None = None) -> bool:
         return self._run(
-            "pause playback", self.sp.pause_playback, command=True
+            "pause playback", self.sp.pause_playback, device_id=device_id, command=True
         )
 
-    def start_playback(self) -> bool:
-        return self._run("resume playback", self.sp.start_playback, command=True)
+    def start_playback(
+        self,
+        device_id: str | None = None,
+        uri: str | None = None,
+        position_ms: int | None = None,
+        uris: list[str] | None = None,
+        context_uri: str | None = None,
+    ) -> bool:
+        return self._run(
+            "resume playback",
+            self.sp.start_playback,
+            device_id=device_id,
+            uris=None if context_uri else uris if uris is not None else [uri] if uri else None,
+            position_ms=position_ms if uri or uris else None,
+            **(
+                {"context_uri": context_uri, "offset": {"uri": uri}}
+                if context_uri and uri
+                else {}
+            ),
+            command=True,
+        )
 
-    def next_track(self) -> bool:
-        return self._run("skip to next track", self.sp.next_track, command=True)
+    def next_track(self, device_id: str | None = None) -> bool:
+        return self._run(
+            "skip to next track", self.sp.next_track, device_id=device_id, command=True
+        )
 
     def previous_track(self) -> bool:
         return self._run(
@@ -213,6 +234,18 @@ class SpotifyClient:
 
     def get_current_playback(self):
         return self._run("get current playback", self.sp.current_playback)
+
+    def get_devices(self):
+        return self._run("get devices", self.sp.devices)
+
+    def transfer_playback(self, device_id: str) -> bool:
+        return self._run(
+            "activate playback device",
+            self.sp.transfer_playback,
+            device_id,
+            force_play=False,
+            command=True,
+        )
 
     def add_to_queue(self, uri: str, device_id: str | None = None) -> bool:
         if not uri or not uri.strip():
