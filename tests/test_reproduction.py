@@ -1,5 +1,7 @@
 import sys
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
 with patch.dict(sys.modules, {
@@ -16,6 +18,16 @@ class RerunRequested(Exception):
 
 class ReproductionTest(unittest.TestCase):
     def setUp(self):
+        self.playback_temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.playback_temp_dir.cleanup)
+        self.playback_path_patch = patch.object(
+            reproduction,
+            "PLAYBACK_STATE_PATH",
+            Path(self.playback_temp_dir.name) / "playback.json",
+        )
+        self.playback_path_patch.start()
+        self.addCleanup(self.playback_path_patch.stop)
+
         self.session_state = {}
         self.streamlit = MagicMock()
         self.streamlit.session_state = self.session_state
@@ -171,6 +183,47 @@ class ReproductionTest(unittest.TestCase):
             offset={"uri": "spotify:track:track-id"},
             position_ms=72_000,
         )
+
+    def test_persisted_pause_restores_context_and_position_in_new_session(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_path = Path(temp_dir) / "playback.json"
+            with patch.object(reproduction, "PLAYBACK_STATE_PATH", state_path):
+                reproduction._persist_playback(
+                    {
+                        **self.playback,
+                        "context": {"uri": "spotify:playlist:playlist-id"},
+                        "paused_at": reproduction.time.monotonic() - 120,
+                    }
+                )
+                self.session_state.clear()
+                self.spotify.current_playback.return_value = None
+
+                paused = reproduction._get_playback(self.client)
+                self.assertEqual(paused["item"], self.track)
+                self.assertFalse(paused["is_playing"])
+                self.click_play_pause(paused)
+
+        self.spotify.start_playback.assert_called_once_with(
+            device_id="original-device",
+            uris=None,
+            context_uri="spotify:playlist:playlist-id",
+            offset={"uri": "spotify:track:track-id"},
+            position_ms=72_000,
+        )
+
+    def test_persisted_playing_track_is_available_when_spotify_has_no_playback(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_path = Path(temp_dir) / "playback.json"
+            with patch.object(reproduction, "PLAYBACK_STATE_PATH", state_path):
+                reproduction._persist_playback(self.playback)
+                self.session_state.clear()
+                self.spotify.current_playback.return_value = None
+
+                paused = reproduction._get_playback(self.client)
+
+        self.assertEqual(paused["item"], self.track)
+        self.assertEqual(paused["progress_ms"], 72_000)
+        self.assertFalse(paused["is_playing"])
 
     def test_inactive_device_restores_track_even_when_paused_item_is_reported(self):
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = self.playback
