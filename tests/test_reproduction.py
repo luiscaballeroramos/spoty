@@ -225,6 +225,19 @@ class ReproductionTest(unittest.TestCase):
         self.assertEqual(paused["progress_ms"], 72_000)
         self.assertFalse(paused["is_playing"])
 
+    def test_playback_poll_persists_track_for_a_new_session(self):
+        self.spotify.current_playback.return_value = self.playback
+        reproduction._get_playback(self.client)
+        self.assertTrue(reproduction.PLAYBACK_STATE_PATH.exists())
+
+        self.session_state.clear()
+        self.spotify.current_playback.return_value = None
+        restored = reproduction._get_playback(self.client)
+
+        self.assertEqual(restored["item"], self.track)
+        self.assertEqual(restored["progress_ms"], 72_000)
+        self.assertFalse(restored["is_playing"])
+
     def test_inactive_device_restores_track_even_when_paused_item_is_reported(self):
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = self.playback
         paused = {**self.playback, "is_playing": False}
