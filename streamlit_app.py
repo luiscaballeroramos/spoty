@@ -64,6 +64,42 @@ except Exception as exc:
 st.markdown(
     """
     <style>
+    html, body, .stApp,
+    [data-testid="stAppViewContainer"],
+    [data-testid="stMain"],
+    [data-testid="stMainBlockContainer"],
+    .block-container {
+        background: #ffffff !important;
+    }
+
+    body, .stApp, [data-testid="stMainBlockContainer"],
+    [data-testid="stMainBlockContainer"] div,
+    [data-testid="stMarkdownContainer"],
+    .element-container {
+        color: #111111 !important;
+    }
+
+    p, h1, h2, h3, h4, h5, h6, span, label, li, a,
+    strong, em, small {
+        color: inherit !important;
+    }
+
+    .stButton > button,
+    .stSelectbox > div,
+    .stTextInput > div,
+    .stNumberInput > div,
+    .stTextArea > div,
+    .stDateInput > div,
+    .stTimeInput > div,
+    .stForm,
+    .stTabs [role="tablist"],
+    [data-testid="stDataFrame"],
+    [data-testid="stTable"] {
+        background: #ffffff !important;
+        border: 1px solid #000000 !important;
+        border-radius: 0.5rem !important;
+    }
+
     [data-testid="stHeader"],
     [data-testid="stDecoration"],
     [data-testid="stToolbar"] {

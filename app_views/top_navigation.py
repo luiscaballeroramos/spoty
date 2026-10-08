@@ -59,7 +59,7 @@ def render_top_navigation(
     )
 
     with st.container(key="top-navigation"):
-        col_summary, col_reproduction = st.columns(2, gap=None)
+        col_summary, col_reproduction = st.columns(2, gap="small")
 
         with col_summary:
             if st.button(

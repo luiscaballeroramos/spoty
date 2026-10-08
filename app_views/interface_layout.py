@@ -60,7 +60,7 @@ import streamlit as st
 
 
 _LAYOUT_KEY_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
-_COLUMN_GAPS = {None, "small", "medium", "large"}
+_COLUMN_GAPS = {"small", "medium", "large"}
 _VERTICAL_ALIGNMENTS = {"top", "center", "bottom"}
 
 
@@ -143,18 +143,16 @@ def proportional_columns(
             numeric, or if a spacing/alignment option is unsupported.
     """
     validated_ratios = _validate_ratios(ratios)
-    if gap not in _COLUMN_GAPS:
-        raise ValueError("gap must be None, 'small', 'medium', or 'large'.")
+    if gap is None:
+        gap_kwargs = {"vertical_alignment": vertical_alignment}
+    else:
+        if gap not in _COLUMN_GAPS:
+            raise ValueError("gap must be 'small', 'medium', or 'large'.")
+        gap_kwargs = {"gap": gap, "vertical_alignment": vertical_alignment}
     if vertical_alignment not in _VERTICAL_ALIGNMENTS:
         raise ValueError("vertical_alignment must be 'top', 'center', or 'bottom'.")
 
-    return list(
-        st.columns(
-            validated_ratios,
-            gap=gap,
-            vertical_alignment=vertical_alignment,
-        )
-    )
+    return list(st.columns(validated_ratios, **gap_kwargs))
 
 
 def _validate_ratios(ratios: Sequence[Real]) -> tuple[Real, ...]:
