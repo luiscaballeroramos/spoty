@@ -102,21 +102,6 @@ def _get_spotify_client() -> SpotifyClient:
     return client
 
 
-def _has_reached_track_refresh_window(playback: dict) -> bool:
-    if not playback.get("is_playing"):
-        return False
-
-    item = playback.get("item") or {}
-    progress_ms = playback.get("progress_ms")
-    duration_ms = item.get("duration_ms")
-    if not isinstance(progress_ms, (int, float)) or not isinstance(
-        duration_ms, (int, float)
-    ):
-        return False
-
-    return progress_ms + PLAYBACK_REFRESH_MARGIN_MS >= duration_ms
-
-
 def _copy_playback_with_estimated_progress(
     playback: dict, fetched_at: float, now: float
 ) -> dict:
@@ -307,6 +292,215 @@ def _get_adjacent_tracks(
     return previous_track, next_track
 
 
+def _clear_paused_playback() -> None:
+    st.session_state.pop(PAUSED_PLAYBACK_KEY, None)
+    _clear_persisted_playback()
+
+
+def _save_paused_playback(client: SpotifyClient, playback: dict) -> None:
+    saved_playback = {**playback, "paused_at": time.monotonic()}
+    queue = client.get_queue() or {}
+    if (queue.get("currently_playing") or {}).get("id") == playback["item"].get("id"):
+        saved_playback["queue_uris"] = [
+            track["uri"]
+            for track in queue.get("queue") or []
+            if track.get("uri", "").startswith("spotify:track:")
+        ][:99]
+    st.session_state[PAUSED_PLAYBACK_KEY] = saved_playback
+    _persist_playback(saved_playback)
+
+
+def _resume_playback(
+    client: SpotifyClient, playback: dict, live_playback: dict
+) -> bool | None:
+    snapshot = (
+        st.session_state.get(PAUSED_PLAYBACK_KEY) or live_playback or playback
+    )
+    device_id = (snapshot.get("device") or {}).get("id")
+    item = snapshot.get("item") or {}
+    if not device_id:
+        st.error("No se ha identificado el dispositivo de reproducción.")
+        return None
+
+    devices = client.get_devices()
+    if devices is None:
+        st.error("No se pudieron consultar los dispositivos de Spotify.")
+        return None
+    device = next(
+        (
+            available
+            for available in devices.get("devices") or []
+            if available.get("id") == device_id
+        ),
+        None,
+    )
+    if device is None:
+        st.error(
+            "El dispositivo original no está disponible. "
+            "Abre Spotify en él y vuelve a pulsar Play."
+        )
+        return None
+    if not device.get("is_active") and not client.transfer_playback(device_id):
+        st.error("No se pudo activar el dispositivo original en Spotify.")
+        return None
+
+    paused_at = snapshot.get("paused_at")
+    missing_playback = (
+        not live_playback.get("item")
+        or not device.get("is_active")
+        or paused_at is None
+        or time.monotonic() - paused_at >= PLAYBACK_RESTORE_AFTER_SECONDS
+    )
+    queue_uris = snapshot.get("queue_uris") or []
+    context_uri = (
+        (snapshot.get("context") or {}).get("uri") if missing_playback else None
+    )
+    succeeded = client.start_playback(
+        device_id=device_id,
+        uri=item.get("uri") if missing_playback else None,
+        position_ms=snapshot.get("progress_ms") if missing_playback else None,
+        **(
+            {"context_uri": context_uri}
+            if context_uri and item.get("uri")
+            else {"uris": [item["uri"], *queue_uris]}
+            if missing_playback and item.get("uri") and queue_uris
+            else {}
+        ),
+    )
+    if not succeeded and context_uri and item.get("uri"):
+        succeeded = client.start_playback(
+            device_id=device_id,
+            uri=item["uri"],
+            uris=[item["uri"], *queue_uris] if queue_uris else None,
+            position_ms=snapshot.get("progress_ms"),
+        )
+    if not succeeded and not missing_playback and item.get("uri"):
+        succeeded = client.start_playback(
+            device_id=device_id,
+            uri=item["uri"],
+            position_ms=snapshot.get("progress_ms"),
+        )
+    return succeeded
+
+
+def _handle_play_pause(client: SpotifyClient, playback: dict) -> None:
+    live_playback = client.get_current_playback() or {}
+    currently_playing = bool(live_playback.get("is_playing"))
+    if currently_playing:
+        snapshot = live_playback
+        device_id = (snapshot.get("device") or {}).get("id")
+        succeeded = client.pause_playback(device_id=device_id)
+        if succeeded and snapshot.get("item"):
+            _save_paused_playback(client, snapshot)
+    else:
+        succeeded = _resume_playback(client, playback, live_playback)
+        if succeeded is None:
+            return
+
+    if succeeded:
+        _invalidate_playback_cache()
+        _request_playback_refresh_window()
+        st.rerun()
+    action_label = "pausar" if currently_playing else "reanudar"
+    st.error(f"No se pudo {action_label} la reproducción.")
+
+
+def _handle_previous_track(client: SpotifyClient, previous_track: dict) -> None:
+    if client.previous_track():
+        _invalidate_playback_cache()
+        _clear_paused_playback()
+        st.session_state[ADJACENT_PREVIOUS_REQUEST_KEY] = previous_track.get("id")
+        _request_playback_refresh_window()
+        st.rerun()
+    st.error("No se pudo volver a la canción anterior.")
+
+
+def _handle_next_track(client: SpotifyClient, playback: dict) -> None:
+    live_playback = client.get_current_playback() or {}
+    device_id = (
+        (live_playback.get("device") or playback.get("device") or {}).get("id")
+    )
+    device = None
+    if device_id:
+        devices = client.get_devices()
+        device = next(
+            (
+                available
+                for available in (devices or {}).get("devices") or []
+                if available.get("id") == device_id
+            ),
+            None,
+        )
+        if device is not None and not device.get("is_active"):
+            if not client.transfer_playback(device_id):
+                st.error("No se pudo activar el dispositivo original en Spotify.")
+                return
+
+    saved_playback = st.session_state.get(PAUSED_PLAYBACK_KEY) or {}
+    paused_at = saved_playback.get("paused_at")
+    needs_restore = (
+        bool(saved_playback)
+        and not live_playback.get("is_playing")
+        and (
+            not live_playback.get("item")
+            or (device is not None and not device.get("is_active"))
+            or (
+                paused_at is not None
+                and time.monotonic() - paused_at >= PLAYBACK_RESTORE_AFTER_SECONDS
+            )
+        )
+    )
+    if needs_restore:
+        queue = client.get_queue()
+        if queue is not None:
+            current_id = (
+                (live_playback.get("item") or playback.get("item") or {}).get("id")
+            )
+            queued_current_id = (queue.get("currently_playing") or {}).get("id")
+            if queued_current_id and queued_current_id != current_id:
+                st.error("La cola de Spotify ha cambiado. Actualiza la reproducción.")
+                return
+            queue_uris = [
+                track["uri"]
+                for track in queue.get("queue") or []
+                if track.get("uri", "").startswith("spotify:track:")
+            ][:100]
+        else:
+            queue_uris = saved_playback.get("queue_uris") or []
+        current_uri = (
+            (live_playback.get("item") or playback.get("item") or {}).get("uri")
+        )
+        if not queue_uris or queue_uris[0] == current_uri:
+            st.error(
+                "No se conoce la siguiente canción para reanudar la reproducción."
+            )
+            return
+
+    if needs_restore:
+        context_uri = (saved_playback.get("context") or {}).get("uri")
+        succeeded = (
+            client.start_playback(
+                device_id=device_id,
+                uri=queue_uris[0],
+                context_uri=context_uri,
+            )
+            if context_uri
+            else False
+        )
+        if not succeeded:
+            succeeded = client.start_playback(device_id=device_id, uris=queue_uris)
+    else:
+        succeeded = client.next_track(device_id=device_id)
+
+    if succeeded:
+        _invalidate_playback_cache()
+        _clear_paused_playback()
+        st.session_state.pop(ADJACENT_PREVIOUS_REQUEST_KEY, None)
+        _request_playback_refresh_window()
+        st.rerun()
+    st.error("No se pudo avanzar a la siguiente canción.")
+
+
 def _render_playback_controls(
     client: SpotifyClient,
     playback: dict,
@@ -332,14 +526,7 @@ def _render_playback_controls(
                 help="Anterior",
                 use_container_width=True,
             ):
-                if client.previous_track():
-                    _invalidate_playback_cache()
-                    st.session_state.pop(PAUSED_PLAYBACK_KEY, None)
-                    _clear_persisted_playback()
-                    st.session_state[ADJACENT_PREVIOUS_REQUEST_KEY] = previous_track.get("id")
-                    _request_playback_refresh_window()
-                    st.rerun()
-                st.error("No se pudo volver a la canción anterior.")
+                _handle_previous_track(client, previous_track)
             _render_adjacent_track_info(previous_track, "Canción anterior")
 
         with play_pause_col:
@@ -352,106 +539,7 @@ def _render_playback_controls(
                         help=play_pause_help,
                         use_container_width=True,
                     ):
-                        live_playback = client.get_current_playback() or {}
-                        currently_playing = bool(live_playback.get("is_playing"))
-                        if currently_playing:
-                            snapshot = live_playback
-                            device_id = (snapshot.get("device") or {}).get("id")
-                            succeeded = client.pause_playback(device_id=device_id)
-                            if succeeded and snapshot.get("item"):
-                                saved_playback = {
-                                    **snapshot,
-                                    "paused_at": time.monotonic(),
-                                }
-                                queue = client.get_queue() or {}
-                                if (queue.get("currently_playing") or {}).get("id") == snapshot["item"].get("id"):
-                                    saved_playback["queue_uris"] = [
-                                        track["uri"]
-                                        for track in queue.get("queue") or []
-                                        if track.get("uri", "").startswith("spotify:track:")
-                                    ][:99]
-                                st.session_state[PAUSED_PLAYBACK_KEY] = saved_playback
-                                _persist_playback(saved_playback)
-                        else:
-                            snapshot = (
-                                st.session_state.get(PAUSED_PLAYBACK_KEY)
-                                or live_playback
-                                or playback
-                            )
-                            device_id = (snapshot.get("device") or {}).get("id")
-                            item = snapshot.get("item") or {}
-                            if not device_id:
-                                st.error(
-                                    "No se ha identificado el dispositivo de reproducción."
-                                )
-                                return
-                            devices = client.get_devices()
-                            if devices is None:
-                                st.error("No se pudieron consultar los dispositivos de Spotify.")
-                                return
-                            device = next(
-                                (
-                                    available
-                                    for available in devices.get("devices") or []
-                                    if available.get("id") == device_id
-                                ),
-                                None,
-                            )
-                            if device is None:
-                                st.error(
-                                    "El dispositivo original no está disponible. "
-                                    "Abre Spotify en él y vuelve a pulsar Play."
-                                )
-                                return
-                            if not device.get("is_active") and not client.transfer_playback(device_id):
-                                st.error("No se pudo activar el dispositivo original en Spotify.")
-                                return
-                            paused_at = snapshot.get("paused_at")
-                            missing_playback = (
-                                not live_playback.get("item")
-                                or not device.get("is_active")
-                                or paused_at is None
-                                or time.monotonic() - paused_at >= PLAYBACK_RESTORE_AFTER_SECONDS
-                            )
-                            queue_uris = snapshot.get("queue_uris") or []
-                            context_uri = (
-                                (snapshot.get("context") or {}).get("uri")
-                                if missing_playback else None
-                            )
-                            succeeded = client.start_playback(
-                                device_id=device_id,
-                                uri=item.get("uri") if missing_playback else None,
-                                position_ms=(
-                                    snapshot.get("progress_ms") if missing_playback else None
-                                ),
-                                **(
-                                    {"context_uri": context_uri}
-                                    if context_uri and item.get("uri")
-                                    else
-                                    {"uris": [item["uri"], *queue_uris]}
-                                    if missing_playback and item.get("uri") and queue_uris
-                                    else {}
-                                ),
-                            )
-                            if not succeeded and context_uri and item.get("uri"):
-                                succeeded = client.start_playback(
-                                    device_id=device_id,
-                                    uri=item["uri"],
-                                    uris=[item["uri"], *queue_uris] if queue_uris else None,
-                                    position_ms=snapshot.get("progress_ms"),
-                                )
-                            if not succeeded and not missing_playback and item.get("uri"):
-                                succeeded = client.start_playback(
-                                    device_id=device_id,
-                                    uri=item["uri"],
-                                    position_ms=snapshot.get("progress_ms"),
-                                )
-                        if succeeded:
-                            _invalidate_playback_cache()
-                            _request_playback_refresh_window()
-                            st.rerun()
-                        action_label = "pausar" if currently_playing else "reanudar"
-                        st.error(f"No se pudo {action_label} la reproducción.")
+                        _handle_play_pause(client, playback)
 
                     with st.container(
                         key=(
@@ -491,89 +579,10 @@ def _render_playback_controls(
             if st.button(
                 ">>",
                 key="reproduction_next",
-                help="Siguiente",
+                help=                "Siguiente",
                 use_container_width=True,
             ):
-                live_playback = client.get_current_playback() or {}
-                device_id = (
-                    (live_playback.get("device") or playback.get("device") or {}).get("id")
-                )
-                device = None
-                if device_id:
-                    devices = client.get_devices()
-                    device = next(
-                        (
-                            available
-                            for available in (devices or {}).get("devices") or []
-                            if available.get("id") == device_id
-                        ),
-                        None,
-                    )
-                    if device is not None and not device.get("is_active"):
-                        if not client.transfer_playback(device_id):
-                            st.error("No se pudo activar el dispositivo original en Spotify.")
-                            return
-                saved_playback = st.session_state.get(PAUSED_PLAYBACK_KEY) or {}
-                paused_at = saved_playback.get("paused_at")
-                needs_restore = (
-                    bool(saved_playback)
-                    and not live_playback.get("is_playing")
-                    and (
-                        not live_playback.get("item")
-                        or (device is not None and not device.get("is_active"))
-                        or (
-                            paused_at is not None
-                            and time.monotonic() - paused_at >= PLAYBACK_RESTORE_AFTER_SECONDS
-                        )
-                    )
-                )
-                if needs_restore:
-                    queue = client.get_queue()
-                    if queue is not None:
-                        current_id = (
-                            (live_playback.get("item") or playback.get("item") or {}).get("id")
-                        )
-                        queued_current_id = (queue.get("currently_playing") or {}).get("id")
-                        if queued_current_id and queued_current_id != current_id:
-                            st.error("La cola de Spotify ha cambiado. Actualiza la reproducción.")
-                            return
-                        queue_uris = [
-                            track["uri"]
-                            for track in queue.get("queue") or []
-                            if track.get("uri", "").startswith("spotify:track:")
-                        ][:100]
-                    else:
-                        queue_uris = saved_playback.get("queue_uris") or []
-                    current_uri = (
-                        (live_playback.get("item") or playback.get("item") or {}).get("uri")
-                    )
-                    if not queue_uris or queue_uris[0] == current_uri:
-                        st.error("No se conoce la siguiente canción para reanudar la reproducción.")
-                        return
-                if needs_restore:
-                    context_uri = (saved_playback.get("context") or {}).get("uri")
-                    succeeded = (
-                        client.start_playback(
-                            device_id=device_id,
-                            uri=queue_uris[0],
-                            context_uri=context_uri,
-                        )
-                        if context_uri else False
-                    )
-                    if not succeeded:
-                        succeeded = client.start_playback(
-                            device_id=device_id, uris=queue_uris
-                        )
-                else:
-                    succeeded = client.next_track(device_id=device_id)
-                if succeeded:
-                    _invalidate_playback_cache()
-                    st.session_state.pop(PAUSED_PLAYBACK_KEY, None)
-                    _clear_persisted_playback()
-                    st.session_state.pop(ADJACENT_PREVIOUS_REQUEST_KEY, None)
-                    _request_playback_refresh_window()
-                    st.rerun()
-                st.error("No se pudo avanzar a la siguiente canción.")
+                _handle_next_track(client, playback)
             _render_adjacent_track_info(next_track, "Canción siguiente")
 
 
