@@ -8,6 +8,7 @@ with patch.dict(sys.modules, {
     "register.artist": MagicMock(),
     "services.reproduction": MagicMock(),
 }):
+    from app_views import interface_layout
     from app_views import reproduction
     from spotifyapi.spotifyclient import SpotifyClient
 
@@ -41,6 +42,11 @@ class ReproductionTest(unittest.TestCase):
         self.streamlit_patch = patch.object(reproduction, "st", self.streamlit)
         self.streamlit_patch.start()
         self.addCleanup(self.streamlit_patch.stop)
+        self.layout_streamlit_patch = patch.object(
+            interface_layout, "st", self.streamlit
+        )
+        self.layout_streamlit_patch.start()
+        self.addCleanup(self.layout_streamlit_patch.stop)
 
         self.spotify = MagicMock()
         self.spotify.current_playback.return_value = None
@@ -77,6 +83,58 @@ class ReproductionTest(unittest.TestCase):
                 previous_track={},
                 next_track={},
             )
+
+    def test_controls_use_the_shared_block_style_for_each_button(self):
+        self.streamlit.button.side_effect = None
+        self.streamlit.button.return_value = False
+
+        with patch.object(
+            reproduction, "styled_button", wraps=reproduction.styled_button
+        ) as styled_button:
+            reproduction._render_playback_controls(
+                client=self.client,
+                playback=self.playback,
+                is_playing=True,
+                track_id="track-id",
+                is_track_liked=False,
+                track_name="Song",
+                artists_text="Artist",
+                previous_track={},
+                next_track={},
+            )
+
+        style_by_key = {
+            call.kwargs["key"]: call.kwargs["style"]
+            for call in styled_button.call_args_list
+        }
+        self.assertEqual(
+            set(style_by_key),
+            {
+                "reproduction_previous",
+                "reproduction_play_pause",
+                "reproduction_corner_action",
+                "reproduction_next",
+            },
+        )
+        for key in (
+            "reproduction_previous",
+            "reproduction_play_pause",
+            "reproduction_next",
+        ):
+            self.assertIs(
+                style_by_key[key], reproduction.REPRODUCTION_CONTROL_STYLE
+            )
+            self.assertEqual(style_by_key[key].aspect_ratio, "1 / 1")
+            self.assertEqual(
+                style_by_key[key].max_height, "calc(100dvh - 7rem)"
+            )
+        self.assertIs(
+            style_by_key["reproduction_corner_action"],
+            reproduction.REPRODUCTION_CORNER_ACTION_STYLE,
+        )
+        self.assertEqual(
+            style_by_key["reproduction_corner_action"].aspect_ratio, "1 / 1"
+        )
 
     def test_pause_then_resume_after_spotify_loses_playback(self):
         self.spotify.current_playback.return_value = self.playback
@@ -125,6 +183,26 @@ class ReproductionTest(unittest.TestCase):
             device_id="original-device", uris=None, position_ms=None
         )
         self.spotify.transfer_playback.assert_not_called()
+
+    def test_resume_restores_context_when_spotify_loses_it(self):
+        context_uri = "spotify:playlist:playlist-id"
+        self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = {
+            **self.playback,
+            "context": {"uri": context_uri},
+            "paused_at": reproduction.time.monotonic(),
+        }
+        paused = {**self.playback, "is_playing": False, "context": None}
+        self.spotify.current_playback.return_value = paused
+
+        self.click_play_pause(paused)
+
+        self.spotify.start_playback.assert_called_once_with(
+            device_id="original-device",
+            uris=None,
+            context_uri=context_uri,
+            offset={"uri": "spotify:track:track-id"},
+            position_ms=72_000,
+        )
 
     def test_long_pause_restores_saved_track_and_position(self):
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = {
@@ -272,6 +350,77 @@ class ReproductionTest(unittest.TestCase):
             next_track={},
         )
         self.spotify.start_playback.assert_not_called()
+        self.streamlit.error.assert_called_once()
+
+    def test_resume_recognizes_original_device_with_replaced_id(self):
+        snapshot = {
+            **self.playback,
+            "device": {
+                "id": "expired-device-id",
+                "name": "Living room speaker",
+                "type": "Speaker",
+                "is_active": False,
+            },
+            "paused_at": reproduction.time.monotonic() - 120,
+        }
+        self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = snapshot
+        self.spotify.devices.return_value = {
+            "devices": [
+                {
+                    "id": "renewed-device-id",
+                    "name": "Living room speaker",
+                    "type": "Speaker",
+                    "is_active": True,
+                }
+            ]
+        }
+
+        self.click_play_pause({**self.playback, "is_playing": False})
+
+        self.spotify.start_playback.assert_called_once_with(
+            device_id="renewed-device-id",
+            uris=["spotify:track:track-id"],
+            position_ms=72_000,
+        )
+        self.spotify.transfer_playback.assert_not_called()
+        self.assertEqual(
+            self.session_state[reproduction.PAUSED_PLAYBACK_KEY]["device"]["id"],
+            "renewed-device-id",
+        )
+
+    def test_resume_does_not_guess_between_duplicate_device_matches(self):
+        self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = {
+            **self.playback,
+            "device": {
+                "id": "expired-device-id",
+                "name": "Living room speaker",
+                "type": "Speaker",
+            },
+            "paused_at": reproduction.time.monotonic() - 120,
+        }
+        self.spotify.devices.return_value = {
+            "devices": [
+                {
+                    "id": "speaker-one",
+                    "name": "Living room speaker",
+                    "type": "Speaker",
+                    "is_active": False,
+                },
+                {
+                    "id": "speaker-two",
+                    "name": "Living room speaker",
+                    "type": "Speaker",
+                    "is_active": True,
+                },
+            ]
+        }
+
+        reproduction._handle_play_pause(
+            self.client, {**self.playback, "is_playing": False}
+        )
+
+        self.spotify.start_playback.assert_not_called()
+        self.spotify.transfer_playback.assert_not_called()
         self.streamlit.error.assert_called_once()
 
     def test_stale_playing_view_resumes_instead_of_pausing(self):
