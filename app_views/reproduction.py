@@ -728,7 +728,7 @@ def render_reproduction_page():
             display: none;
         }
         .reproduction-track-title {
-            color: white !important;
+            color: #111111 !important;
             font-size: clamp(1.15rem, 3vw, 1.8rem);
             font-weight: 800;
             line-height: 1.2;
@@ -738,7 +738,7 @@ def render_reproduction_page():
         }
         .reproduction-track-artists,
         .reproduction-track-empty {
-            color: white !important;
+            color: #111111 !important;
             font-size: clamp(0.95rem, 2vw, 1.15rem);
             line-height: 1.3;
             font-weight: 600;
@@ -752,6 +752,8 @@ def render_reproduction_page():
             margin: 0 0 0.35rem;
             padding: 0 0.5rem;
             overflow-wrap: anywhere;
+            color: #111111 !important;
+            background: #ffffff !important;
         }
         .reproduction-adjacent-info {
             min-height: 3.25rem;
@@ -840,7 +842,8 @@ def render_reproduction_page():
                 padding-top: 0.35rem;
                 position: relative;
                 z-index: 3;
-                background: #0d1017;
+                color: #111111 !important;
+                background: #ffffff !important;
             }
             .st-key-reproduction-cover .reproduction-portrait-track-info {
                 min-height: 4.25rem !important;
@@ -889,11 +892,15 @@ def render_reproduction_page():
         }
         .st-key-reproduction-corner-action-liked
         .st-key-reproduction_corner_action [data-testid="stButton"] button {
-            color: white !important;
+            color: #ffffff !important;
+            background: #e91e63 !important;
+            border-color: #e91e63 !important;
         }
         .st-key-reproduction-corner-action-unliked
         .st-key-reproduction_corner_action [data-testid="stButton"] button {
-            color: #444444 !important;
+            color: #111111 !important;
+            background: #ffffff !important;
+            border-color: #000000 !important;
         }
         </style>
         """,
