@@ -39,6 +39,7 @@ ADJACENT_TRACKS_CACHE_KEY = "reproduction_adjacent_tracks_cache"
 ADJACENT_TRACK_HISTORY_KEY = "reproduction_adjacent_track_history"
 ADJACENT_PREVIOUS_REQUEST_KEY = "reproduction_previous_request"
 REPRODUCTION_COLUMN_RATIOS = (1, 2, 1)
+REPRODUCTION_FULL_BLOCK = True
 REPRODUCTION_BLOCK_STYLE = BlockStyle(padding="0")
 REPRODUCTION_CONTROL_STYLE = BlockStyle(
     color="white",
@@ -50,6 +51,8 @@ REPRODUCTION_CONTROL_STYLE = BlockStyle(
     font_size="clamp(1.75rem, 8vw, 5rem)",
     font_weight="900",
     text_align="center",
+    max_width="min(100%, calc(100dvh - 7rem))",
+    max_height="calc(100dvh - 7rem)",
 )
 REPRODUCTION_CORNER_ACTION_STYLE = BlockStyle(
     color="white",
@@ -551,7 +554,14 @@ def _render_playback_controls(
     play_pause_label = ">||"
     play_pause_help = "Pausar" if is_playing else "Reproducir"
     with styled_block("reproduction-controls", REPRODUCTION_BLOCK_STYLE):
-        apply_layout_styles("reproduction-controls")
+        apply_layout_styles(
+            "reproduction-controls",
+            column_ratios=REPRODUCTION_COLUMN_RATIOS,
+            portrait_column_ratios=REPRODUCTION_COLUMN_RATIOS,
+            full_block=REPRODUCTION_FULL_BLOCK,
+            full_block_offset="2.6rem",
+            center_content=True,
+        )
         previous_col, play_pause_col, next_col = proportional_columns(
             REPRODUCTION_COLUMN_RATIOS,
             gap=None,
@@ -724,7 +734,9 @@ def render_reproduction_page():
             margin: 0 0 0.35rem;
         }
 
-        .st-key-reproduction-controls [data-testid="column"] {
+        .st-key-reproduction-controls [data-testid="stColumn"],
+        .st-key-reproduction-controls [data-testid="column"],
+        .st-key-reproduction-controls .stColumn {
             padding: 0 !important;
             min-height: 0;
         }
@@ -752,6 +764,19 @@ def render_reproduction_page():
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
+        }
+        .st-key-reproduction_play_pause [data-testid="stButton"] {
+            display: flex;
+            width: 100% !important;
+            justify-content: center;
+        }
+        .st-key-reproduction_play_pause [data-testid="stButton"] > div,
+        .st-key-reproduction_play_pause [data-testid="stTooltipIcon"],
+        .st-key-reproduction_play_pause [data-testid="stTooltipHoverTarget"] {
+            width: 100% !important;
+        }
+        .st-key-reproduction_play_pause [data-testid="stTooltipHoverTarget"] {
+            justify-content: center !important;
         }
         .st-key-reproduction-controls [data-testid="stButton"] button * {
             font-size: inherit !important;
@@ -799,33 +824,15 @@ def render_reproduction_page():
         }
         @media (orientation: portrait) {
             .st-key-reproduction-controls {
-                --reproduction-portrait-button-size: min(75vw, calc((100vh - 12rem) / 3));
-            }
-            .st-key-reproduction-controls [data-testid="stHorizontalBlock"] {
-                display: grid !important;
-                grid-template-columns: minmax(0, 1fr) !important;
-                align-items: stretch !important;
-            }
-            .st-key-reproduction-controls .stColumn {
-                width: 100% !important;
-                min-width: 0 !important;
-            }
-            .st-key-reproduction-controls .stColumn > [data-testid="stVerticalBlock"] {
-                width: 100% !important;
-            }
-            .st-key-reproduction-controls [data-testid="stHorizontalBlock"] > [data-testid="stVerticalBlock"] {
-                width: 100% !important;
-                flex: none !important;
-                height: auto !important;
+                --reproduction-portrait-button-size:
+                    max(2.6rem, min(75vw, calc((100dvh - 17rem) / 4)));
+                --reproduction-portrait-play-button-size:
+                    max(2.6rem, min(75vw, calc((100dvh - 11rem) / 2)));
             }
             .st-key-reproduction-controls [data-testid="stButton"] button {
                 width: var(--reproduction-portrait-button-size) !important;
                 height: var(--reproduction-portrait-button-size) !important;
                 aspect-ratio: 1 !important;
-            }
-            .st-key-reproduction_play_pause [data-testid="stButton"] {
-                display: flex;
-                justify-content: center;
             }
             .st-key-reproduction_previous [data-testid="stButton"] > div:last-child,
             .st-key-reproduction_play_pause [data-testid="stButton"] > div:last-child,
@@ -835,7 +842,8 @@ def render_reproduction_page():
                 width: 100% !important;
             }
             .st-key-reproduction_play_pause [data-testid="stButton"] button {
-                width: var(--reproduction-portrait-button-size) !important;
+                width: var(--reproduction-portrait-play-button-size) !important;
+                height: var(--reproduction-portrait-play-button-size) !important;
                 aspect-ratio: 1 !important;
             }
             .st-key-reproduction_previous [data-testid="stButton"] button,
@@ -867,7 +875,6 @@ def render_reproduction_page():
         """,
         unsafe_allow_html=True,
     )
-
     # st.subheader("Reproduction")
     render_oauth_feedback()
 
