@@ -5,6 +5,13 @@ from pathlib import Path
 
 import streamlit as st
 
+from app_views.interface_layout import (
+    BlockStyle,
+    apply_layout_styles,
+    proportional_columns,
+    styled_block,
+    styled_button,
+)
 from services.reproduction import ReproductionService
 from spotifyapi.spotifyclient import SpotifyClient
 from spotifyapi.streamlit_auth import (
@@ -31,6 +38,31 @@ LIKED_CACHE_KEY = "reproduction_liked_cache"
 ADJACENT_TRACKS_CACHE_KEY = "reproduction_adjacent_tracks_cache"
 ADJACENT_TRACK_HISTORY_KEY = "reproduction_adjacent_track_history"
 ADJACENT_PREVIOUS_REQUEST_KEY = "reproduction_previous_request"
+REPRODUCTION_COLUMN_RATIOS = (1, 2, 1)
+REPRODUCTION_BLOCK_STYLE = BlockStyle(padding="0")
+REPRODUCTION_CONTROL_STYLE = BlockStyle(
+    color="white",
+    padding="0 0.15rem",
+    border_radius="5%",
+    width="100%",
+    aspect_ratio="1 / 1",
+    min_height="0",
+    font_size="clamp(1.75rem, 8vw, 5rem)",
+    font_weight="900",
+    text_align="center",
+)
+REPRODUCTION_CORNER_ACTION_STYLE = BlockStyle(
+    color="white",
+    border="1px solid rgba(255, 255, 255, 0.7)",
+    border_radius="50%",
+    background="rgba(0, 0, 0, 0.28)",
+    padding="0",
+    width="4rem",
+    aspect_ratio="1 / 1",
+    min_height="4rem",
+    font_size="1.6rem",
+    text_align="center",
+)
 
 
 def _load_persisted_playback() -> None:
@@ -143,8 +175,14 @@ def _get_playback(client: SpotifyClient) -> dict:
 
         if not playback.get("is_playing"):
             if elapsed_ms < PLAYBACK_PAUSED_POLL_SECONDS * 1000:
-                return playback if playback.get("item") else (
-                    {**saved_playback, "is_playing": False} if saved_playback else {}
+                return (
+                    playback
+                    if playback.get("item")
+                    else (
+                        {**saved_playback, "is_playing": False}
+                        if saved_playback
+                        else {}
+                    )
                 )
         elif (
             isinstance(progress_ms, (int, float))
@@ -162,10 +200,9 @@ def _get_playback(client: SpotifyClient) -> dict:
 
     playback = client.get_current_playback() or {}
     if saved_playback and playback.get("item"):
-        if (
-            playback["item"].get("id") != (saved_playback.get("item") or {}).get("id")
-            or playback.get("is_playing")
-        ):
+        if playback["item"].get("id") != (saved_playback.get("item") or {}).get(
+            "id"
+        ) or playback.get("is_playing"):
             st.session_state.pop(PAUSED_PLAYBACK_KEY, None)
             saved_playback = None
     if playback.get("item"):
@@ -238,7 +275,10 @@ def _get_adjacent_tracks(
 
     cached = st.session_state.get(ADJACENT_TRACKS_CACHE_KEY)
     if cached and cached.get("current_track_id") == current_track_id:
-        if time.monotonic() - cached.get("fetched_at", 0) >= ADJACENT_TRACKS_POLL_SECONDS:
+        if (
+            time.monotonic() - cached.get("fetched_at", 0)
+            >= ADJACENT_TRACKS_POLL_SECONDS
+        ):
             queue = client.get_queue()
             if queue is not None:
                 cached["next"] = next(
@@ -313,9 +353,7 @@ def _save_paused_playback(client: SpotifyClient, playback: dict) -> None:
 def _resume_playback(
     client: SpotifyClient, playback: dict, live_playback: dict
 ) -> bool | None:
-    snapshot = (
-        st.session_state.get(PAUSED_PLAYBACK_KEY) or live_playback or playback
-    )
+    snapshot = st.session_state.get(PAUSED_PLAYBACK_KEY) or live_playback or playback
     device_id = (snapshot.get("device") or {}).get("id")
     item = snapshot.get("item") or {}
     if not device_id:
@@ -362,9 +400,11 @@ def _resume_playback(
         **(
             {"context_uri": context_uri}
             if context_uri and item.get("uri")
-            else {"uris": [item["uri"], *queue_uris]}
-            if missing_playback and item.get("uri") and queue_uris
-            else {}
+            else (
+                {"uris": [item["uri"], *queue_uris]}
+                if missing_playback and item.get("uri") and queue_uris
+                else {}
+            )
         ),
     )
     if not succeeded and context_uri and item.get("uri"):
@@ -417,9 +457,7 @@ def _handle_previous_track(client: SpotifyClient, previous_track: dict) -> None:
 
 def _handle_next_track(client: SpotifyClient, playback: dict) -> None:
     live_playback = client.get_current_playback() or {}
-    device_id = (
-        (live_playback.get("device") or playback.get("device") or {}).get("id")
-    )
+    device_id = (live_playback.get("device") or playback.get("device") or {}).get("id")
     device = None
     if device_id:
         devices = client.get_devices()
@@ -453,8 +491,8 @@ def _handle_next_track(client: SpotifyClient, playback: dict) -> None:
     if needs_restore:
         queue = client.get_queue()
         if queue is not None:
-            current_id = (
-                (live_playback.get("item") or playback.get("item") or {}).get("id")
+            current_id = (live_playback.get("item") or playback.get("item") or {}).get(
+                "id"
             )
             queued_current_id = (queue.get("currently_playing") or {}).get("id")
             if queued_current_id and queued_current_id != current_id:
@@ -467,13 +505,11 @@ def _handle_next_track(client: SpotifyClient, playback: dict) -> None:
             ][:100]
         else:
             queue_uris = saved_playback.get("queue_uris") or []
-        current_uri = (
-            (live_playback.get("item") or playback.get("item") or {}).get("uri")
+        current_uri = (live_playback.get("item") or playback.get("item") or {}).get(
+            "uri"
         )
         if not queue_uris or queue_uris[0] == current_uri:
-            st.error(
-                "No se conoce la siguiente canción para reanudar la reproducción."
-            )
+            st.error("No se conoce la siguiente canción para reanudar la reproducción.")
             return
 
     if needs_restore:
@@ -514,15 +550,19 @@ def _render_playback_controls(
 ) -> None:
     play_pause_label = ">||"
     play_pause_help = "Pausar" if is_playing else "Reproducir"
-    with st.container(key="reproduction-controls"):
-        previous_col, play_pause_col, next_col = st.columns(
-            3, gap=None, vertical_alignment="center"
+    with styled_block("reproduction-controls", REPRODUCTION_BLOCK_STYLE):
+        apply_layout_styles("reproduction-controls")
+        previous_col, play_pause_col, next_col = proportional_columns(
+            REPRODUCTION_COLUMN_RATIOS,
+            gap=None,
+            vertical_alignment="center",
         )
 
         with previous_col:
-            if st.button(
+            if styled_button(
                 "<<",
                 key="reproduction_previous",
+                style=REPRODUCTION_CONTROL_STYLE,
                 help="Anterior",
                 use_container_width=True,
             ):
@@ -532,9 +572,10 @@ def _render_playback_controls(
         with play_pause_col:
             with st.container(key="reproduction-cover"):
                 with st.container(key="reproduction-cover-art"):
-                    if st.button(
+                    if styled_button(
                         play_pause_label,
                         key="reproduction_play_pause",
+                        style=REPRODUCTION_CONTROL_STYLE,
                         type="primary",
                         help=play_pause_help,
                         use_container_width=True,
@@ -548,9 +589,10 @@ def _render_playback_controls(
                             else "reproduction-corner-action-unliked"
                         )
                     ):
-                        if st.button(
+                        if styled_button(
                             "♥",
                             key="reproduction_corner_action",
+                            style=REPRODUCTION_CORNER_ACTION_STYLE,
                             help=(
                                 "Retirar de Liked Songs"
                                 if is_track_liked
@@ -576,10 +618,11 @@ def _render_playback_controls(
                 )
 
         with next_col:
-            if st.button(
+            if styled_button(
                 ">>",
                 key="reproduction_next",
-                help=                "Siguiente",
+                style=REPRODUCTION_CONTROL_STYLE,
+                help="Siguiente",
                 use_container_width=True,
             ):
                 _handle_next_track(client, playback)
@@ -608,7 +651,9 @@ def render_reproduction_page():
 
         [data-testid="stMainBlockContainer"] {
             padding-top: 0 !important;
+            padding-right: 0 !important;
             padding-bottom: 0 !important;
+            padding-left: 0 !important;
             overflow: hidden !important;
         }
 
@@ -679,9 +724,6 @@ def render_reproduction_page():
             margin: 0 0 0.35rem;
         }
 
-        .st-key-reproduction-controls [data-testid="stHorizontalBlock"] {
-            gap: 0 !important;
-        }
         .st-key-reproduction-controls [data-testid="column"] {
             padding: 0 !important;
             min-height: 0;
@@ -694,7 +736,6 @@ def render_reproduction_page():
         }
         .st-key-reproduction-controls [data-testid="stHorizontalBlock"] > [data-testid="stVerticalBlock"] {
             display: flex;
-            height: min(calc(100vh - 8.5rem), 32vw) !important;
             justify-content: center;
         }
         .st-key-reproduction-controls [data-testid="stElementContainer"] {
@@ -704,17 +745,8 @@ def render_reproduction_page():
             container-type: inline-size;
         }
         .st-key-reproduction-controls [data-testid="stButton"] button {
-            width: 100% !important;
-            height: min(calc(100vh - 8.5rem), 32vw) !important;
-            aspect-ratio: auto;
-            min-height: 0;
-            box-sizing: border-box;
-            font-size: clamp(1.75rem, 8vw, 5rem) !important;
             line-height: 1;
             white-space: nowrap;
-            padding: 0 0.15rem;
-            border-radius: 0.8rem;
-            color: white;
             text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9);
             background-color: #34495e;
             background-size: contain;
@@ -729,9 +761,7 @@ def render_reproduction_page():
         }
         .st-key-reproduction_previous [data-testid="stButton"] button,
         .st-key-reproduction_next [data-testid="stButton"] button {
-            width: 75% !important;
-            height: min(calc(100vh - 13rem), 27vw) !important;
-            aspect-ratio: 1;
+            width: 100% !important;
             background-image: linear-gradient(rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.5));
             background-size: contain;
             background-repeat: no-repeat;
@@ -765,10 +795,6 @@ def render_reproduction_page():
             }
             .st-key-reproduction-cover .reproduction-portrait-track-info {
                 min-height: 4.25rem !important;
-            }
-            .st-key-reproduction_previous [data-testid="stButton"] button,
-            .st-key-reproduction_next [data-testid="stButton"] button {
-                height: min(calc(100vh - 14rem), 26vw) !important;
             }
         }
         @media (orientation: portrait) {
@@ -827,16 +853,6 @@ def render_reproduction_page():
             z-index: 2;
         }
         .st-key-reproduction_corner_action [data-testid="stButton"] button {
-            width: 4rem !important;
-            height: 4rem !important;
-            min-height: 4rem !important;
-            aspect-ratio: 1;
-            padding: 0 !important;
-            border: 1px solid rgba(255, 255, 255, 0.7);
-            border-radius: 50%;
-            background: rgba(0, 0, 0, 0.28) !important;
-            color: white !important;
-            font-size: 1.6rem !important;
             opacity: 1 !important;
         }
         .st-key-reproduction-corner-action-liked
@@ -906,14 +922,14 @@ def render_reproduction_page():
     if previous_image_url:
         adjacent_images_css += (
             f'.st-key-reproduction_previous [data-testid="stButton"] button '
-            f'{{ background-image: linear-gradient(rgba(0, 0, 0, 0.28), '
-            f'rgba(0, 0, 0, 0.5)), url({json.dumps(previous_image_url)}); }}'
+            f"{{ background-image: linear-gradient(rgba(0, 0, 0, 0.28), "
+            f"rgba(0, 0, 0, 0.5)), url({json.dumps(previous_image_url)}); }}"
         )
     if next_image_url:
         adjacent_images_css += (
             f'.st-key-reproduction_next [data-testid="stButton"] button '
-            f'{{ background-image: linear-gradient(rgba(0, 0, 0, 0.28), '
-            f'rgba(0, 0, 0, 0.5)), url({json.dumps(next_image_url)}); }}'
+            f"{{ background-image: linear-gradient(rgba(0, 0, 0, 0.28), "
+            f"rgba(0, 0, 0, 0.5)), url({json.dumps(next_image_url)}); }}"
         )
     if adjacent_images_css:
         st.markdown(f"<style>{adjacent_images_css}</style>", unsafe_allow_html=True)
