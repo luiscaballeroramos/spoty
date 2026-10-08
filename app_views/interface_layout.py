@@ -93,6 +93,8 @@ class BlockStyle:
         align_items: Cross-axis alignment when using a flex or grid layout.
         justify_content: Main-axis alignment when using a flex layout.
         overflow: Overflow behavior, such as ``"hidden"`` or ``"auto"``.
+        max_width: Maximum width, useful for constraining responsive elements.
+        max_height: Maximum height, useful for constraining responsive elements.
     """
 
     background: Optional[str] = None
@@ -112,6 +114,8 @@ class BlockStyle:
     align_items: Optional[str] = None
     justify_content: Optional[str] = None
     overflow: Optional[str] = None
+    max_width: Optional[str] = None
+    max_height: Optional[str] = None
 
 
 def proportional_columns(
@@ -138,6 +142,22 @@ def proportional_columns(
         ValueError: If ratios are empty, non-positive, non-finite, or not
             numeric, or if a spacing/alignment option is unsupported.
     """
+    validated_ratios = _validate_ratios(ratios)
+    if gap not in _COLUMN_GAPS:
+        raise ValueError("gap must be None, 'small', 'medium', or 'large'.")
+    if vertical_alignment not in _VERTICAL_ALIGNMENTS:
+        raise ValueError("vertical_alignment must be 'top', 'center', or 'bottom'.")
+
+    return list(
+        st.columns(
+            validated_ratios,
+            gap=gap,
+            vertical_alignment=vertical_alignment,
+        )
+    )
+
+
+def _validate_ratios(ratios: Sequence[Real]) -> tuple[Real, ...]:
     if not ratios or any(
         isinstance(ratio, bool)
         or not isinstance(ratio, Real)
@@ -146,18 +166,7 @@ def proportional_columns(
         for ratio in ratios
     ):
         raise ValueError("Column ratios must be a non-empty sequence of positive numbers.")
-    if gap not in _COLUMN_GAPS:
-        raise ValueError("gap must be None, 'small', 'medium', or 'large'.")
-    if vertical_alignment not in _VERTICAL_ALIGNMENTS:
-        raise ValueError("vertical_alignment must be 'top', 'center', or 'bottom'.")
-
-    return list(
-        st.columns(
-            tuple(ratios),
-            gap=gap,
-            vertical_alignment=vertical_alignment,
-        )
-    )
+    return tuple(ratios)
 
 
 def apply_layout_styles(
@@ -165,6 +174,11 @@ def apply_layout_styles(
     *,
     column_gap: str = "0",
     vertical_gap: str = "0",
+    column_ratios: Optional[Sequence[Real]] = None,
+    portrait_column_ratios: Optional[Sequence[Real]] = None,
+    full_block: bool = False,
+    full_block_offset: str = "0px",
+    center_content: bool = False,
 ) -> None:
     """Remove Streamlit's default spacing within one keyed layout container.
 
@@ -178,11 +192,117 @@ def apply_layout_styles(
             Defaults to ``"0"``.
         vertical_gap: CSS value for the gap between vertically stacked blocks.
             Defaults to ``"0"``.
+        column_ratios: Optional relative widths for a grid layout. When set,
+            the root's columns preserve these ratios rather than using
+            Streamlit's responsive column stacking.
+        portrait_column_ratios: Optional relative row heights when the layout
+            is stacked in portrait orientation. Must have the same number of
+            entries as ``column_ratios``.
+        full_block: Whether the layout should fill the viewport height.
+        full_block_offset: Height to subtract from the viewport when
+            ``full_block`` is enabled, for content rendered after a header.
+        center_content: Center each grid column's contents horizontally and
+            vertically.
 
     Raises:
-        ValueError: If ``layout_key`` does not follow the supported key format.
+        ValueError: If the key or ratios are invalid, or if portrait and
+            landscape ratio counts differ.
     """
     _validate_key(layout_key)
+    column_selector = (
+        f".st-key-{layout_key} [data-testid=\"stColumn\"], "
+        f".st-key-{layout_key} [data-testid=\"column\"], "
+        f".st-key-{layout_key} .stColumn"
+    )
+    columns = (
+        _validate_ratios(column_ratios) if column_ratios is not None else None
+    )
+    portrait_rows = (
+        _validate_ratios(portrait_column_ratios)
+        if portrait_column_ratios is not None
+        else None
+    )
+    if portrait_rows is not None and (
+        columns is None or len(portrait_rows) != len(columns)
+    ):
+        raise ValueError(
+            "portrait_column_ratios must match the number of column_ratios."
+        )
+    grid_styles = ""
+    if columns is not None:
+        column_tracks = " ".join(f"minmax(0, {ratio}fr)" for ratio in columns)
+        portrait_tracks = (
+            " ".join(f"minmax(0, {ratio}fr)" for ratio in portrait_rows)
+            if portrait_rows is not None
+            else None
+        )
+        portrait_row_rule = (
+            f"grid-template-rows: {portrait_tracks} !important;"
+            if portrait_tracks
+            else ""
+        )
+        grid_styles = f"""
+        .st-key-{layout_key} [data-testid="stHorizontalBlock"] {{
+            display: grid !important;
+            grid-template-columns: {column_tracks} !important;
+            grid-template-rows: minmax(0, 1fr) !important;
+            align-items: stretch !important;
+        }}
+        {column_selector} {{
+            width: 100% !important;
+            min-width: 0 !important;
+            box-sizing: border-box;
+        }}
+        @media (orientation: portrait) {{
+            .st-key-{layout_key} [data-testid="stHorizontalBlock"] {{
+                grid-template-columns: minmax(0, 1fr) !important;
+                {portrait_row_rule}
+            }}
+        }}
+        """
+    full_block_styles = (
+        f"""
+        .st-key-{layout_key} {{
+            box-sizing: border-box;
+            height: calc(100dvh - {full_block_offset}) !important;
+            min-height: calc(100dvh - {full_block_offset}) !important;
+            overflow: hidden;
+        }}
+        .st-key-{layout_key} [data-testid="stHorizontalBlock"] {{
+            height: 100% !important;
+        }}
+        .st-key-{layout_key} > [data-testid="stLayoutWrapper"] {{
+            height: 100% !important;
+            flex: 1 1 0% !important;
+            min-height: 0 !important;
+        }}
+        {column_selector} {{
+            height: 100% !important;
+            min-height: 0 !important;
+        }}
+        {column_selector} > [data-testid="stVerticalBlock"] {{
+            height: 100% !important;
+            min-height: 0 !important;
+        }}
+        """
+        if full_block
+        else ""
+    )
+    centered_content_styles = (
+        f"""
+        .st-key-{layout_key} [data-testid="stColumn"] > [data-testid="stVerticalBlock"],
+        .st-key-{layout_key} [data-testid="column"] > [data-testid="stVerticalBlock"],
+        .st-key-{layout_key} .stColumn > [data-testid="stVerticalBlock"] {{
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }}
+        """
+        if center_content
+        else ""
+    )
     st.markdown(
         f"""
         <style>
@@ -199,11 +319,14 @@ def apply_layout_styles(
             margin-top: 0 !important;
             margin-bottom: 0 !important;
         }}
-        .st-key-{layout_key} [data-testid="column"] {{
+        {column_selector} {{
             min-width: 0 !important;
             padding-left: 0 !important;
             padding-right: 0 !important;
         }}
+        {grid_styles}
+        {full_block_styles}
+        {centered_content_styles}
         </style>
         """,
         unsafe_allow_html=True,
@@ -317,6 +440,8 @@ def _style_css(style: BlockStyle) -> str:
         ("align-items", style.align_items),
         ("justify-content", style.justify_content),
         ("overflow", style.overflow),
+        ("max-width", style.max_width),
+        ("max-height", style.max_height),
     )
     return "\n".join(
         f"{property_name}: {value};"
