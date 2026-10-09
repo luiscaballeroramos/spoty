@@ -199,6 +199,7 @@ block = replace(block, state="selected")
 | `min_row_height_px` | Altura minima de todas las filas; el contenido puede ampliarlas |
 | `gap_px` | Separacion comun, compatible con la configuracion anterior |
 | `row_gap_px`, `column_gap_px` | Separaciones por eje; `None` hereda `gap_px`, `0` elimina el espacio |
+| `parent_gap_px` | Separacion con otros elementos del contenedor vertical padre; `None` conserva el gap de Streamlit |
 | `padding` | Espacio interior del conjunto: numero uniforme o `Insets` por lado |
 | `horizontal`, `vertical` | Alineacion general del bloque dentro de su area |
 | `mobile_breakpoint_px` | `None` desactiva la adaptacion; un ancho activa el apilado |

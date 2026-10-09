@@ -1,9 +1,17 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 import math
 import re
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
-from styles import Alignment, BlockStyle, validate_alignment, validate_number
+if TYPE_CHECKING:
+    from .styles import Alignment
+
+if __package__:
+    from .styles import BlockStyle, validate_alignment, validate_number
+else:
+    from styles import BlockStyle, validate_alignment, validate_number
 
 
 @dataclass(frozen=True)
