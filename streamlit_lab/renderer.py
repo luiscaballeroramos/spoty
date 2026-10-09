@@ -3,9 +3,14 @@ from collections.abc import Callable
 
 import streamlit as st
 
-from blocks import Block
-from layout import Group, Layout
-from styles import BlockStyle, pixels
+if __package__:
+    from .blocks import Block
+    from .layout import Group, Layout
+    from .styles import BlockStyle, pixels
+else:
+    from blocks import Block
+    from layout import Group, Layout
+    from styles import BlockStyle, pixels
 
 
 ALIGNMENTS = {"start": "flex-start", "center": "center", "end": "flex-end"}
@@ -80,8 +85,14 @@ def render_layout(
             {mobile_hidden}
         }}"""
     columns = " ".join(f"minmax(0, {weight:g}fr)" for weight in layout.column_weights) if layout.column_weights else f"repeat({layout.columns}, minmax(0, 1fr))"
+    parent_gap = ""
+    if layout.parent_gap_px is not None:
+        parent_gap = f"""[data-testid="stVerticalBlock"]:has(> [data-testid="stLayoutWrapper"] {container_selector}) {{
+            gap: {layout.parent_gap_px:g}px !important;
+        }}"""
     st.html(
         f"""<style>
+        {parent_gap}
         {container_selector} {{
             display: grid !important;
             align-items: stretch !important;

@@ -37,6 +37,7 @@ class StyleTests(unittest.TestCase):
             lambda: BlockStyle(content_horizontal="invalid"), lambda: BlockStyle(overflow="invalid"),
             lambda: Block("ratio", aspect_ratio=2), lambda: Block("ratio", height=None, aspect_ratio=0),
             lambda: Layout(column_weights=(1, 2)), lambda: Layout(row_gap_px=-1),
+            lambda: Layout(parent_gap_px=-1),
         ]
         for factory in factories:
             with self.subTest(factory=factory), self.assertRaises(ValueError):
@@ -112,6 +113,23 @@ class LayoutTests(unittest.TestCase):
             with self.subTest(coordinates=coordinates), self.assertRaises(ValueError):
                 Position(*coordinates)
 
+    def test_parent_gap_is_rendered_by_the_lab(self):
+        from contextlib import nullcontext
+        from unittest.mock import patch
+
+        from renderer import render_layout
+
+        with patch("renderer.st.html") as html:
+            with patch("renderer.st.container", return_value=nullcontext()):
+                render_layout([], Layout(parent_gap_px=0), key="flush")
+
+        css = html.call_args.args[0]
+        self.assertIn(
+            '[data-testid="stVerticalBlock"]:has(> [data-testid="stLayoutWrapper"] .st-key-flush)',
+            css,
+        )
+        self.assertIn("gap: 0px !important", css)
+
     def test_invalid_placements(self):
         cases = [
             [Block("same"), Block("same")],
@@ -133,9 +151,11 @@ class LayoutTests(unittest.TestCase):
         app.selectbox(key="layout_flow").select("row").run()
         app.selectbox(key="layout_horizontal").select("center").run()
         app.selectbox(key="layout_vertical").select("end").run()
+        app.checkbox(key="layout_parent_gap_custom").check().run()
+        app.number_input(key="layout_parent_gap").set_value(0).run()
         self.assertFalse(app.exception)
         self.assertFalse(app.error)
-        self.assertEqual(app.session_state.group.layout, replace(initial_layout, columns=6, flow="row", horizontal="center", vertical="end"))
+        self.assertEqual(app.session_state.group.layout, replace(initial_layout, columns=6, flow="row", horizontal="center", vertical="end", parent_gap_px=0))
         app.selectbox(key="layout_flow").select("grid").run()
         app.number_input(key="layout_columns").set_value(1).run()
         self.assertTrue(app.error)

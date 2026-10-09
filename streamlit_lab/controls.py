@@ -50,6 +50,18 @@ def layout_controls(layout: Layout) -> Layout:
     if independent:
         row_gap = st.number_input("Entre filas (px)", min_value=0.0, value=float(layout.row_gap), key="layout_row_gap")
         column_gap = st.number_input("Entre columnas (px)", min_value=0.0, value=float(layout.column_gap), key="layout_column_gap")
+    parent_gap_custom = st.checkbox(
+        "Separacion exterior personalizada",
+        value=layout.parent_gap_px is not None,
+        key="layout_parent_gap_custom",
+    )
+    parent_gap = None
+    if parent_gap_custom:
+        parent_gap = st.number_input(
+            "Separacion exterior (px)", min_value=0.0, max_value=64.0,
+            value=float(layout.parent_gap_px if layout.parent_gap_px is not None else 16),
+            key="layout_parent_gap",
+        )
     padding = edge_controls("Padding del layout", layout.padding, "layout_padding")
     minimum = st.number_input("Alto minimo de fila (px)", min_value=0.0, value=float(layout.min_row_height_px), key="layout_min_row_height")
     weighted = st.checkbox("Anchos de columna proporcionales", value=layout.column_weights is not None, key="layout_weighted")
@@ -67,6 +79,7 @@ def layout_controls(layout: Layout) -> Layout:
         layout, rows=rows, columns=columns, flow=flow, horizontal=horizontal, vertical=vertical,
         gap_px=gap, row_gap_px=row_gap, column_gap_px=column_gap, padding=padding,
         column_weights=weights, min_row_height_px=minimum, mobile_breakpoint_px=breakpoint,
+        parent_gap_px=parent_gap,
     )
 
 

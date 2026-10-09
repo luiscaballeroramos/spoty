@@ -5,8 +5,12 @@ import math
 import re
 from typing import Literal
 
-from blocks import Block, Position, Span
-from styles import Insets, validate_number
+if __package__:
+    from .blocks import Block, Position, Span
+    from .styles import Insets, validate_number
+else:
+    from blocks import Block, Position, Span
+    from styles import Insets, validate_number
 
 
 @dataclass(frozen=True)
@@ -23,6 +27,7 @@ class Layout:
     column_weights: tuple[float, ...] | None = None
     min_row_height_px: float = 0
     mobile_breakpoint_px: float | None = None
+    parent_gap_px: float | None = None
 
     def __post_init__(self):
         if any(type(value) is not int or value < 1 for value in (self.rows, self.columns)):
@@ -33,7 +38,7 @@ class Layout:
             raise ValueError("Alineacion no admitida")
         if not math.isfinite(self.gap_px) or self.gap_px < 0:
             raise ValueError("La separacion debe ser finita y no negativa")
-        for value in (self.row_gap_px, self.column_gap_px, self.mobile_breakpoint_px):
+        for value in (self.row_gap_px, self.column_gap_px, self.mobile_breakpoint_px, self.parent_gap_px):
             if value is not None:
                 validate_number(value, "Separacion o breakpoint")
         validate_number(self.min_row_height_px, "Altura minima de fila")
