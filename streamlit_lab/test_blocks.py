@@ -3,7 +3,7 @@ from dataclasses import replace
 
 from blocks import Block, Position, Size, Span
 from layout import Group, Layout
-from styles import BlockStyle, Border, Corners, Insets, Shadow
+from styles import BlockStyle, Border, ButtonStyle, Corners, Insets, PageStyle, Shadow
 
 
 class StyleTests(unittest.TestCase):
@@ -36,12 +36,73 @@ class StyleTests(unittest.TestCase):
             lambda: BlockStyle(background_image="javascript:alert(1)"),
             lambda: BlockStyle(content_horizontal="invalid"), lambda: BlockStyle(overflow="invalid"),
             lambda: Block("ratio", aspect_ratio=2), lambda: Block("ratio", height=None, aspect_ratio=0),
-            lambda: Layout(column_weights=(1, 2)), lambda: Layout(row_gap_px=-1),
+            lambda: Layout(column_weights=(1, 2)),
+            lambda: Layout(columns=2, portrait_row_weights=(1,)),
+            lambda: Layout(columns=2, portrait_row_weights=(1, 0)),
+            lambda: Layout(row_gap_px=-1),
             lambda: Layout(parent_gap_px=-1),
         ]
         for factory in factories:
             with self.subTest(factory=factory), self.assertRaises(ValueError):
                 factory()
+
+    def test_page_style_renders_shared_streamlit_page_rules(self):
+        from unittest.mock import patch
+
+        from renderer import render_page_style
+
+        with patch("renderer.st.html") as html:
+            render_page_style(PageStyle(
+                hide_header=True,
+                content_padding=0,
+                content_overflow="visible",
+                app_overflow_y="auto",
+                vertical_gap_px=0,
+                horizontal_gap_px=0,
+                element_margin_px=0,
+            ))
+
+        css = html.call_args.args[0]
+        self.assertIn('[data-testid="stHeader"]', css)
+        self.assertIn("padding: 0px !important", css)
+        self.assertIn("overflow-y: auto !important", css)
+        self.assertIn("gap: 0px !important", css)
+
+    def test_render_button_applies_style_and_background_image(self):
+        from unittest.mock import patch
+
+        from renderer import render_button
+
+        with patch("renderer.st.html") as html, patch(
+            "renderer.st.button", return_value=True
+        ) as button:
+            clicked = render_button(
+                "Play",
+                key="play-control",
+                style=ButtonStyle(
+                    background_image="https://example.com/cover.jpg",
+                    background_fit="contain",
+                    aspect_ratio="1 / 1",
+                ),
+            )
+
+        self.assertTrue(clicked)
+        self.assertIn(
+            'background-image: url("https://example.com/cover.jpg")',
+            html.call_args.args[0],
+        )
+        self.assertIn("background-size: contain", html.call_args.args[0])
+        button.assert_called_once_with(
+            "Play",
+            key="play-control",
+            type="secondary",
+            help=None,
+            disabled=False,
+            use_container_width=True,
+            icon=None,
+        )
+        with self.assertRaises(ValueError):
+            ButtonStyle(background_image="javascript:alert(1)")
 
     def test_layout_overrides_and_declared_order(self):
         layout = Layout(rows=1, columns=2, gap_px=16, row_gap_px=0, column_gap_px=24, column_weights=(2, 1))
@@ -55,9 +116,10 @@ class BlockTests(unittest.TestCase):
         self.assertEqual(Size(65, "%", 280, 900).css(), "clamp(280px, 65%, 900px)")
         self.assertEqual(Size(24, "vh", 160).css(), "max(160px, 24vh)")
         self.assertEqual(Size(180).css(), "max(0px, 180px)")
+        self.assertEqual(Size(30, "dvh", offset_px=20).css(), "max(0px, calc(30dvh - 20px))")
 
     def test_invalid_sizes(self):
-        for arguments in ((-1,), (float("nan"),), (float("inf"),), (1, "rem"), (10, "px", 20, 10)):
+        for arguments in ((-1,), (float("nan"),), (float("inf"),), (1, "rem"), (10, "px", 20, 10), (10, "px", 0, None, -1)):
             with self.subTest(arguments=arguments), self.assertRaises(ValueError):
                 Size(*arguments)
 
@@ -65,6 +127,19 @@ class BlockTests(unittest.TestCase):
         for arguments in ({"key": "bad key"}, {"key": "ok", "color": "red"}, {"key": "ok", "height": Size(50, "%")}):
             with self.subTest(arguments=arguments), self.assertRaises(ValueError):
                 Block(**arguments)
+
+    def test_portrait_height_is_rendered_only_when_configured(self):
+        from unittest.mock import patch
+        from renderer import render_block
+
+        for size in (None, Size(30, "dvh", offset_px=20)):
+            with self.subTest(size=size), patch("renderer.st.html") as html:
+                with patch("renderer.st.container"):
+                    render_block(Block("responsive", portrait_height=size))
+                css = html.call_args.args[0]
+                self.assertEqual("@media (orientation: portrait)" in css, size is not None)
+                if size is not None:
+                    self.assertIn("height: max(0px, calc(30dvh - 20px)) !important", css)
 
     def test_app_and_size_edit(self):
         from pathlib import Path
@@ -140,6 +215,48 @@ class LayoutTests(unittest.TestCase):
         for blocks in cases:
             with self.subTest(blocks=blocks), self.assertRaises(ValueError):
                 Layout(rows=2, columns=1).place(blocks)
+
+    def test_portrait_collapse_is_opt_in_and_independent_of_breakpoint(self):
+        from unittest.mock import patch
+        from renderer import render_layout
+
+        blocks = [Block("first"), Block("second")]
+        for enabled in (False, True):
+            with self.subTest(enabled=enabled), patch("renderer.st.html") as html:
+                with patch("renderer.st.container"):
+                    render_layout(
+                        blocks,
+                        Layout(rows=1, columns=2, collapse_on_portrait=enabled),
+                        collapse_on_mobile=False,
+                    )
+                css = html.call_args.args[0]
+                self.assertEqual("@media (orientation: portrait)" in css, enabled)
+                if enabled:
+                    self.assertIn("grid-template-columns: minmax(0, 1fr) !important", css)
+                    self.assertIn("grid-row: auto !important", css)
+
+    def test_portrait_collapse_uses_explicit_row_weights(self):
+        from unittest.mock import patch
+        from renderer import render_layout
+
+        with patch("renderer.st.html") as html:
+            with patch("renderer.st.container"):
+                render_layout(
+                    [Block("first"), Block("middle"), Block("last")],
+                    Layout(
+                        rows=1,
+                        columns=3,
+                        column_weights=(1, 2, 1),
+                        portrait_row_weights=(1, 2, 1),
+                        collapse_on_portrait=True,
+                    ),
+                )
+
+        css = html.call_args.args[0]
+        self.assertIn(
+            "grid-template-rows: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr) !important",
+            css,
+        )
 
     def test_app_layout_controls(self):
         from pathlib import Path
@@ -241,6 +358,22 @@ class LayoutTests(unittest.TestCase):
 
 
 class GroupTests(unittest.TestCase):
+    def test_groups_use_layout_vertical_alignment_in_available_height(self):
+        from unittest.mock import patch
+        from renderer import render_layout
+
+        group = Group("track", ("image", "title"), Layout(rows=2, columns=1))
+        layout = Layout(
+            rows=1, columns=1, vertical="center",
+            height=Size(100, "dvh", offset_px=64),
+        )
+        with patch("renderer.st.html") as html, patch("renderer.st.container"):
+            render_layout([group], layout)
+        css = html.call_args.args[0]
+        self.assertIn("justify-content: center", css)
+        self.assertIn("flex: 0 0 auto !important", css)
+        self.assertIn(f"height: {layout.height.css()} !important", css)
+
     def test_nested_groups_have_independent_layouts(self):
         blocks = {
             "principal": Block("principal", position=Position(1, 1), span=Span(2, 2)),
