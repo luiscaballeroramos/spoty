@@ -38,6 +38,8 @@ ADJACENT_TRACK_HISTORY_KEY = "reproduction_adjacent_track_history"
 ADJACENT_PREVIOUS_REQUEST_KEY = "reproduction_previous_request"
 REPRODUCTION_COLUMN_RATIOS = (1, 2, 1)
 REPRODUCTION_IMAGE_HEIGHT_PERCENT = 80
+REPRODUCTION_VIEWPORT_OFFSET_PX = 64
+REPRODUCTION_MAX_CONTENT_HEIGHT_PX = 720
 REPRODUCTION_PAGE_STYLE = PageStyle(
     hide_header=True,
     content_padding=0,
@@ -55,19 +57,35 @@ REPRODUCTION_LAYOUT = Layout(
     gap_px=0,
     horizontal="center",
     vertical="center",
-    height=Size(100, "dvh", offset_px=64),
-    mobile_breakpoint_px=768,
+    height=Size(100, "dvh", offset_px=REPRODUCTION_VIEWPORT_OFFSET_PX),
+    portrait_row_weights=REPRODUCTION_COLUMN_RATIOS,
     collapse_on_portrait=True,
 )
 REPRODUCTION_TRACK_BLOCKS = [
     Block(
         key=f"reproduction-{track}-{part}",
         color="#ffffff",
-        height=Size(70 * fraction, "vh", 360 * fraction, 720 * fraction),
+        height=Size(
+            100 * fraction,
+            "dvh",
+            max_px=REPRODUCTION_MAX_CONTENT_HEIGHT_PX * fraction,
+            offset_px=REPRODUCTION_VIEWPORT_OFFSET_PX * fraction,
+        ),
         portrait_height=Size(
             100 * fraction * weight / sum(REPRODUCTION_COLUMN_RATIOS),
             "dvh",
-            offset_px=64 * fraction * weight / sum(REPRODUCTION_COLUMN_RATIOS),
+            max_px=(
+                REPRODUCTION_MAX_CONTENT_HEIGHT_PX
+                * fraction
+                * weight
+                / sum(REPRODUCTION_COLUMN_RATIOS)
+            ),
+            offset_px=(
+                REPRODUCTION_VIEWPORT_OFFSET_PX
+                * fraction
+                * weight
+                / sum(REPRODUCTION_COLUMN_RATIOS)
+            ),
         ),
         style=BlockStyle(
             padding=0 if part == "image" else 2,
@@ -87,7 +105,13 @@ REPRODUCTION_TRACK_GROUPS = tuple(
     Group(
         key=f"reproduction-{track}",
         children=(f"reproduction-{track}-image", f"reproduction-{track}-title"),
-        layout=Layout(rows=2, columns=1, gap_px=0),
+        layout=Layout(
+            rows=2,
+            columns=1,
+            gap_px=0,
+            horizontal="center",
+            vertical="center",
+        ),
     )
     for track in ("previous", "current", "next")
 )
@@ -743,14 +767,6 @@ def _render_control_styles() -> None:
                 min-height: 0 !important;
                 font-size: 1.25rem !important;
             }}
-            .st-key-reproduction-controls .reproduction-track-title {{
-                font-size: 0.85rem;
-                line-height: 1.15;
-            }}
-            .st-key-reproduction-controls .reproduction-track-artists {{
-                font-size: 0.75rem;
-                line-height: 1.15;
-            }}
         }}
         </style>""")
 
@@ -783,34 +799,68 @@ def render_reproduction_page():
 
         .reproduction-track-title {
             color: #111111 !important;
-            font-size: 1.4rem;
+            font-size: min(40cqh, 5cqi, 1.4rem);
             font-weight: 800;
-            line-height: 1.2;
+            line-height: 1;
+            align-self: center;
             overflow-wrap: anywhere;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            overflow: hidden;
             opacity: 1 !important;
             text-shadow: none !important;
         }
         .reproduction-track-artists {
             color: #111111 !important;
-            font-size: 1rem;
-            line-height: 1.3;
+            font-size: min(22cqh, 4cqi, 1rem);
+            line-height: 0.9;
+            align-self: center;
             font-weight: 600;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
             opacity: 1 !important;
             text-shadow: none !important;
         }
         .reproduction-portrait-track-info {
-            display: block;
+            box-sizing: border-box;
+            display: grid;
+            grid-template-rows: minmax(0, 4fr) minmax(0, 1fr);
+            position: absolute;
+            inset: 0;
             text-align: center;
-            min-height: 3.25rem;
-            margin: 0 0 0.35rem;
+            width: 100%;
+            min-height: 0;
+            margin: 0;
             padding: 0 0.5rem;
             overflow-wrap: anywhere;
+            overflow: hidden;
+            container-type: size;
             color: #111111 !important;
             background: #ffffff !important;
         }
         .reproduction-adjacent-info {
-            min-height: 3.25rem;
-            margin: 0 0 0.35rem;
+            min-height: 0;
+            margin: 0;
+        }
+        .st-key-reproduction-controls :is(
+            .st-key-lab-reproduction-previous-title,
+            .st-key-lab-reproduction-current-title,
+            .st-key-lab-reproduction-next-title
+        ) > [data-testid="stElementContainer"] {
+            position: absolute;
+            inset: 0;
+            height: auto !important;
+            min-height: 0 !important;
+        }
+        .st-key-reproduction-controls :is(
+            .st-key-lab-reproduction-previous-title,
+            .st-key-lab-reproduction-current-title,
+            .st-key-lab-reproduction-next-title
+        ) :is(.stMarkdown, [data-testid="stMarkdownContainer"]) {
+            height: 100% !important;
+            min-height: 0 !important;
         }
 
         .st-key-reproduction-controls [data-testid="stColumn"],
@@ -890,16 +940,14 @@ def render_reproduction_page():
         }
         @media (orientation: landscape) {
             .st-key-reproduction-controls .reproduction-portrait-track-info {
-                min-height: 4.25rem !important;
-                margin-bottom: 0.75rem;
-                padding-top: 0.35rem;
-                position: relative;
+                min-height: 0 !important;
+                margin: 0 !important;
+                padding: 0 0.5rem !important;
+                position: absolute !important;
+                inset: 0;
                 z-index: 3;
                 color: #111111 !important;
                 background: #ffffff !important;
-            }
-            .st-key-reproduction-cover .reproduction-portrait-track-info {
-                min-height: 4.25rem !important;
             }
         }
         @media (orientation: portrait) {
