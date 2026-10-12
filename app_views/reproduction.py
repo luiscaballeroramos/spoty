@@ -43,9 +43,8 @@ ADJACENT_TRACKS_CACHE_KEY = "reproduction_adjacent_tracks_cache"
 ADJACENT_TRACK_HISTORY_KEY = "reproduction_adjacent_track_history"
 ADJACENT_PREVIOUS_REQUEST_KEY = "reproduction_previous_request"
 REPRODUCTION_COLUMN_RATIOS = (1, 2, 1)
-REPRODUCTION_IMAGE_HEIGHT_PERCENT = 80
 REPRODUCTION_VIEWPORT_OFFSET_PX = 64
-REPRODUCTION_MAX_CONTENT_HEIGHT_PX = 720
+REPRODUCTION_TEXT_HEIGHT_PX = 64
 REPRODUCTION_PAGE_STYLE = PageStyle(
     hide_header=True,
     content_padding=0,
@@ -72,27 +71,29 @@ REPRODUCTION_TRACK_BLOCKS = [
     Block(
         key=f"reproduction-{track}-{part}",
         color="#ffffff",
-        height=Size(
-            100 * fraction,
-            "dvh",
-            max_px=REPRODUCTION_MAX_CONTENT_HEIGHT_PX * fraction,
-            offset_px=REPRODUCTION_VIEWPORT_OFFSET_PX * fraction,
+        height=(
+            Size(
+                100,
+                "dvh",
+                offset_px=REPRODUCTION_VIEWPORT_OFFSET_PX
+                + REPRODUCTION_TEXT_HEIGHT_PX,
+            )
+            if part == "image"
+            else Size(REPRODUCTION_TEXT_HEIGHT_PX)
         ),
-        portrait_height=Size(
-            100 * fraction * weight / sum(REPRODUCTION_COLUMN_RATIOS),
-            "dvh",
-            max_px=(
-                REPRODUCTION_MAX_CONTENT_HEIGHT_PX
-                * fraction
-                * weight
-                / sum(REPRODUCTION_COLUMN_RATIOS)
-            ),
-            offset_px=(
-                REPRODUCTION_VIEWPORT_OFFSET_PX
-                * fraction
-                * weight
-                / sum(REPRODUCTION_COLUMN_RATIOS)
-            ),
+        portrait_height=(
+            Size(
+                100 * weight / sum(REPRODUCTION_COLUMN_RATIOS),
+                "dvh",
+                offset_px=(
+                    REPRODUCTION_VIEWPORT_OFFSET_PX
+                    * weight
+                    / sum(REPRODUCTION_COLUMN_RATIOS)
+                    + REPRODUCTION_TEXT_HEIGHT_PX
+                ),
+            )
+            if part == "image"
+            else Size(REPRODUCTION_TEXT_HEIGHT_PX)
         ),
         style=BlockStyle(
             padding=0 if part == "image" else 2,
@@ -103,10 +104,7 @@ REPRODUCTION_TRACK_BLOCKS = [
         ),
     )
     for track, weight in zip(("previous", "current", "next"), REPRODUCTION_COLUMN_RATIOS)
-    for part, fraction in (
-        ("image", REPRODUCTION_IMAGE_HEIGHT_PERCENT / 100),
-        ("title", 1 - REPRODUCTION_IMAGE_HEIGHT_PERCENT / 100),
-    )
+    for part in ("image", "title")
 ]
 REPRODUCTION_TRACK_GROUPS = tuple(
     Group(
@@ -139,19 +137,6 @@ REPRODUCTION_CONTROL_STYLE = ButtonStyle(
     font_weight="900",
     text_align="center",
     fill_container=True,
-    portrait=ButtonDimensions(
-        width="max(2.6rem, min(75vw, calc((100dvh - 17rem) / 4)))",
-        height="max(2.6rem, min(75vw, calc((100dvh - 17rem) / 4)))",
-        aspect_ratio="1",
-    ),
-)
-REPRODUCTION_PLAY_CONTROL_STYLE = replace(
-    REPRODUCTION_CONTROL_STYLE,
-    portrait=ButtonDimensions(
-        width="max(2.6rem, min(75vw, calc((100dvh - 11rem) / 2)))",
-        height="max(2.6rem, min(75vw, calc((100dvh - 11rem) / 2)))",
-        aspect_ratio="1",
-    ),
 )
 REPRODUCTION_CORNER_ACTION_STYLE = ButtonStyle(
     color="white",
@@ -702,16 +687,13 @@ def _render_playback_controls(
             ),
             "next": (">>", "reproduction_next", "Siguiente"),
         }[track]
-        track_image = _get_track_image_url(tracks[track][0])
+        track_image = _get_track_image_url(tracks[track][0]) or _get_track_image_url(
+            current_track
+        )
         if render_button(
             label,
             key=key,
-            style=replace(
-                REPRODUCTION_PLAY_CONTROL_STYLE
-                if track == "current"
-                else REPRODUCTION_CONTROL_STYLE,
-                background_image=track_image,
-            ),
+            style=replace(REPRODUCTION_CONTROL_STYLE, background_image=track_image),
             type="primary" if track == "current" else "secondary",
             help=help_text,
             use_container_width=True,
@@ -894,7 +876,6 @@ def render_reproduction_page():
             white-space: nowrap;
             text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9);
             background-color: #ffffff;
-            background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
         }
@@ -921,7 +902,6 @@ def render_reproduction_page():
         .st-key-reproduction_next [data-testid="stButton"] button {
             width: 100% !important;
             background-image: none;
-            background-size: contain;
             background-repeat: no-repeat;
         }
         .st-key-reproduction_previous [data-testid="stButton"],

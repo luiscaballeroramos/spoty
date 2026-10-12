@@ -153,15 +153,37 @@ class ReproductionTest(unittest.TestCase):
         for image, title, weight in zip(
             blocks[::2], blocks[1::2], reproduction.REPRODUCTION_COLUMN_RATIOS
         ):
-            self.assertAlmostEqual(image.height.value / title.height.value, 4)
+            self.assertEqual(image.height.value, 100)
+            self.assertEqual(
+                image.height.offset_px,
+                reproduction.REPRODUCTION_VIEWPORT_OFFSET_PX
+                + reproduction.REPRODUCTION_TEXT_HEIGHT_PX,
+            )
+            self.assertEqual(title.height.value, reproduction.REPRODUCTION_TEXT_HEIGHT_PX)
+            self.assertEqual(title.height.unit, "px")
             self.assertEqual(image.height.min_px, 0)
             self.assertEqual(title.height.min_px, 0)
-            self.assertAlmostEqual(image.height.max_px / title.height.max_px, 4)
+            self.assertIsNone(image.height.max_px)
+            self.assertIsNone(title.height.max_px)
             self.assertEqual(image.portrait_height.unit, "dvh")
-            self.assertAlmostEqual(image.portrait_height.value / title.portrait_height.value, 4)
-            self.assertAlmostEqual(image.portrait_height.value + title.portrait_height.value, 100 * weight / 4)
-            self.assertAlmostEqual(image.portrait_height.max_px + title.portrait_height.max_px, 720 * weight / 4)
-            self.assertAlmostEqual(image.portrait_height.offset_px + title.portrait_height.offset_px, 64 * weight / 4)
+            self.assertAlmostEqual(
+                image.portrait_height.value,
+                100 * weight / sum(reproduction.REPRODUCTION_COLUMN_RATIOS),
+            )
+            self.assertEqual(
+                image.portrait_height.offset_px,
+                reproduction.REPRODUCTION_VIEWPORT_OFFSET_PX
+                * weight
+                / sum(reproduction.REPRODUCTION_COLUMN_RATIOS)
+                + reproduction.REPRODUCTION_TEXT_HEIGHT_PX,
+            )
+            self.assertEqual(
+                title.portrait_height.value,
+                reproduction.REPRODUCTION_TEXT_HEIGHT_PX,
+            )
+            self.assertEqual(title.portrait_height.unit, "px")
+            self.assertIsNone(image.portrait_height.max_px)
+            self.assertIsNone(title.portrait_height.max_px)
 
     def test_controls_use_the_shared_block_style_for_each_button(self):
         self.streamlit.button.side_effect = None
@@ -206,15 +228,20 @@ class ReproductionTest(unittest.TestCase):
             )
             self.assertEqual(style_by_key[key].aspect_ratio, "1 / 1")
             self.assertTrue(style_by_key[key].fill_container)
-            self.assertIsNotNone(style_by_key[key].portrait)
-        self.assertEqual(
-            style_by_key["reproduction_play_pause"].portrait.width,
-            "max(2.6rem, min(75vw, calc((100dvh - 11rem) / 2)))",
-        )
+            self.assertIsNone(style_by_key[key].portrait)
+            self.assertEqual(style_by_key[key].background_fit, "cover")
         self.assertEqual(
             style_by_key["reproduction_play_pause"].background_image,
             "https://example.com/cover.jpg",
         )
+        for key in (
+            "reproduction_previous",
+            "reproduction_next",
+        ):
+            self.assertEqual(
+                style_by_key[key].background_image,
+                "https://example.com/cover.jpg",
+            )
         self.assertIs(
             style_by_key["reproduction_corner_action"],
             reproduction.REPRODUCTION_CORNER_ACTION_STYLE,
