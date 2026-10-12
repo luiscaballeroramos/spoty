@@ -1,18 +1,15 @@
 import html
 import json
 import time
+from dataclasses import replace
 from pathlib import Path
 
 import streamlit as st
 
-from app_views.interface_layout import (
-    BlockStyle,
-    styled_button,
-)
 from streamlit_lab.blocks import Block, Size
 from streamlit_lab.layout import Group, Layout
-from streamlit_lab.renderer import render_group
-from streamlit_lab.styles import BlockStyle as LabBlockStyle
+from streamlit_lab.renderer import render_button, render_group, render_page_style
+from streamlit_lab.styles import BlockStyle, ButtonStyle, PageStyle
 from services.reproduction import ReproductionService
 from spotifyapi.spotifyclient import SpotifyClient
 from spotifyapi.streamlit_auth import (
@@ -41,6 +38,15 @@ ADJACENT_TRACK_HISTORY_KEY = "reproduction_adjacent_track_history"
 ADJACENT_PREVIOUS_REQUEST_KEY = "reproduction_previous_request"
 REPRODUCTION_COLUMN_RATIOS = (1, 2, 1)
 REPRODUCTION_IMAGE_HEIGHT_PERCENT = 80
+REPRODUCTION_PAGE_STYLE = PageStyle(
+    hide_header=True,
+    content_padding=0,
+    content_overflow="visible",
+    app_overflow_y="auto",
+    vertical_gap_px=0,
+    horizontal_gap_px=0,
+    element_margin_px=0,
+)
 REPRODUCTION_LAYOUT = Layout(
     rows=1,
     columns=3,
@@ -63,7 +69,7 @@ REPRODUCTION_TRACK_BLOCKS = [
             "dvh",
             offset_px=64 * fraction * weight / sum(REPRODUCTION_COLUMN_RATIOS),
         ),
-        style=LabBlockStyle(
+        style=BlockStyle(
             padding=0 if part == "image" else 2,
             radius=0,
             content_gap_px=0,
@@ -90,7 +96,7 @@ REPRODUCTION_GROUP = Group(
     children=REPRODUCTION_TRACK_GROUPS,
     layout=REPRODUCTION_LAYOUT,
 )
-REPRODUCTION_CONTROL_STYLE = BlockStyle(
+REPRODUCTION_CONTROL_STYLE = ButtonStyle(
     color="white",
     border="none",
     padding="0 0.15rem",
@@ -104,7 +110,7 @@ REPRODUCTION_CONTROL_STYLE = BlockStyle(
     max_width="min(100%, calc(100dvh - 7rem))",
     max_height="calc(100dvh - 7rem)",
 )
-REPRODUCTION_CORNER_ACTION_STYLE = BlockStyle(
+REPRODUCTION_CORNER_ACTION_STYLE = ButtonStyle(
     color="white",
     border="none",
     border_radius="50%",
@@ -625,12 +631,14 @@ def _render_playback_controls(
     previous_track: dict,
     next_track: dict,
 ) -> None:
+    current_track = playback.get("item") or {}
+    if track_name and not current_track.get("name"):
+        current_track = {**current_track, "name": track_name}
+    if artists_text and not current_track.get("artists"):
+        current_track = {**current_track, "artists": [{"name": artists_text}]}
     tracks = {
         "previous": (previous_track, "Canción anterior"),
-        "current": (
-            {"name": track_name, "artists": [{"name": artists_text}]},
-            "Sin título",
-        ),
+        "current": (current_track, "Sin título"),
         "next": (next_track, "Canción siguiente"),
     }
 
@@ -648,10 +656,11 @@ def _render_playback_controls(
             ),
             "next": (">>", "reproduction_next", "Siguiente"),
         }[track]
-        if styled_button(
+        track_image = _get_track_image_url(tracks[track][0])
+        if render_button(
             label,
             key=key,
-            style=REPRODUCTION_CONTROL_STYLE,
+            style=replace(REPRODUCTION_CONTROL_STYLE, background_image=track_image),
             type="primary" if track == "current" else "secondary",
             help=help_text,
             use_container_width=True,
@@ -671,7 +680,7 @@ def _render_playback_controls(
                     else "reproduction-corner-action-unliked"
                 )
             ):
-                if styled_button(
+                if render_button(
                     "♥",
                     key="reproduction_corner_action",
                     style=REPRODUCTION_CORNER_ACTION_STYLE,
@@ -759,41 +768,10 @@ def _render_adjacent_track_info(track: dict, fallback_title: str) -> None:
 
 @st.fragment(run_every=PLAYBACK_FRAGMENT_INTERVAL_SECONDS)
 def render_reproduction_page():
+    render_page_style(REPRODUCTION_PAGE_STYLE)
     st.markdown(
         """
         <style>
-        [data-testid="stHeader"] {
-            display: none !important;
-        }
-
-        [data-testid="stMainBlockContainer"] {
-            padding-top: 0 !important;
-            padding-right: 0 !important;
-            padding-bottom: 0 !important;
-            padding-left: 0 !important;
-            overflow: visible !important;
-        }
-
-        [data-testid="stAppViewContainer"] {
-            overflow-y: auto !important;
-        }
-
-        [data-testid="stMainBlockContainer"] > div,
-        [data-testid="stMainBlockContainer"] [data-testid="stVerticalBlock"] {
-            gap: 0 !important;
-        }
-
-        [data-testid="stMainBlockContainer"] [data-testid="stHorizontalBlock"] {
-            row-gap: 0 !important;
-            margin-top: 0 !important;
-            margin-bottom: 0 !important;
-        }
-
-        [data-testid="stMainBlockContainer"] [data-testid="stElementContainer"] {
-            margin-top: 0 !important;
-            margin-bottom: 0 !important;
-        }
-
         .st-key-reproduction-controls {
             margin-top: 0 !important;
         }
@@ -803,13 +781,6 @@ def render_reproduction_page():
             margin-bottom: 0.1rem !important;
         }
 
-        .reproduction-track-info {
-            text-align: center;
-            margin: 0.35rem 0 1.25rem;
-            padding: 0 1rem;
-            opacity: 1 !important;
-            display: none;
-        }
         .reproduction-track-title {
             color: #111111 !important;
             font-size: 1.4rem;
@@ -819,8 +790,7 @@ def render_reproduction_page():
             opacity: 1 !important;
             text-shadow: none !important;
         }
-        .reproduction-track-artists,
-        .reproduction-track-empty {
+        .reproduction-track-artists {
             color: #111111 !important;
             font-size: 1rem;
             line-height: 1.3;
@@ -1030,53 +1000,7 @@ def render_reproduction_page():
     )
     previous_track, next_track = _get_adjacent_tracks(client, item)
 
-    adjacent_images_css = ""
-    previous_image_url = _get_track_image_url(previous_track)
-    next_image_url = _get_track_image_url(next_track)
-    if previous_image_url:
-        adjacent_images_css += (
-            f'.st-key-reproduction_previous [data-testid="stButton"] button '
-            f"{{ background-image: url({json.dumps(previous_image_url)}); }}"
-        )
-    if next_image_url:
-        adjacent_images_css += (
-            f'.st-key-reproduction_next [data-testid="stButton"] button '
-            f"{{ background-image: url({json.dumps(next_image_url)}); }}"
-        )
-    if adjacent_images_css:
-        st.markdown(f"<style>{adjacent_images_css}</style>", unsafe_allow_html=True)
-
-    if track_image_url:
-        st.markdown(
-            f"""
-            <style>
-            .st-key-reproduction_play_pause [data-testid="stButton"] button {{
-                background-image: url({json.dumps(track_image_url)});
-            }}
-            </style>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    if track_name:
-        artists_text = ", ".join(artist_names)
-        st.markdown(
-            f"""
-            <div class="reproduction-track-info">
-                <div class="reproduction-track-title">{track_name}</div>
-                {f'<div class="reproduction-track-artists">{artists_text}</div>' if artists_text else ''}
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    else:
-        artists_text = ""
-        st.markdown(
-            '<div class="reproduction-track-info reproduction-track-empty">'
-            "No hay una pista activa en este momento."
-            "</div>",
-            unsafe_allow_html=True,
-        )
+    artists_text = ", ".join(artist_names)
 
     if st.session_state.pop("liked_track_saved", False):
         st.toast("Canción añadida a Liked Songs y a la base de datos.")

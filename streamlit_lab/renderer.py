@@ -1,19 +1,114 @@
 from dataclasses import replace
 from collections.abc import Callable
+import json
+import re
 
 import streamlit as st
 
 if __package__:
     from .blocks import Block
     from .layout import Group, Layout
-    from .styles import BlockStyle, pixels
+    from .styles import BlockStyle, ButtonStyle, PageStyle, pixels
 else:
     from blocks import Block
     from layout import Group, Layout
-    from styles import BlockStyle, pixels
+    from styles import BlockStyle, ButtonStyle, PageStyle, pixels
 
 
 ALIGNMENTS = {"start": "flex-start", "center": "center", "end": "flex-end"}
+_KEY_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
+
+
+def render_page_style(style: PageStyle) -> None:
+    rules = []
+    if style.hide_header:
+        rules.append('[data-testid="stHeader"] { display: none !important; }')
+    if style.content_padding is not None:
+        rules.append(
+            f'[data-testid="stMainBlockContainer"] {{ padding: {pixels(style.content_padding)} !important; }}'
+        )
+    if style.content_overflow is not None:
+        rules.append(
+            f'[data-testid="stMainBlockContainer"] {{ overflow: {style.content_overflow} !important; }}'
+        )
+    if style.app_overflow_y is not None:
+        rules.append(
+            f'[data-testid="stAppViewContainer"] {{ overflow-y: {style.app_overflow_y} !important; }}'
+        )
+    if style.vertical_gap_px is not None:
+        rules.append(
+            f'[data-testid="stMainBlockContainer"] > div, '
+            f'[data-testid="stMainBlockContainer"] [data-testid="stVerticalBlock"] '
+            f'{{ gap: {style.vertical_gap_px:g}px !important; }}'
+        )
+    if style.horizontal_gap_px is not None:
+        rules.append(
+            f'[data-testid="stMainBlockContainer"] [data-testid="stHorizontalBlock"] '
+            f'{{ row-gap: {style.horizontal_gap_px:g}px !important; '
+            f'margin-top: 0 !important; margin-bottom: 0 !important; }}'
+        )
+    if style.element_margin_px is not None:
+        rules.append(
+            f'[data-testid="stMainBlockContainer"] [data-testid="stElementContainer"] '
+            f'{{ margin-top: {style.element_margin_px:g}px !important; '
+            f'margin-bottom: {style.element_margin_px:g}px !important; }}'
+        )
+    if rules:
+        st.html(f"<style>{''.join(rules)}</style>")
+
+
+def render_button(
+    label: str,
+    *,
+    key: str,
+    style: ButtonStyle | None = None,
+    type: str = "secondary",
+    help: str | None = None,
+    disabled: bool = False,
+    use_container_width: bool = True,
+    icon: str | None = None,
+) -> bool:
+    if not _KEY_PATTERN.fullmatch(key):
+        raise ValueError("La clave debe empezar por una letra y usar letras, numeros, _ o -")
+
+    button_style = style or ButtonStyle()
+    declarations = (
+        ("background", button_style.background),
+        ("background-image", f"url({json.dumps(button_style.background_image)})" if button_style.background_image else None),
+        ("background-size", button_style.background_fit if button_style.background_image else None),
+        ("background-repeat", "no-repeat" if button_style.background_image else None),
+        ("background-position", "center" if button_style.background_image else None),
+        ("color", button_style.color),
+        ("padding", button_style.padding),
+        ("border", button_style.border),
+        ("border-radius", button_style.border_radius),
+        ("width", button_style.width),
+        ("aspect-ratio", button_style.aspect_ratio),
+        ("min-height", button_style.min_height),
+        ("height", button_style.height),
+        ("font-size", button_style.font_size),
+        ("font-weight", button_style.font_weight),
+        ("text-align", button_style.text_align),
+        ("box-shadow", button_style.box_shadow),
+        ("max-width", button_style.max_width),
+        ("max-height", button_style.max_height),
+    )
+    css = "\n".join(
+        f"{name}: {value};" for name, value in declarations if value is not None
+    )
+    st.html(
+        f"<style>.st-key-{key} [data-testid=\"stButton\"] button "
+        f"{{ box-sizing: border-box; {css} }}</style>"
+    )
+    return st.button(
+        label,
+        key=key,
+        type=type,
+        help=help,
+        disabled=disabled,
+        use_container_width=use_container_width,
+        icon=icon,
+    )
 
 
 def style_css(style: BlockStyle, fallback_color: str) -> str:

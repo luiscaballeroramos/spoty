@@ -133,3 +133,64 @@ class BlockStyle:
         validate_number(self.content_gap_px, "Separacion del contenido")
         if self.overflow not in ("auto", "hidden", "scroll", "visible"):
             raise ValueError("Desbordamiento no admitido")
+
+
+@dataclass(frozen=True)
+class ButtonStyle:
+    """CSS declarativo para el boton Streamlit renderizado por ``render_button``."""
+
+    background: str | None = None
+    background_image: str | None = None
+    background_fit: Literal["cover", "contain"] = "cover"
+    color: str | None = None
+    padding: str | None = None
+    border: str | None = None
+    border_radius: str | None = None
+    width: str | None = None
+    aspect_ratio: str | None = None
+    min_height: str | None = None
+    height: str | None = None
+    font_size: str | None = None
+    font_weight: str | None = None
+    text_align: str | None = None
+    box_shadow: str | None = None
+    max_width: str | None = None
+    max_height: str | None = None
+
+    def __post_init__(self):
+        if self.background_image is not None:
+            url = urlsplit(self.background_image)
+            if url.scheme not in ("http", "https") or not url.netloc or re.search(r"[\s<>\"'\\()]", self.background_image):
+                raise ValueError("La imagen debe ser una URL HTTP(S) sin caracteres especiales sin codificar")
+        if self.background_fit not in ("cover", "contain"):
+            raise ValueError("Ajuste de imagen no admitido")
+
+
+@dataclass(frozen=True)
+class PageStyle:
+    """Ajustes comunes de estructura para una pagina Streamlit."""
+
+    hide_header: bool = False
+    content_padding: float | Insets | None = None
+    content_overflow: Literal["auto", "hidden", "scroll", "visible"] | None = None
+    app_overflow_y: Literal["auto", "hidden", "scroll", "visible"] | None = None
+    vertical_gap_px: float | None = None
+    horizontal_gap_px: float | None = None
+    element_margin_px: float | None = None
+
+    def __post_init__(self):
+        if self.content_padding is not None and not isinstance(
+            self.content_padding, Insets
+        ):
+            validate_number(self.content_padding, "Padding")
+        for value in (
+            self.vertical_gap_px,
+            self.horizontal_gap_px,
+            self.element_margin_px,
+        ):
+            if value is not None:
+                validate_number(value, "Espaciado")
+        if self.content_overflow not in (None, "auto", "hidden", "scroll", "visible"):
+            raise ValueError("Desbordamiento de contenido no admitido")
+        if self.app_overflow_y not in (None, "auto", "hidden", "scroll", "visible"):
+            raise ValueError("Desbordamiento de pagina no admitido")
