@@ -176,8 +176,14 @@ def render_layout(
     mobile = ""
     collapse = f"""{container_selector} {{ grid-template-columns: minmax(0, 1fr) !important; grid-template-rows: none !important; }}
         {container_selector} > div {{ grid-row: auto !important; grid-column: 1 !important; }}"""
+    portrait_rows = (
+        " ".join(f"minmax(0, {weight:g}fr)" for weight in layout.portrait_row_weights)
+        if layout.portrait_row_weights else "none"
+    )
+    portrait_collapse = f"""{container_selector} {{ grid-template-columns: minmax(0, 1fr) !important; grid-template-rows: {portrait_rows} !important; }}
+        {container_selector} > div {{ grid-row: auto !important; grid-column: 1 !important; }}"""
     portrait = (
-        f"@media (orientation: portrait) {{ {collapse} }}"
+        f"@media (orientation: portrait) {{ {portrait_collapse} }}"
         if layout.collapse_on_portrait else ""
     )
     if layout.mobile_breakpoint_px is not None:

@@ -25,6 +25,7 @@ class Layout:
     column_gap_px: float | None = None
     padding: float | Insets = 0
     column_weights: tuple[float, ...] | None = None
+    portrait_row_weights: tuple[float, ...] | None = None
     min_row_height_px: float = 0
     mobile_breakpoint_px: float | None = None
     parent_gap_px: float | None = None
@@ -53,6 +54,11 @@ class Layout:
                 raise ValueError("Debe haber un peso por columna")
             for weight in self.column_weights:
                 validate_number(weight, "Peso de columna", 0.001)
+        if self.portrait_row_weights is not None:
+            if len(self.portrait_row_weights) != self.columns:
+                raise ValueError("Debe haber un peso por fila vertical")
+            for weight in self.portrait_row_weights:
+                validate_number(weight, "Peso de fila vertical", 0.001)
 
     @property
     def row_gap(self) -> float:
