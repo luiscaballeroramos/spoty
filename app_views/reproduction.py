@@ -839,6 +839,22 @@ def render_reproduction_page():
             background-repeat: no-repeat;
             background-position: center;
         }
+        .st-key-reproduction-controls :is(
+            .st-key-reproduction_previous,
+            .st-key-reproduction_play_pause,
+            .st-key-reproduction_next
+        ) [data-testid="stButton"] button p {
+            display: inline-flex;
+            width: 1.8em;
+            height: 1.8em;
+            margin: 0;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.5);
+            color: #ffffff !important;
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.95);
+        }
         .st-key-reproduction_play_pause [data-testid="stButton"] {
             display: flex;
             width: 100% !important;
