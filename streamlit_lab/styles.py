@@ -136,6 +136,16 @@ class BlockStyle:
 
 
 @dataclass(frozen=True)
+class ButtonDimensions:
+    """Dimensiones de un boton para una orientacion concreta."""
+
+    width: str | None = None
+    height: str | None = None
+    min_height: str | None = None
+    aspect_ratio: str | None = None
+
+
+@dataclass(frozen=True)
 class ButtonStyle:
     """CSS declarativo para el boton Streamlit renderizado por ``render_button``."""
 
@@ -156,8 +166,14 @@ class ButtonStyle:
     box_shadow: str | None = None
     max_width: str | None = None
     max_height: str | None = None
+    fill_container: bool = False
+    portrait: ButtonDimensions | None = None
 
     def __post_init__(self):
+        if self.portrait is not None and not isinstance(
+            self.portrait, ButtonDimensions
+        ):
+            raise ValueError("Las dimensiones verticales deben ser ButtonDimensions")
         if self.background_image is not None:
             url = urlsplit(self.background_image)
             if url.scheme not in ("http", "https") or not url.netloc or re.search(r"[\s<>\"'\\()]", self.background_image):
@@ -177,12 +193,17 @@ class PageStyle:
     vertical_gap_px: float | None = None
     horizontal_gap_px: float | None = None
     element_margin_px: float | None = None
+    caption_margin_px: float | Insets | None = None
 
     def __post_init__(self):
         if self.content_padding is not None and not isinstance(
             self.content_padding, Insets
         ):
             validate_number(self.content_padding, "Padding")
+        if self.caption_margin_px is not None and not isinstance(
+            self.caption_margin_px, Insets
+        ):
+            validate_number(self.caption_margin_px, "Margen de caption")
         for value in (
             self.vertical_gap_px,
             self.horizontal_gap_px,

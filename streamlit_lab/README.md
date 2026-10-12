@@ -38,18 +38,29 @@ with render_block(block):
 ## Estilos de página y botones
 
 `PageStyle` configura el espacio y el desbordamiento comunes de una página;
-`ButtonStyle` aplica estilos CSS a un botón Streamlit. `render_button` conserva
-los argumentos habituales de `st.button` y acepta una imagen HTTP(S) como fondo.
+`ButtonStyle` aplica estilos CSS a un botón Streamlit. Puede hacer que el botón
+ocupe su contenedor y declarar dimensiones alternativas para orientación vertical
+con `fill_container` y `portrait=ButtonDimensions(...)`. `PageStyle.caption_margin_px`
+ajusta el margen de los captions. `render_button` conserva los argumentos
+habituales de `st.button` y acepta una imagen HTTP(S) como fondo.
 
 ```python
 from renderer import render_button, render_page_style
-from styles import ButtonStyle, PageStyle
+from styles import ButtonDimensions, ButtonStyle, Insets, PageStyle
 
-render_page_style(PageStyle(hide_header=True, content_padding=0))
+render_page_style(PageStyle(
+    hide_header=True,
+    content_padding=0,
+    caption_margin_px=Insets(top=0, bottom=2),
+))
 render_button(
     "Play",
     key="play",
-    style=ButtonStyle(background_image="https://example.com/cover.jpg"),
+    style=ButtonStyle(
+        background_image="https://example.com/cover.jpg",
+        fill_container=True,
+        portrait=ButtonDimensions(width="3rem", height="3rem", aspect_ratio="1"),
+    ),
 )
 ```
 

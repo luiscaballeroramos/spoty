@@ -53,6 +53,11 @@ def render_page_style(style: PageStyle) -> None:
             f'{{ margin-top: {style.element_margin_px:g}px !important; '
             f'margin-bottom: {style.element_margin_px:g}px !important; }}'
         )
+    if style.caption_margin_px is not None:
+        rules.append(
+            f'[data-testid="stCaptionContainer"] '
+            f'{{ margin: {pixels(style.caption_margin_px)} !important; }}'
+        )
     if rules:
         st.html(f"<style>{''.join(rules)}</style>")
 
@@ -96,9 +101,58 @@ def render_button(
     css = "\n".join(
         f"{name}: {value};" for name, value in declarations if value is not None
     )
+    fill_container_css = ""
+    if button_style.fill_container:
+        selector = f".st-key-{key}"
+        fill_container_css = f"""
+        {selector} {{
+            width: 100% !important;
+            height: 100% !important;
+        }}
+        {selector} [data-testid="stButton"],
+        {selector} [data-testid="stButton"] > div,
+        {selector} [data-testid="stTooltipIcon"],
+        {selector} [data-testid="stTooltipHoverTarget"] {{
+            width: 100% !important;
+            height: 100% !important;
+        }}
+        {selector} [data-testid="stButton"] {{
+            display: flex;
+            justify-content: center;
+        }}
+        {selector} [data-testid="stButton"] button {{
+            box-sizing: border-box;
+            width: 100% !important;
+            height: 100% !important;
+            max-width: none !important;
+            max-height: none !important;
+            aspect-ratio: auto !important;
+        }}
+        """
+    portrait_css = ""
+    if button_style.portrait is not None:
+        portrait_declarations = (
+            ("width", button_style.portrait.width),
+            ("height", button_style.portrait.height),
+            ("min-height", button_style.portrait.min_height),
+            ("aspect-ratio", button_style.portrait.aspect_ratio),
+        )
+        portrait_rules = "\n".join(
+            f"{name}: {value} !important;"
+            for name, value in portrait_declarations
+            if value is not None
+        )
+        portrait_css = f"""
+        @media (orientation: portrait) {{
+            .st-key-{key} [data-testid="stButton"] button {{
+                {portrait_rules}
+            }}
+        }}
+        """
     st.html(
         f"<style>.st-key-{key} [data-testid=\"stButton\"] button "
-        f"{{ box-sizing: border-box; {css} }}</style>"
+        f"{{ box-sizing: border-box; {css} }}"
+        f"{fill_container_css}{portrait_css}</style>"
     )
     return st.button(
         label,
