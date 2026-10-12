@@ -40,6 +40,10 @@ y limites opcionales en pixeles. `%` representa el ancho del contenedor disponib
 `vw` y `vh` representan porcentajes del ancho y alto de la ventana completa
 (incluida la zona ocupada por la barra lateral). Para alto proporcional se usa `vh`,
 no `%`. `px` representa un tamano fijo, sujeto a los limites.
+`dvh` usa la altura visible actual de la ventana. `Size(..., offset_px=64)`
+descuenta un espacio fijo antes de aplicar los limites, por ejemplo para navegacion.
+Un bloque puede declarar `portrait_height=Size(...)` para usar otra altura solo
+en orientacion vertical, sin modificar su altura habitual ni el layout del grupo.
 
 El ancho disponible tiene prioridad sobre el minimo: un bloque nunca debe ensanchar
 la pagina en movil. La altura se limita independientemente y el contenido que no
@@ -82,6 +86,9 @@ El panel conserva la ultima configuracion valida cuando una edicion no es valida
 Los anchos porcentuales se calculan respecto al area asignada. Por defecto se
 mantienen las filas y columnas en movil. Con `mobile_breakpoint_px` el layout se
 convierte en una columna por debajo de ese ancho de ventana.
+Con `collapse_on_portrait=True` tambien se apila en orientacion vertical,
+independientemente del ancho. Esta opcion se aplica al layout que la declara;
+los layouts internos de los grupos conservan su propia distribucion.
 
 ## Minilayouts anidados
 

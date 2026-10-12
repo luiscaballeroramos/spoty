@@ -6,10 +6,10 @@ import re
 from typing import Literal
 
 if __package__:
-    from .blocks import Block, Position, Span
+    from .blocks import Block, Position, Size, Span
     from .styles import Insets, validate_number
 else:
-    from blocks import Block, Position, Span
+    from blocks import Block, Position, Size, Span
     from styles import Insets, validate_number
 
 
@@ -28,8 +28,12 @@ class Layout:
     min_row_height_px: float = 0
     mobile_breakpoint_px: float | None = None
     parent_gap_px: float | None = None
+    collapse_on_portrait: bool = False
+    height: Size | None = None
 
     def __post_init__(self):
+        if self.height is not None and not isinstance(self.height, Size):
+            raise ValueError("La altura del layout debe ser un Size")
         if any(type(value) is not int or value < 1 for value in (self.rows, self.columns)):
             raise ValueError("El numero de filas y columnas debe ser un entero positivo")
         if self.flow not in ("grid", "row", "column"):
