@@ -643,13 +643,10 @@ def _render_playback_controls(
             _render_adjacent_track_info(*tracks[track])
             return
 
-        label, key, help_text = {
-            "previous": ("<<", "reproduction_previous", "Anterior"),
-            "current": (
-                ">||", "reproduction_play_pause",
-                "Pausar" if is_playing else "Reproducir",
-            ),
-            "next": (">>", "reproduction_next", "Siguiente"),
+        label, key = {
+            "previous": ("<<", "reproduction_previous"),
+            "current": (">||", "reproduction_play_pause"),
+            "next": (">>", "reproduction_next"),
         }[track]
         track_image = _get_track_image_url(tracks[track][0]) or _get_track_image_url(
             current_track
@@ -659,7 +656,6 @@ def _render_playback_controls(
             key=key,
             style=replace(REPRODUCTION_CONTROL_STYLE, background_image=track_image),
             type="primary" if track == "current" else "secondary",
-            help=help_text,
             use_container_width=True,
         ):
             if track == "previous":

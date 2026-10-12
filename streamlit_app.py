@@ -95,7 +95,7 @@ st.markdown(
     .stTabs [role="tablist"],
     [data-testid="stDataFrame"],
     [data-testid="stTable"] {
-        background: #ffffff !important;
+        background-color: #ffffff !important;
         border: 1px solid #000000 !important;
         border-radius: 0.5rem !important;
     }
