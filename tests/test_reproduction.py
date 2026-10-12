@@ -276,6 +276,7 @@ class ReproductionTest(unittest.TestCase):
         self.spotify.transfer_playback.assert_called_once_with(
             "original-device", force_play=False
         )
+        self.spotify.devices.assert_not_called()
         self.spotify.start_playback.assert_called_once_with(
             device_id="original-device",
             uris=["spotify:track:track-id"],
@@ -309,6 +310,31 @@ class ReproductionTest(unittest.TestCase):
         self.spotify.current_playback.return_value = paused
 
         self.click_play_pause(paused)
+
+        self.spotify.start_playback.assert_called_once_with(
+            device_id="original-device",
+            uris=None,
+            context_uri=context_uri,
+            offset={"uri": "spotify:track:track-id"},
+            position_ms=72_000,
+        )
+
+    def test_resume_restores_paused_track_when_live_track_changed(self):
+        context_uri = "spotify:playlist:playlist-id"
+        self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = {
+            **self.playback,
+            "context": {"uri": context_uri},
+            "paused_at": reproduction.time.monotonic(),
+        }
+        changed_track = {**self.track, "id": "other-track"}
+        self.spotify.current_playback.return_value = {
+            **self.playback,
+            "is_playing": False,
+            "item": changed_track,
+            "context": {"uri": context_uri},
+        }
+
+        self.click_play_pause({**self.playback, "is_playing": False})
 
         self.spotify.start_playback.assert_called_once_with(
             device_id="original-device",
@@ -432,26 +458,22 @@ class ReproductionTest(unittest.TestCase):
 
     def test_inactive_device_restores_track_even_when_paused_item_is_reported(self):
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = self.playback
-        paused = {**self.playback, "is_playing": False}
-        self.spotify.current_playback.return_value = paused
-        self.session_state[reproduction.PLAYBACK_CACHE_KEY] = {
-            "playback": paused,
-            "fetched_at": 0,
-        }
-        self.spotify.devices.return_value["devices"][0]["is_active"] = False
-        self.click_play_pause(paused)
+        self.spotify.current_playback.return_value = None
+        self.click_play_pause({**self.playback, "is_playing": False})
         self.spotify.transfer_playback.assert_called_once_with(
             "original-device", force_play=False
         )
+        self.spotify.devices.assert_not_called()
         self.spotify.start_playback.assert_called_once_with(
             device_id="original-device",
             uris=["spotify:track:track-id"],
             position_ms=72_000,
         )
 
-    def test_missing_original_device_does_not_play_elsewhere(self):
+    def test_missing_original_device_is_not_replaced_by_another_device(self):
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = self.playback
-        self.spotify.devices.return_value = {"devices": []}
+        self.spotify.current_playback.return_value = None
+        self.spotify.transfer_playback.side_effect = RuntimeError("device unavailable")
         reproduction._render_playback_controls(
             client=self.client,
             playback={**self.playback, "is_playing": False},
@@ -464,9 +486,10 @@ class ReproductionTest(unittest.TestCase):
             next_track={},
         )
         self.spotify.start_playback.assert_not_called()
+        self.spotify.devices.assert_not_called()
         self.streamlit.error.assert_called_once()
 
-    def test_resume_recognizes_original_device_with_replaced_id(self):
+    def test_resume_does_not_search_for_a_replacement_device_id(self):
         snapshot = {
             **self.playback,
             "device": {
@@ -478,28 +501,21 @@ class ReproductionTest(unittest.TestCase):
             "paused_at": reproduction.time.monotonic() - 120,
         }
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = snapshot
-        self.spotify.devices.return_value = {
-            "devices": [
-                {
-                    "id": "renewed-device-id",
-                    "name": "Living room speaker",
-                    "type": "Speaker",
-                    "is_active": True,
-                }
-            ]
-        }
+        self.spotify.current_playback.return_value = None
+        self.spotify.transfer_playback.side_effect = RuntimeError("device unavailable")
 
-        self.click_play_pause({**self.playback, "is_playing": False})
-
-        self.spotify.start_playback.assert_called_once_with(
-            device_id="renewed-device-id",
-            uris=["spotify:track:track-id"],
-            position_ms=72_000,
+        reproduction._handle_play_pause(
+            self.client, {**self.playback, "is_playing": False}
         )
-        self.spotify.transfer_playback.assert_not_called()
+
+        self.spotify.devices.assert_not_called()
+        self.spotify.transfer_playback.assert_called_once_with(
+            "expired-device-id", force_play=False
+        )
+        self.spotify.start_playback.assert_not_called()
         self.assertEqual(
             self.session_state[reproduction.PAUSED_PLAYBACK_KEY]["device"]["id"],
-            "renewed-device-id",
+            "expired-device-id",
         )
 
     def test_resume_does_not_guess_between_duplicate_device_matches(self):
@@ -512,6 +528,8 @@ class ReproductionTest(unittest.TestCase):
             },
             "paused_at": reproduction.time.monotonic() - 120,
         }
+        self.spotify.current_playback.return_value = None
+        self.spotify.transfer_playback.side_effect = RuntimeError("device unavailable")
         self.spotify.devices.return_value = {
             "devices": [
                 {
@@ -533,8 +551,11 @@ class ReproductionTest(unittest.TestCase):
             self.client, {**self.playback, "is_playing": False}
         )
 
+        self.spotify.devices.assert_not_called()
+        self.spotify.transfer_playback.assert_called_once_with(
+            "expired-device-id", force_play=False
+        )
         self.spotify.start_playback.assert_not_called()
-        self.spotify.transfer_playback.assert_not_called()
         self.streamlit.error.assert_called_once()
 
     def test_stale_playing_view_resumes_instead_of_pausing(self):

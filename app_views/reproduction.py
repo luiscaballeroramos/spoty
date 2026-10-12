@@ -450,47 +450,9 @@ def _resume_playback(
         st.error("No se ha identificado el dispositivo de reproducción.")
         return None
 
-    devices = client.get_devices()
-    if devices is None:
-        st.error("No se pudieron consultar los dispositivos de Spotify.")
-        return None
-    device = next(
-        (
-            available
-            for available in devices.get("devices") or []
-            if available.get("id") == device_id
-        ),
-        None,
-    )
-    if device is None:
-        saved_device = snapshot.get("device") or {}
-        device_matches = [
-            available
-            for available in devices.get("devices") or []
-            if saved_device.get("name")
-            and available.get("name") == saved_device["name"]
-            and (
-                not saved_device.get("type")
-                or available.get("type") == saved_device["type"]
-            )
-        ]
-        if len(device_matches) == 1:
-            device = device_matches[0]
-            snapshot = {**snapshot, "device": device}
-            st.session_state[PAUSED_PLAYBACK_KEY] = snapshot
-            _persist_playback(snapshot)
-
-    if device is None:
-        st.error(
-            "No se encontró el dispositivo original de forma inequívoca. "
-            "Abre Spotify en él y vuelve a pulsar Play."
-        )
-        return None
-    device_id = device.get("id")
-    if not device_id:
-        st.error("El dispositivo original no tiene un identificador válido.")
-        return None
-    if not device.get("is_active") and not client.transfer_playback(device_id):
+    live_device_id = (live_playback.get("device") or {}).get("id")
+    target_is_active = live_device_id == device_id
+    if not target_is_active and not client.transfer_playback(device_id):
         st.error("No se pudo activar el dispositivo original en Spotify.")
         return None
 
@@ -498,9 +460,11 @@ def _resume_playback(
     context_uri = (snapshot.get("context") or {}).get("uri")
     live_context_uri = (live_playback.get("context") or {}).get("uri")
     context_changed = bool(context_uri and live_context_uri != context_uri)
+    live_track_id = (live_playback.get("item") or {}).get("id")
     missing_playback = (
         not live_playback.get("item")
-        or not device.get("is_active")
+        or not target_is_active
+        or live_track_id != item.get("id")
         or paused_at is None
         or time.monotonic() - paused_at >= PLAYBACK_RESTORE_AFTER_SECONDS
         or context_changed
