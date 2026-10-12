@@ -208,6 +208,13 @@ class ReproductionTest(unittest.TestCase):
             call.kwargs["key"]: call.kwargs["style"]
             for call in render_button.call_args_list
         }
+        for call in self.streamlit.button.call_args_list:
+            if call.kwargs["key"] in (
+                "reproduction_previous",
+                "reproduction_play_pause",
+                "reproduction_next",
+            ):
+                self.assertIsNone(call.kwargs.get("help"))
         self.assertEqual(
             set(style_by_key),
             {
