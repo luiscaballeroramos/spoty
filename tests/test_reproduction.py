@@ -4,6 +4,9 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
+from streamlit_lab import renderer
+from streamlit_lab.blocks import Position
+
 with patch.dict(sys.modules, {
     "register.artist": MagicMock(),
     "services.reproduction": MagicMock(),
@@ -47,6 +50,11 @@ class ReproductionTest(unittest.TestCase):
         )
         self.layout_streamlit_patch.start()
         self.addCleanup(self.layout_streamlit_patch.stop)
+        self.renderer_streamlit_patch = patch.object(
+            renderer, "st", self.streamlit
+        )
+        self.renderer_streamlit_patch.start()
+        self.addCleanup(self.renderer_streamlit_patch.stop)
 
         self.spotify = MagicMock()
         self.spotify.current_playback.return_value = None
@@ -84,13 +92,84 @@ class ReproductionTest(unittest.TestCase):
                 next_track={},
             )
 
+    def test_track_blocks_use_automatic_responsive_layout(self):
+        self.streamlit.button.side_effect = None
+        self.streamlit.button.return_value = False
+
+        reproduction._render_playback_controls(
+            client=self.client,
+            playback=self.playback,
+            is_playing=True,
+            track_id="track-id",
+            is_track_liked=False,
+            track_name="Song",
+            artists_text="Artist",
+            previous_track={"name": "Previous"},
+            next_track={"name": "Next"},
+        )
+
+        blocks = reproduction.REPRODUCTION_TRACK_BLOCKS
+        self.assertTrue(all(block.position is None for block in blocks))
+        self.assertIsNone(reproduction.REPRODUCTION_LAYOUT.mobile_breakpoint_px)
+        self.assertEqual(
+            reproduction.REPRODUCTION_LAYOUT.portrait_row_weights,
+            reproduction.REPRODUCTION_COLUMN_RATIOS,
+        )
+        groups = reproduction.REPRODUCTION_TRACK_GROUPS
+        self.assertEqual(
+            reproduction.REPRODUCTION_LAYOUT.place(list(groups)),
+            {
+                "reproduction-previous": Position(1, 1),
+                "reproduction-current": Position(1, 2),
+                "reproduction-next": Position(1, 3),
+            },
+        )
+        container_keys = [
+            call.kwargs.get("key")
+            for call in self.streamlit.container.call_args_list
+        ]
+        self.assertEqual(
+            [key for key in container_keys if key and key.startswith("lab-") and not key.startswith("lab-group-")],
+            [f"lab-{block.key}" for block in blocks],
+        )
+        layout_css = self.streamlit.html.call_args_list[1].args[0]
+        self.assertNotIn("@media (max-width:", layout_css)
+        self.assertIn("@media (orientation: portrait)", layout_css)
+        self.assertIn("grid-template-columns: minmax(0, 1fr) !important", layout_css)
+        self.assertIn("grid-row: auto !important", layout_css)
+        self.assertIn(
+            "grid-template-rows: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr) !important",
+            layout_css,
+        )
+        self.assertEqual(self.streamlit.columns.call_count, 0)
+
+        reproduction.REPRODUCTION_GROUP.validate({block.key: block for block in blocks})
+        for group in groups:
+            self.assertIn(f"lab-group-{group.key}", container_keys)
+            self.assertEqual(group.layout.rows, 2)
+            self.assertEqual(group.layout.columns, 1)
+            self.assertEqual(group.layout.horizontal, "center")
+            self.assertEqual(group.layout.vertical, "center")
+        for image, title, weight in zip(
+            blocks[::2], blocks[1::2], reproduction.REPRODUCTION_COLUMN_RATIOS
+        ):
+            self.assertAlmostEqual(image.height.value / title.height.value, 4)
+            self.assertEqual(image.height.min_px, 0)
+            self.assertEqual(title.height.min_px, 0)
+            self.assertAlmostEqual(image.height.max_px / title.height.max_px, 4)
+            self.assertEqual(image.portrait_height.unit, "dvh")
+            self.assertAlmostEqual(image.portrait_height.value / title.portrait_height.value, 4)
+            self.assertAlmostEqual(image.portrait_height.value + title.portrait_height.value, 100 * weight / 4)
+            self.assertAlmostEqual(image.portrait_height.max_px + title.portrait_height.max_px, 720 * weight / 4)
+            self.assertAlmostEqual(image.portrait_height.offset_px + title.portrait_height.offset_px, 64 * weight / 4)
+
     def test_controls_use_the_shared_block_style_for_each_button(self):
         self.streamlit.button.side_effect = None
         self.streamlit.button.return_value = False
 
         with patch.object(
-            reproduction, "styled_button", wraps=reproduction.styled_button
-        ) as styled_button:
+            reproduction, "render_button", wraps=reproduction.render_button
+        ) as render_button:
             reproduction._render_playback_controls(
                 client=self.client,
                 playback=self.playback,
@@ -105,7 +184,7 @@ class ReproductionTest(unittest.TestCase):
 
         style_by_key = {
             call.kwargs["key"]: call.kwargs["style"]
-            for call in styled_button.call_args_list
+            for call in render_button.call_args_list
         }
         self.assertEqual(
             set(style_by_key),
@@ -121,13 +200,18 @@ class ReproductionTest(unittest.TestCase):
             "reproduction_play_pause",
             "reproduction_next",
         ):
-            self.assertIs(
-                style_by_key[key], reproduction.REPRODUCTION_CONTROL_STYLE
+            self.assertEqual(
+                style_by_key[key].color,
+                reproduction.REPRODUCTION_CONTROL_STYLE.color,
             )
             self.assertEqual(style_by_key[key].aspect_ratio, "1 / 1")
             self.assertEqual(
                 style_by_key[key].max_height, "calc(100dvh - 7rem)"
             )
+        self.assertEqual(
+            style_by_key["reproduction_play_pause"].background_image,
+            "https://example.com/cover.jpg",
+        )
         self.assertIs(
             style_by_key["reproduction_corner_action"],
             reproduction.REPRODUCTION_CORNER_ACTION_STYLE,
