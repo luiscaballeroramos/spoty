@@ -3,7 +3,16 @@ from dataclasses import replace
 
 from blocks import Block, Position, Size, Span
 from layout import Group, Layout
-from styles import BlockStyle, Border, ButtonStyle, Corners, Insets, PageStyle, Shadow
+from styles import (
+    BlockStyle,
+    Border,
+    ButtonDimensions,
+    ButtonStyle,
+    Corners,
+    Insets,
+    PageStyle,
+    Shadow,
+)
 
 
 class StyleTests(unittest.TestCase):
@@ -35,6 +44,8 @@ class StyleTests(unittest.TestCase):
             lambda: BlockStyle(background_image="https://example.com/</style>"),
             lambda: BlockStyle(background_image="javascript:alert(1)"),
             lambda: BlockStyle(content_horizontal="invalid"), lambda: BlockStyle(overflow="invalid"),
+            lambda: ButtonStyle(portrait="invalid"),
+            lambda: PageStyle(caption_margin_px=-1),
             lambda: Block("ratio", aspect_ratio=2), lambda: Block("ratio", height=None, aspect_ratio=0),
             lambda: Layout(column_weights=(1, 2)),
             lambda: Layout(columns=2, portrait_row_weights=(1,)),
@@ -60,6 +71,7 @@ class StyleTests(unittest.TestCase):
                 vertical_gap_px=0,
                 horizontal_gap_px=0,
                 element_margin_px=0,
+                caption_margin_px=Insets(top=0, bottom=2),
             ))
 
         css = html.call_args.args[0]
@@ -67,6 +79,8 @@ class StyleTests(unittest.TestCase):
         self.assertIn("padding: 0px !important", css)
         self.assertIn("overflow-y: auto !important", css)
         self.assertIn("gap: 0px !important", css)
+        self.assertIn('[data-testid="stCaptionContainer"]', css)
+        self.assertIn("margin: 0px 0px 2px 0px !important", css)
 
     def test_render_button_applies_style_and_background_image(self):
         from unittest.mock import patch
@@ -83,6 +97,8 @@ class StyleTests(unittest.TestCase):
                     background_image="https://example.com/cover.jpg",
                     background_fit="contain",
                     aspect_ratio="1 / 1",
+                    fill_container=True,
+                    portrait=ButtonDimensions("2rem", "2rem", "0", "1"),
                 ),
             )
 
@@ -92,6 +108,10 @@ class StyleTests(unittest.TestCase):
             html.call_args.args[0],
         )
         self.assertIn("background-size: contain", html.call_args.args[0])
+        self.assertIn("height: 100% !important", html.call_args.args[0])
+        self.assertIn("@media (orientation: portrait)", html.call_args.args[0])
+        self.assertIn("min-height: 0 !important", html.call_args.args[0])
+        self.assertIn("aspect-ratio: 1 !important", html.call_args.args[0])
         button.assert_called_once_with(
             "Play",
             key="play-control",

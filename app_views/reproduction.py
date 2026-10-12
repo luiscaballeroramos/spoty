@@ -9,7 +9,13 @@ import streamlit as st
 from streamlit_lab.blocks import Block, Size
 from streamlit_lab.layout import Group, Layout
 from streamlit_lab.renderer import render_button, render_group, render_page_style
-from streamlit_lab.styles import BlockStyle, ButtonStyle, PageStyle
+from streamlit_lab.styles import (
+    BlockStyle,
+    ButtonDimensions,
+    ButtonStyle,
+    Insets,
+    PageStyle,
+)
 from services.reproduction import ReproductionService
 from spotifyapi.spotifyclient import SpotifyClient
 from spotifyapi.streamlit_auth import (
@@ -48,6 +54,7 @@ REPRODUCTION_PAGE_STYLE = PageStyle(
     vertical_gap_px=0,
     horizontal_gap_px=0,
     element_margin_px=0,
+    caption_margin_px=Insets(top=0, right=0, bottom=1.6, left=0),
 )
 REPRODUCTION_LAYOUT = Layout(
     rows=1,
@@ -124,15 +131,27 @@ REPRODUCTION_CONTROL_STYLE = ButtonStyle(
     color="white",
     border="none",
     padding="0 0.15rem",
-    border_radius="5%",
+    border_radius="0",
     width="100%",
     aspect_ratio="1 / 1",
     min_height="0",
     font_size="3rem",
     font_weight="900",
     text_align="center",
-    max_width="min(100%, calc(100dvh - 7rem))",
-    max_height="calc(100dvh - 7rem)",
+    fill_container=True,
+    portrait=ButtonDimensions(
+        width="max(2.6rem, min(75vw, calc((100dvh - 17rem) / 4)))",
+        height="max(2.6rem, min(75vw, calc((100dvh - 17rem) / 4)))",
+        aspect_ratio="1",
+    ),
+)
+REPRODUCTION_PLAY_CONTROL_STYLE = replace(
+    REPRODUCTION_CONTROL_STYLE,
+    portrait=ButtonDimensions(
+        width="max(2.6rem, min(75vw, calc((100dvh - 11rem) / 2)))",
+        height="max(2.6rem, min(75vw, calc((100dvh - 11rem) / 2)))",
+        aspect_ratio="1",
+    ),
 )
 REPRODUCTION_CORNER_ACTION_STYLE = ButtonStyle(
     color="white",
@@ -145,6 +164,9 @@ REPRODUCTION_CORNER_ACTION_STYLE = ButtonStyle(
     min_height="4rem",
     font_size="1.6rem",
     text_align="center",
+    portrait=ButtonDimensions(
+        width="2.75rem", height="2.75rem", min_height="0"
+    ),
 )
 
 
@@ -684,7 +706,12 @@ def _render_playback_controls(
         if render_button(
             label,
             key=key,
-            style=replace(REPRODUCTION_CONTROL_STYLE, background_image=track_image),
+            style=replace(
+                REPRODUCTION_PLAY_CONTROL_STYLE
+                if track == "current"
+                else REPRODUCTION_CONTROL_STYLE,
+                background_image=track_image,
+            ),
             type="primary" if track == "current" else "secondary",
             help=help_text,
             use_container_width=True,
@@ -728,24 +755,6 @@ def _render_playback_controls(
 
 def _render_control_styles() -> None:
     st.html(f"""<style>
-        :is(.st-key-reproduction_previous, .st-key-reproduction_play_pause,
-            .st-key-reproduction_next),
-        :is(.st-key-reproduction_previous, .st-key-reproduction_play_pause,
-            .st-key-reproduction_next) :is([data-testid="stButton"],
-            [data-testid="stButton"] > div, [data-testid="stTooltipIcon"],
-            [data-testid="stTooltipHoverTarget"]) {{
-            height: 100% !important;
-        }}
-        .st-key-reproduction-controls
-        :is(.st-key-reproduction_previous, .st-key-reproduction_play_pause,
-            .st-key-reproduction_next) [data-testid="stButton"] button {{
-            height: 100% !important;
-            width: 100% !important;
-            max-height: none !important;
-            max-width: none !important;
-            aspect-ratio: auto !important;
-            border-radius: 0 !important;
-        }}
         .st-key-reproduction-controls .reproduction-portrait-track-info {{
             min-height: 0 !important;
             margin: 0 !important;
@@ -790,11 +799,6 @@ def render_reproduction_page():
         <style>
         .st-key-reproduction-controls {
             margin-top: 0 !important;
-        }
-
-        [data-testid="stCaptionContainer"] {
-            margin-top: 0 !important;
-            margin-bottom: 0.1rem !important;
         }
 
         .reproduction-track-title {
@@ -948,30 +952,6 @@ def render_reproduction_page():
                 z-index: 3;
                 color: #111111 !important;
                 background: #ffffff !important;
-            }
-        }
-        @media (orientation: portrait) {
-            .st-key-reproduction-controls {
-                --reproduction-portrait-button-size:
-                    max(2.6rem, min(75vw, calc((100dvh - 17rem) / 4)));
-                --reproduction-portrait-play-button-size:
-                    max(2.6rem, min(75vw, calc((100dvh - 11rem) / 2)));
-            }
-            .st-key-reproduction-controls [data-testid="stButton"] button {
-                width: var(--reproduction-portrait-button-size) !important;
-                height: var(--reproduction-portrait-button-size) !important;
-                aspect-ratio: 1 !important;
-            }
-            .st-key-reproduction_play_pause [data-testid="stButton"] button {
-                width: var(--reproduction-portrait-play-button-size) !important;
-                height: var(--reproduction-portrait-play-button-size) !important;
-                aspect-ratio: 1 !important;
-            }
-            .st-key-reproduction_previous [data-testid="stButton"] button,
-            .st-key-reproduction_next [data-testid="stButton"] button {
-                width: var(--reproduction-portrait-button-size) !important;
-                height: var(--reproduction-portrait-button-size) !important;
-                aspect-ratio: 1 !important;
             }
         }
         .st-key-reproduction_corner_action {

@@ -205,9 +205,12 @@ class ReproductionTest(unittest.TestCase):
                 reproduction.REPRODUCTION_CONTROL_STYLE.color,
             )
             self.assertEqual(style_by_key[key].aspect_ratio, "1 / 1")
-            self.assertEqual(
-                style_by_key[key].max_height, "calc(100dvh - 7rem)"
-            )
+            self.assertTrue(style_by_key[key].fill_container)
+            self.assertIsNotNone(style_by_key[key].portrait)
+        self.assertEqual(
+            style_by_key["reproduction_play_pause"].portrait.width,
+            "max(2.6rem, min(75vw, calc((100dvh - 11rem) / 2)))",
+        )
         self.assertEqual(
             style_by_key["reproduction_play_pause"].background_image,
             "https://example.com/cover.jpg",
