@@ -7,11 +7,12 @@ import streamlit as st
 
 from app_views.interface_layout import (
     BlockStyle,
-    apply_layout_styles,
-    proportional_columns,
-    styled_block,
     styled_button,
 )
+from streamlit_lab.blocks import Block, Size
+from streamlit_lab.layout import Group, Layout
+from streamlit_lab.renderer import render_group
+from streamlit_lab.styles import BlockStyle as LabBlockStyle
 from services.reproduction import ReproductionService
 from spotifyapi.spotifyclient import SpotifyClient
 from spotifyapi.streamlit_auth import (
@@ -39,16 +40,65 @@ ADJACENT_TRACKS_CACHE_KEY = "reproduction_adjacent_tracks_cache"
 ADJACENT_TRACK_HISTORY_KEY = "reproduction_adjacent_track_history"
 ADJACENT_PREVIOUS_REQUEST_KEY = "reproduction_previous_request"
 REPRODUCTION_COLUMN_RATIOS = (1, 2, 1)
-REPRODUCTION_FULL_BLOCK = True
-REPRODUCTION_BLOCK_STYLE = BlockStyle(padding="0")
+REPRODUCTION_IMAGE_HEIGHT_PERCENT = 80
+REPRODUCTION_LAYOUT = Layout(
+    rows=1,
+    columns=3,
+    flow="row",
+    column_weights=REPRODUCTION_COLUMN_RATIOS,
+    gap_px=0,
+    horizontal="center",
+    vertical="center",
+    height=Size(100, "dvh", offset_px=64),
+    mobile_breakpoint_px=768,
+    collapse_on_portrait=True,
+)
+REPRODUCTION_TRACK_BLOCKS = [
+    Block(
+        key=f"reproduction-{track}-{part}",
+        color="#ffffff",
+        height=Size(70 * fraction, "vh", 360 * fraction, 720 * fraction),
+        portrait_height=Size(
+            100 * fraction * weight / sum(REPRODUCTION_COLUMN_RATIOS),
+            "dvh",
+            offset_px=64 * fraction * weight / sum(REPRODUCTION_COLUMN_RATIOS),
+        ),
+        style=LabBlockStyle(
+            padding=0 if part == "image" else 2,
+            radius=0,
+            content_gap_px=0,
+            content_horizontal="center",
+            content_vertical="start" if part == "image" else "center",
+        ),
+    )
+    for track, weight in zip(("previous", "current", "next"), REPRODUCTION_COLUMN_RATIOS)
+    for part, fraction in (
+        ("image", REPRODUCTION_IMAGE_HEIGHT_PERCENT / 100),
+        ("title", 1 - REPRODUCTION_IMAGE_HEIGHT_PERCENT / 100),
+    )
+]
+REPRODUCTION_TRACK_GROUPS = tuple(
+    Group(
+        key=f"reproduction-{track}",
+        children=(f"reproduction-{track}-image", f"reproduction-{track}-title"),
+        layout=Layout(rows=2, columns=1, gap_px=0),
+    )
+    for track in ("previous", "current", "next")
+)
+REPRODUCTION_GROUP = Group(
+    key="reproduction-controls",
+    children=REPRODUCTION_TRACK_GROUPS,
+    layout=REPRODUCTION_LAYOUT,
+)
 REPRODUCTION_CONTROL_STYLE = BlockStyle(
     color="white",
+    border="none",
     padding="0 0.15rem",
     border_radius="5%",
     width="100%",
     aspect_ratio="1 / 1",
     min_height="0",
-    font_size="clamp(1.75rem, 8vw, 5rem)",
+    font_size="3rem",
     font_weight="900",
     text_align="center",
     max_width="min(100%, calc(100dvh - 7rem))",
@@ -56,7 +106,7 @@ REPRODUCTION_CONTROL_STYLE = BlockStyle(
 )
 REPRODUCTION_CORNER_ACTION_STYLE = BlockStyle(
     color="white",
-    border="1px solid rgba(255, 255, 255, 0.7)",
+    border="none",
     border_radius="50%",
     background="rgba(0, 0, 0, 0.28)",
     padding="0",
@@ -575,92 +625,125 @@ def _render_playback_controls(
     previous_track: dict,
     next_track: dict,
 ) -> None:
-    play_pause_label = ">||"
-    play_pause_help = "Pausar" if is_playing else "Reproducir"
-    with styled_block("reproduction-controls", REPRODUCTION_BLOCK_STYLE):
-        apply_layout_styles(
-            "reproduction-controls",
-            column_ratios=REPRODUCTION_COLUMN_RATIOS,
-            portrait_column_ratios=REPRODUCTION_COLUMN_RATIOS,
-            full_block=REPRODUCTION_FULL_BLOCK,
-            full_block_offset="2.6rem",
-            center_content=True,
-        )
-        previous_col, play_pause_col, next_col = proportional_columns(
-            REPRODUCTION_COLUMN_RATIOS,
-            gap=None,
-            vertical_alignment="center",
-        )
+    tracks = {
+        "previous": (previous_track, "Canción anterior"),
+        "current": (
+            {"name": track_name, "artists": [{"name": artists_text}]},
+            "Sin título",
+        ),
+        "next": (next_track, "Canción siguiente"),
+    }
 
-        with previous_col:
-            if styled_button(
-                "<<",
-                key="reproduction_previous",
-                style=REPRODUCTION_CONTROL_STYLE,
-                help="Anterior",
-                use_container_width=True,
-            ):
+    def render_track_content(block: Block) -> None:
+        _, track, part = block.key.split("-")
+        if part == "title":
+            _render_adjacent_track_info(*tracks[track])
+            return
+
+        label, key, help_text = {
+            "previous": ("<<", "reproduction_previous", "Anterior"),
+            "current": (
+                ">||", "reproduction_play_pause",
+                "Pausar" if is_playing else "Reproducir",
+            ),
+            "next": (">>", "reproduction_next", "Siguiente"),
+        }[track]
+        if styled_button(
+            label,
+            key=key,
+            style=REPRODUCTION_CONTROL_STYLE,
+            type="primary" if track == "current" else "secondary",
+            help=help_text,
+            use_container_width=True,
+        ):
+            if track == "previous":
                 _handle_previous_track(client, previous_track)
-            _render_adjacent_track_info(previous_track, "Canción anterior")
-
-        with play_pause_col:
-            with st.container(key="reproduction-cover"):
-                with st.container(key="reproduction-cover-art"):
-                    if styled_button(
-                        play_pause_label,
-                        key="reproduction_play_pause",
-                        style=REPRODUCTION_CONTROL_STYLE,
-                        type="primary",
-                        help=play_pause_help,
-                        use_container_width=True,
-                    ):
-                        _handle_play_pause(client, playback)
-
-                    with st.container(
-                        key=(
-                            "reproduction-corner-action-liked"
-                            if is_track_liked
-                            else "reproduction-corner-action-unliked"
-                        )
-                    ):
-                        if styled_button(
-                            "♥",
-                            key="reproduction_corner_action",
-                            style=REPRODUCTION_CORNER_ACTION_STYLE,
-                            help=(
-                                "Retirar de Liked Songs"
-                                if is_track_liked
-                                else "Añadir a Liked Songs"
-                            ),
-                            disabled=not track_id,
-                        ):
-                            if track_id:
-                                st.session_state["pending_library_action"] = {
-                                    "track_id": track_id,
-                                    "action": "unlike" if is_track_liked else "like",
-                                }
-                                st.rerun()
-
-                st.markdown(
-                    f"""
-                    <div class="reproduction-portrait-track-info">
-                        <div class="reproduction-track-title">{html.escape(track_name or 'Sin título')}</div>
-                        <div class="reproduction-track-artists">{html.escape(artists_text or 'Artista desconocido')}</div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-
-        with next_col:
-            if styled_button(
-                ">>",
-                key="reproduction_next",
-                style=REPRODUCTION_CONTROL_STYLE,
-                help="Siguiente",
-                use_container_width=True,
-            ):
+            elif track == "current":
+                _handle_play_pause(client, playback)
+            else:
                 _handle_next_track(client, playback)
-            _render_adjacent_track_info(next_track, "Canción siguiente")
+
+        if track == "current":
+            with st.container(
+                key=(
+                    "reproduction-corner-action-liked"
+                    if is_track_liked
+                    else "reproduction-corner-action-unliked"
+                )
+            ):
+                if styled_button(
+                    "♥",
+                    key="reproduction_corner_action",
+                    style=REPRODUCTION_CORNER_ACTION_STYLE,
+                    help=(
+                        "Retirar de Liked Songs"
+                        if is_track_liked
+                        else "Añadir a Liked Songs"
+                    ),
+                    disabled=not track_id,
+                ) and track_id:
+                    st.session_state["pending_library_action"] = {
+                        "track_id": track_id,
+                        "action": "unlike" if is_track_liked else "like",
+                    }
+                    st.rerun()
+
+    with st.container(key="reproduction-controls"):
+        _render_control_styles()
+        render_group(REPRODUCTION_GROUP, REPRODUCTION_TRACK_BLOCKS, render_track_content)
+
+
+def _render_control_styles() -> None:
+    st.html(f"""<style>
+        :is(.st-key-reproduction_previous, .st-key-reproduction_play_pause,
+            .st-key-reproduction_next),
+        :is(.st-key-reproduction_previous, .st-key-reproduction_play_pause,
+            .st-key-reproduction_next) :is([data-testid="stButton"],
+            [data-testid="stButton"] > div, [data-testid="stTooltipIcon"],
+            [data-testid="stTooltipHoverTarget"]) {{
+            height: 100% !important;
+        }}
+        .st-key-reproduction-controls
+        :is(.st-key-reproduction_previous, .st-key-reproduction_play_pause,
+            .st-key-reproduction_next) [data-testid="stButton"] button {{
+            height: 100% !important;
+            width: 100% !important;
+            max-height: none !important;
+            max-width: none !important;
+            aspect-ratio: auto !important;
+            border-radius: 0 !important;
+        }}
+        .st-key-reproduction-controls .reproduction-portrait-track-info {{
+            min-height: 0 !important;
+            margin: 0 !important;
+            padding: 0.25rem 0.5rem !important;
+        }}
+        @media (orientation: portrait) {{
+            .st-key-reproduction-controls .reproduction-portrait-track-info {{
+                padding: 0 0.5rem !important;
+            }}
+            .st-key-reproduction-controls .st-key-reproduction_corner_action {{
+                width: 2.75rem !important;
+                left: 0.5rem;
+                bottom: 0.5rem;
+            }}
+            .st-key-reproduction-controls .st-key-reproduction_corner_action
+            [data-testid="stButton"] button {{
+                width: 2.75rem !important;
+                height: 2.75rem !important;
+                min-height: 0 !important;
+                font-size: 1.25rem !important;
+            }}
+            .st-key-reproduction-controls .reproduction-track-title {{
+                font-size: 0.85rem;
+                line-height: 1.15;
+            }}
+            .st-key-reproduction-controls .reproduction-track-artists {{
+                font-size: 0.75rem;
+                line-height: 1.15;
+            }}
+        }}
+        </style>""")
 
 
 def _render_adjacent_track_info(track: dict, fallback_title: str) -> None:
@@ -688,11 +771,11 @@ def render_reproduction_page():
             padding-right: 0 !important;
             padding-bottom: 0 !important;
             padding-left: 0 !important;
-            overflow: hidden !important;
+            overflow: visible !important;
         }
 
         [data-testid="stAppViewContainer"] {
-            overflow-y: hidden !important;
+            overflow-y: auto !important;
         }
 
         [data-testid="stMainBlockContainer"] > div,
@@ -729,7 +812,7 @@ def render_reproduction_page():
         }
         .reproduction-track-title {
             color: #111111 !important;
-            font-size: clamp(1.15rem, 3vw, 1.8rem);
+            font-size: 1.4rem;
             font-weight: 800;
             line-height: 1.2;
             overflow-wrap: anywhere;
@@ -739,7 +822,7 @@ def render_reproduction_page():
         .reproduction-track-artists,
         .reproduction-track-empty {
             color: #111111 !important;
-            font-size: clamp(0.95rem, 2vw, 1.15rem);
+            font-size: 1rem;
             line-height: 1.3;
             font-weight: 600;
             opacity: 1 !important;
@@ -786,7 +869,7 @@ def render_reproduction_page():
             line-height: 1;
             white-space: nowrap;
             text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9);
-            background-color: #34495e;
+            background-color: #ffffff;
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
@@ -813,7 +896,7 @@ def render_reproduction_page():
         .st-key-reproduction_previous [data-testid="stButton"] button,
         .st-key-reproduction_next [data-testid="stButton"] button {
             width: 100% !important;
-            background-image: linear-gradient(rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.5));
+            background-image: none;
             background-size: contain;
             background-repeat: no-repeat;
         }
@@ -860,13 +943,6 @@ def render_reproduction_page():
                 width: var(--reproduction-portrait-button-size) !important;
                 height: var(--reproduction-portrait-button-size) !important;
                 aspect-ratio: 1 !important;
-            }
-            .st-key-reproduction_previous [data-testid="stButton"] > div:last-child,
-            .st-key-reproduction_play_pause [data-testid="stButton"] > div:last-child,
-            .st-key-reproduction_next [data-testid="stButton"] > div:last-child {
-                display: flex;
-                justify-content: center;
-                width: 100% !important;
             }
             .st-key-reproduction_play_pause [data-testid="stButton"] button {
                 width: var(--reproduction-portrait-play-button-size) !important;
@@ -960,14 +1036,12 @@ def render_reproduction_page():
     if previous_image_url:
         adjacent_images_css += (
             f'.st-key-reproduction_previous [data-testid="stButton"] button '
-            f"{{ background-image: linear-gradient(rgba(0, 0, 0, 0.28), "
-            f"rgba(0, 0, 0, 0.5)), url({json.dumps(previous_image_url)}); }}"
+            f"{{ background-image: url({json.dumps(previous_image_url)}); }}"
         )
     if next_image_url:
         adjacent_images_css += (
             f'.st-key-reproduction_next [data-testid="stButton"] button '
-            f"{{ background-image: linear-gradient(rgba(0, 0, 0, 0.28), "
-            f"rgba(0, 0, 0, 0.5)), url({json.dumps(next_image_url)}); }}"
+            f"{{ background-image: url({json.dumps(next_image_url)}); }}"
         )
     if adjacent_images_css:
         st.markdown(f"<style>{adjacent_images_css}</style>", unsafe_allow_html=True)
@@ -977,9 +1051,7 @@ def render_reproduction_page():
             f"""
             <style>
             .st-key-reproduction_play_pause [data-testid="stButton"] button {{
-                background-image:
-                    linear-gradient(rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.5)),
-                    url({json.dumps(track_image_url)});
+                background-image: url({json.dumps(track_image_url)});
             }}
             </style>
             """,

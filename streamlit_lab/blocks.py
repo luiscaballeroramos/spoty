@@ -19,14 +19,15 @@ class Size:
     """Represents a size with a value, unit, and optional minimum and maximum pixel constraints.
     Units: "px" for pixels, "%" for percentage, "vw" for viewport width, "vh" for viewport height."""
     value: float
-    unit: Literal["px", "%", "vw", "vh"] = "px"
+    unit: Literal["px", "%", "vw", "vh", "dvh"] = "px"
     min_px: float = 0
     max_px: float | None = None
+    offset_px: float = 0
 
     def __post_init__(self):
-        if self.unit not in ("px", "%", "vw", "vh"):
+        if self.unit not in ("px", "%", "vw", "vh", "dvh"):
             raise ValueError("Unidad de tamano no admitida")
-        values = [self.value, self.min_px]
+        values = [self.value, self.min_px, self.offset_px]
         if self.max_px is not None:
             values.append(self.max_px)
         if any(not math.isfinite(value) or value < 0 for value in values):
@@ -36,6 +37,8 @@ class Size:
 
     def css(self) -> str:
         preferred = f"{self.value:g}{self.unit}"
+        if self.offset_px:
+            preferred = f"calc({preferred} - {self.offset_px:g}px)"
         if self.max_px is None:
             return f"max({self.min_px:g}px, {preferred})"
         return f"clamp({self.min_px:g}px, {preferred}, {self.max_px:g}px)"
@@ -86,13 +89,14 @@ class Block:
     hover_style: BlockStyle | None = None
     selected_style: BlockStyle | None = None
     disabled_style: BlockStyle | None = None
+    portrait_height: Size | None = None
 
     def __post_init__(self):
         if not re.fullmatch(r"[a-z][a-z0-9_-]*", self.key):
             raise ValueError("La clave debe empezar por una letra y usar a-z, 0-9, _ o -")
         if not re.fullmatch(r"#[0-9a-fA-F]{6}", self.color):
             raise ValueError("El color debe tener formato #RRGGBB")
-        if self.height is not None and self.height.unit == "%":
+        if any(size is not None and size.unit == "%" for size in (self.height, self.portrait_height)):
             raise ValueError("Usa vh para una altura proporcional a la pantalla")
         for alignment in (self.horizontal, self.vertical):
             if alignment is not None:

@@ -53,7 +53,7 @@ def render_layout(
     for block in layout.ordered_blocks(blocks):
         block_key = f"lab-group-{block.key}" if isinstance(block, Group) else f"lab-{block.key}"
         horizontal = ALIGNMENTS[block.horizontal or layout.horizontal] if isinstance(block, Block) else "stretch"
-        vertical = ALIGNMENTS[block.vertical or layout.vertical] if isinstance(block, Block) else "flex-start"
+        vertical = ALIGNMENTS[block.vertical or layout.vertical] if isinstance(block, Block) else ALIGNMENTS[layout.vertical]
         cells.append(
             f"""{container_selector} > div:has(> .st-key-{block_key}) {{
             grid-row: {positions[block.key].row} / span {block.span.rows};
@@ -66,22 +66,32 @@ def render_layout(
             width: 100%;
         }}"""
         )
+        if isinstance(block, Group):
+            cells.append(
+                f"""{container_selector} > div > .st-key-{block_key} {{
+                    flex: 0 0 auto !important;
+                    min-height: 0 !important;
+                    width: 100% !important;
+                }}"""
+            )
     hidden = "\n".join(
         f"{container_selector} > div:has(> .st-key-{'lab-group-' if isinstance(block, Group) else 'lab-'}{block.key}) {{ display: none !important; }}"
         for block in blocks if not block.visible
     )
     mobile = ""
+    collapse = f"""{container_selector} {{ grid-template-columns: minmax(0, 1fr) !important; grid-template-rows: none !important; }}
+        {container_selector} > div {{ grid-row: auto !important; grid-column: 1 !important; }}"""
+    portrait = (
+        f"@media (orientation: portrait) {{ {collapse} }}"
+        if layout.collapse_on_portrait else ""
+    )
     if layout.mobile_breakpoint_px is not None:
         mobile_hidden = "\n".join(
             f"{container_selector} > div:has(> .st-key-lab-{block.key}) {{ display: none !important; }}"
             for block in blocks if isinstance(block, Block) and block.hide_on_mobile
         )
-        collapse = ""
-        if collapse_on_mobile:
-            collapse = f"""{container_selector} {{ grid-template-columns: minmax(0, 1fr) !important; grid-template-rows: none !important; }}
-            {container_selector} > div {{ grid-row: auto !important; grid-column: 1 !important; }}"""
         mobile = f"""@media (max-width: {layout.mobile_breakpoint_px:g}px) {{
-            {collapse}
+            {collapse if collapse_on_mobile else ''}
             {mobile_hidden}
         }}"""
     columns = " ".join(f"minmax(0, {weight:g}fr)" for weight in layout.column_weights) if layout.column_weights else f"repeat({layout.columns}, minmax(0, 1fr))"
@@ -96,6 +106,7 @@ def render_layout(
         {container_selector} {{
             display: grid !important;
             align-items: stretch !important;
+            {f'height: {layout.height.css()} !important; min-height: 0 !important; flex: 0 0 auto !important;' if layout.height is not None else ''}
             grid-template-columns: {columns};
             grid-template-rows: repeat({layout.rows}, minmax({layout.min_row_height_px:g}px, auto));
             grid-auto-rows: minmax({layout.min_row_height_px:g}px, auto);
@@ -109,6 +120,7 @@ def render_layout(
         {''.join(cells)}
         {hidden}
         {mobile}
+        {portrait}
         </style>"""
     )
     return st.container(key=key, border=False)
@@ -116,6 +128,10 @@ def render_layout(
 
 def render_block(block: Block):
     hover = ""
+    portrait = (
+        f"@media (orientation: portrait) {{ .st-key-lab-{block.key} {{ height: {block.portrait_height.css()} !important; }} }}"
+        if block.portrait_height is not None else ""
+    )
     if block.hover_style is not None and block.state != "disabled":
         hover = f".st-key-lab-{block.key}:hover {{ {style_css(block.hover_style, block.color)} }}"
     st.html(
@@ -154,6 +170,7 @@ def render_block(block: Block):
         }}
         .st-key-lab-{block.key} p {{ color: inherit; }}
         {hover}
+        {portrait}
         </style>"""
     )
     return st.container(key=f"lab-{block.key}", border=False)
