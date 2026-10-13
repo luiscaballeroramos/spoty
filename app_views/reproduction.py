@@ -140,7 +140,7 @@ REPRODUCTION_CORNER_ACTION_STYLE = ButtonStyle(
     color="white",
     border="none",
     border_radius="0",
-    background="rgba(0, 0, 0, 0.28)",
+    background="rgba(0, 0, 0, 0.5)",
     padding="0",
     width="48px",
     height="48px",
@@ -611,6 +611,42 @@ def _handle_next_track(client: SpotifyClient, playback: dict) -> None:
     st.error("No se pudo avanzar a la siguiente canción.")
 
 
+def _is_track_liked(client: SpotifyClient, track_id: str | None) -> bool:
+    if not track_id:
+        return False
+    pending_action = st.session_state.get("pending_library_action") or {}
+    if pending_action.get("track_id") == track_id:
+        return pending_action.get("action") == "like"
+    liked_cache = st.session_state.setdefault(LIKED_CACHE_KEY, {})
+    if track_id not in liked_cache:
+        liked_cache[track_id] = client.is_track_liked(track_id)
+    return bool(liked_cache[track_id])
+
+
+def _render_like_button(
+    track_id: str | None, is_track_liked: bool, position: str
+) -> None:
+    state = "liked" if is_track_liked else "unliked"
+    key = (
+        "reproduction_corner_action"
+        if position == "current"
+        else f"reproduction_{position}_corner_action"
+    )
+    with st.container(key=f"reproduction-corner-action-{state}-{position}"):
+        if render_button(
+            "♪",
+            key=key,
+            style=REPRODUCTION_CORNER_ACTION_STYLE,
+            help="Retirar de Liked Songs" if is_track_liked else "Añadir a Liked Songs",
+            disabled=not track_id,
+        ) and track_id:
+            st.session_state["pending_library_action"] = {
+                "track_id": track_id,
+                "action": "unlike" if is_track_liked else "like",
+            }
+            st.rerun()
+
+
 def _render_playback_controls(
     client: SpotifyClient,
     playback: dict,
@@ -661,30 +697,13 @@ def _render_playback_controls(
             else:
                 _handle_next_track(client, playback)
 
-        if track == "current":
-            with st.container(
-                key=(
-                    "reproduction-corner-action-liked"
-                    if is_track_liked
-                    else "reproduction-corner-action-unliked"
-                )
-            ):
-                if render_button(
-                    "♪",
-                    key="reproduction_corner_action",
-                    style=REPRODUCTION_CORNER_ACTION_STYLE,
-                    help=(
-                        "Retirar de Liked Songs"
-                        if is_track_liked
-                        else "Añadir a Liked Songs"
-                    ),
-                    disabled=not track_id,
-                ) and track_id:
-                    st.session_state["pending_library_action"] = {
-                        "track_id": track_id,
-                        "action": "unlike" if is_track_liked else "like",
-                    }
-                    st.rerun()
+        button_track_id = track_id if track == "current" else tracks[track][0].get("id")
+        button_track_liked = (
+            is_track_liked
+            if track == "current"
+            else _is_track_liked(client, button_track_id)
+        )
+        _render_like_button(button_track_id, button_track_liked, track)
 
     with st.container(key="reproduction-controls"):
         _render_control_styles()
@@ -750,11 +769,19 @@ def _render_control_styles() -> None:
         ) {{
             color: #ffffff !important;
         }}
-        .st-key-reproduction-controls .st-key-lab-reproduction-current-title
+        .st-key-reproduction-controls :is(
+            .st-key-lab-reproduction-previous-title,
+            .st-key-lab-reproduction-current-title,
+            .st-key-lab-reproduction-next-title
+        )
         .reproduction-track-title {{
             margin-left: 48px;
         }}
-        .st-key-reproduction-controls .st-key-reproduction_corner_action {{
+        .st-key-reproduction-controls :is(
+            .st-key-reproduction_previous_corner_action,
+            .st-key-reproduction_corner_action,
+            .st-key-reproduction_next_corner_action
+        ) {{
             position: absolute !important;
             top: 0;
             right: auto;
@@ -851,8 +878,8 @@ def render_reproduction_page():
             border-radius: 0;
             display: grid;
             place-items: center;
-            background: #ffffff;
-            color: #000000 !important;
+            background: transparent;
+            color: #ffffff !important;
             font-size: 1.5rem;
             line-height: 1;
             cursor: pointer;
@@ -867,10 +894,10 @@ def render_reproduction_page():
             font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24;
             line-height: 1;
             letter-spacing: 0;
-            color: #000000 !important;
+            color: inherit !important;
         }
         .st-key-reproduction-controls .reproduction-detail-button:focus-visible {
-            outline: 2px solid #000000;
+            outline: 2px solid #ffffff;
             outline-offset: -2px;
         }
         .reproduction-track-artists,
@@ -1034,20 +1061,47 @@ def render_reproduction_page():
                 background: rgba(0, 0, 0, 0.5) !important;
             }
         }
-        .st-key-reproduction_corner_action [data-testid="stButton"] button {
+        .st-key-reproduction-controls [class*="st-key-reproduction-corner-action-"]
+        [data-testid="stButton"] button {
             opacity: 1 !important;
+            border: none !important;
+            text-shadow: none !important;
         }
-        .st-key-reproduction-corner-action-liked
-        .st-key-reproduction_corner_action [data-testid="stButton"] button {
+        .st-key-reproduction-controls [class*="st-key-reproduction-corner-action-"]
+        [data-testid="stButton"] button * {
+            color: inherit !important;
+            text-shadow: none !important;
+        }
+        .st-key-reproduction-controls [class*="st-key-reproduction-corner-action-liked-"]
+        :is(
+            .st-key-reproduction_previous_corner_action,
+            .st-key-reproduction_corner_action,
+            .st-key-reproduction_next_corner_action
+        )
+        [data-testid="stButton"] button {
+            color: #000000 !important;
+            background: rgba(0, 0, 0, 0.5) !important;
+        }
+        .st-key-reproduction-controls [class*="st-key-reproduction-corner-action-liked-"]
+        :is(
+            .st-key-reproduction_previous_corner_action,
+            .st-key-reproduction_corner_action,
+            .st-key-reproduction_next_corner_action
+        )
+        [data-testid="stButton"] button p {
+            display: grid;
+            place-items: center;
+            width: 30px;
+            height: 30px;
+            margin: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5) !important;
+            color: #000000 !important;
+        }
+        .st-key-reproduction-controls [class*="st-key-reproduction-corner-action-unliked-"]
+        [data-testid="stButton"] button {
             color: #ffffff !important;
-            background: #e91e63 !important;
-            border-color: #e91e63 !important;
-        }
-        .st-key-reproduction-corner-action-unliked
-        .st-key-reproduction_corner_action [data-testid="stButton"] button {
-            color: #111111 !important;
-            background: #ffffff !important;
-            border-color: #000000 !important;
+            background: rgba(0, 0, 0, 0.5) !important;
         }
         </style>
         """,
@@ -1076,17 +1130,7 @@ def render_reproduction_page():
     item = playback.get("item") or {}
     track_id = item.get("id")
 
-    pending_library_action = st.session_state.get("pending_library_action") or {}
-    is_current_track_pending = bool(
-        track_id and pending_library_action.get("track_id") == track_id
-    )
-    if is_current_track_pending:
-        is_track_liked = pending_library_action.get("action") == "like"
-    else:
-        liked_cache = st.session_state.setdefault(LIKED_CACHE_KEY, {})
-        if track_id not in liked_cache:
-            liked_cache[track_id] = client.is_track_liked(track_id)
-        is_track_liked = bool(track_id and liked_cache[track_id])
+    is_track_liked = _is_track_liked(client, track_id)
     track_name = item.get("name")
     artists = item.get("artists") or []
     artist_names = [artist.get("name") for artist in artists if artist.get("name")]
