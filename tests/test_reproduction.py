@@ -156,9 +156,9 @@ class ReproductionTest(unittest.TestCase):
             self.assertEqual(image.height.value, 100)
             self.assertEqual(
                 image.height.offset_px,
-                reproduction.REPRODUCTION_VIEWPORT_OFFSET_PX
-                + reproduction.REPRODUCTION_TEXT_HEIGHT_PX,
+                reproduction.REPRODUCTION_VIEWPORT_OFFSET_PX,
             )
+            self.assertEqual(title.style.background_opacity, 0)
             self.assertEqual(title.height.value, reproduction.REPRODUCTION_TEXT_HEIGHT_PX)
             self.assertEqual(title.height.unit, "px")
             self.assertEqual(image.height.min_px, 0)
@@ -174,8 +174,7 @@ class ReproductionTest(unittest.TestCase):
                 image.portrait_height.offset_px,
                 reproduction.REPRODUCTION_VIEWPORT_OFFSET_PX
                 * weight
-                / sum(reproduction.REPRODUCTION_COLUMN_RATIOS)
-                + reproduction.REPRODUCTION_TEXT_HEIGHT_PX,
+                / sum(reproduction.REPRODUCTION_COLUMN_RATIOS),
             )
             self.assertEqual(
                 title.portrait_height.value,
@@ -184,6 +183,72 @@ class ReproductionTest(unittest.TestCase):
             self.assertEqual(title.portrait_height.unit, "px")
             self.assertIsNone(image.portrait_height.max_px)
             self.assertIsNone(title.portrait_height.max_px)
+
+    def test_track_titles_overlay_the_full_cover_without_intercepting_clicks(self):
+        reproduction._render_control_styles()
+
+        css = self.streamlit.html.call_args.args[0]
+        self.assertIn("grid-template-rows: minmax(0, 1fr) !important", css)
+        self.assertIn("position: absolute !important", css)
+        self.assertIn("inset: 0 !important", css)
+        self.assertIn("height: 100% !important", css)
+        self.assertIn("grid-row: auto !important", css)
+        self.assertIn("grid-column: auto !important", css)
+        self.assertIn("background: transparent !important", css)
+        self.assertIn("pointer-events: none", css)
+        self.assertIn("color: #ffffff !important", css)
+        self.assertIn("margin-left: 48px", css)
+        self.assertIn("top: 0", css)
+        self.assertIn("left: 0", css)
+        self.assertIn("right: auto", css)
+        self.assertIn("z-index: 4", css)
+
+        style = reproduction.REPRODUCTION_CORNER_ACTION_STYLE
+        self.assertEqual(style.width, "48px")
+        self.assertEqual(style.height, "48px")
+        self.assertEqual(style.min_height, "48px")
+        self.assertIsNone(style.portrait)
+
+    def test_track_separators_are_thick_black_lines_in_both_orientations(self):
+        reproduction._render_control_styles()
+
+        css = self.streamlit.html.call_args.args[0]
+        self.assertIn(')::after {', css)
+        self.assertIn("width: 6px", css)
+        self.assertIn("height: 6px", css)
+        self.assertIn("background: #000000", css)
+        self.assertIn("@media (orientation: portrait)", css)
+
+    def test_track_info_renders_artist_and_album_below_title(self):
+        reproduction._render_adjacent_track_info(
+            {
+                "name": "Song <Title>",
+                "artists": [{"name": "Artist & Friends"}],
+                "album": {"name": 'Album "Deluxe"'},
+            },
+            "Sin título",
+        )
+
+        markup = self.streamlit.markdown.call_args.args[0]
+        self.assertIn('reproduction-track-title">Song &lt;Title&gt;</div>', markup)
+        self.assertIn('<div class="reproduction-track-details">', markup)
+        self.assertIn('<div class="reproduction-track-metadata">', markup)
+        self.assertEqual(markup.count('class="reproduction-detail-button"'), 2)
+        self.assertEqual(markup.count('type="button"'), 2)
+        self.assertNotIn("onclick", markup)
+        self.assertIn('aria-label="Artista"', markup)
+        self.assertIn('aria-label="Álbum"', markup)
+        self.assertIn('aria-hidden="true">person</span>', markup)
+        self.assertIn('aria-hidden="true">album</span>', markup)
+        self.assertIn('reproduction-track-artists" title="Artist &amp; Friends"', markup)
+        self.assertIn('reproduction-track-album" title="Album &quot;Deluxe&quot;"', markup)
+        self.assertLess(markup.index("reproduction-track-title"), markup.index("reproduction-track-details"))
+        self.assertTrue(self.streamlit.markdown.call_args.kwargs["unsafe_allow_html"])
+
+    def test_track_info_handles_missing_album(self):
+        reproduction._render_adjacent_track_info({}, "Sin título")
+
+        self.assertIn("Álbum desconocido", self.streamlit.markdown.call_args.args[0])
 
     def test_controls_use_the_shared_block_style_for_each_button(self):
         self.streamlit.button.side_effect = None
