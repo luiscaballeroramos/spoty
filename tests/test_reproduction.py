@@ -92,6 +92,64 @@ class ReproductionTest(unittest.TestCase):
                 next_track={},
             )
 
+    def test_like_buttons_target_their_own_track(self):
+        for position, track_id, key in (
+            ("previous", "previous-id", "reproduction_previous_corner_action"),
+            ("current", "track-id", "reproduction_corner_action"),
+            ("next", "next-id", "reproduction_next_corner_action"),
+        ):
+            for liked in (False, True):
+                with self.subTest(position=position, liked=liked):
+                    self.session_state.clear()
+                    self.session_state[reproduction.LIKED_CACHE_KEY] = {
+                        "previous-id": liked, "next-id": liked,
+                    }
+                    self.streamlit.button.side_effect = (
+                        lambda *args, **kwargs: kwargs.get("key") == key
+                    )
+                    with self.assertRaises(RerunRequested):
+                        reproduction._render_playback_controls(
+                            client=self.client,
+                            playback=self.playback,
+                            is_playing=True,
+                            track_id="track-id",
+                            is_track_liked=liked,
+                            track_name="Song",
+                            artists_text="Artist",
+                            previous_track={"id": "previous-id"},
+                            next_track={"id": "next-id"},
+                        )
+                    self.assertEqual(
+                        self.session_state["pending_library_action"],
+                        {"track_id": track_id, "action": "unlike" if liked else "like"},
+                    )
+                    self.spotify.previous_track.assert_not_called()
+                    self.spotify.next_track.assert_not_called()
+                    self.spotify.pause_playback.assert_not_called()
+
+    def test_liked_status_uses_cache_and_pending_action_for_each_track(self):
+        self.spotify.current_user_saved_tracks_contains.return_value = [True]
+        self.assertTrue(reproduction._is_track_liked(self.client, "previous-id"))
+        self.assertTrue(reproduction._is_track_liked(self.client, "previous-id"))
+        self.spotify.current_user_saved_tracks_contains.assert_called_once_with(
+            ["previous-id"]
+        )
+        self.session_state["pending_library_action"] = {
+            "track_id": "previous-id", "action": "unlike",
+        }
+        self.assertFalse(reproduction._is_track_liked(self.client, "previous-id"))
+        self.assertFalse(reproduction._is_track_liked(self.client, None))
+        self.assertEqual(self.spotify.current_user_saved_tracks_contains.call_count, 1)
+
+    def test_like_buttons_are_disabled_without_track_id(self):
+        self.streamlit.button.side_effect = None
+        self.streamlit.button.return_value = True
+        for position in ("previous", "current", "next"):
+            reproduction._render_like_button(None, False, position)
+            self.assertTrue(self.streamlit.button.call_args.kwargs["disabled"])
+        self.assertNotIn("pending_library_action", self.session_state)
+        self.streamlit.rerun.assert_not_called()
+
     def test_track_blocks_use_automatic_responsive_layout(self):
         self.streamlit.button.side_effect = None
         self.streamlit.button.return_value = False
@@ -286,6 +344,8 @@ class ReproductionTest(unittest.TestCase):
                 "reproduction_previous",
                 "reproduction_play_pause",
                 "reproduction_corner_action",
+                "reproduction_previous_corner_action",
+                "reproduction_next_corner_action",
                 "reproduction_next",
             },
         )
