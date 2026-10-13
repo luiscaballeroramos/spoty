@@ -743,6 +743,29 @@ def _render_control_styles() -> None:
             height: 100% !important;
             padding: 0 !important;
         }}
+        .st-key-reproduction-controls :is(
+            .st-key-reproduction_previous,
+            .st-key-reproduction_next
+        ) [data-testid="stButton"] button {{
+            position: relative;
+            isolation: isolate;
+            overflow: hidden;
+        }}
+        .st-key-reproduction-controls :is(
+            .st-key-reproduction_previous,
+            .st-key-reproduction_next
+        ) [data-testid="stButton"] button::before {{
+            content: "";
+            position: absolute;
+            inset: -8px;
+            z-index: -1;
+            background-image: inherit;
+            background-size: cover;
+            background-position: center;
+            filter: blur(4px);
+            transform: scale(1.04);
+            pointer-events: none;
+        }}
         .st-key-reproduction-controls .reproduction-portrait-track-info {{
             min-height: 0 !important;
             margin: 0 !important;

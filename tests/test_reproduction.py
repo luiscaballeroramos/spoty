@@ -279,6 +279,10 @@ class ReproductionTest(unittest.TestCase):
         self.assertIn("linear-gradient(to right, #000000 50%, #ffffff 50%)", css)
         self.assertIn("linear-gradient(to bottom, #000000 50%, #ffffff 50%)", css)
         self.assertIn("@media (orientation: portrait)", css)
+        self.assertIn(".st-key-reproduction_previous", css)
+        self.assertIn(".st-key-reproduction_next", css)
+        self.assertIn("button::before", css)
+        self.assertIn("filter: blur(6px)", css)
 
     def test_track_info_renders_artist_and_album_below_title(self):
         reproduction._render_adjacent_track_info(
