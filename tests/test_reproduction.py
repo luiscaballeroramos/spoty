@@ -622,7 +622,7 @@ class ReproductionTest(unittest.TestCase):
         )
         self.spotify.start_playback.assert_not_called()
         self.spotify.devices.assert_not_called()
-        self.streamlit.error.assert_called_once()
+        self.streamlit.error.assert_not_called()
 
     def test_resume_does_not_search_for_a_replacement_device_id(self):
         snapshot = {
@@ -691,7 +691,7 @@ class ReproductionTest(unittest.TestCase):
             "expired-device-id", force_play=False
         )
         self.spotify.start_playback.assert_not_called()
-        self.streamlit.error.assert_called_once()
+        self.streamlit.error.assert_not_called()
 
     def test_stale_playing_view_resumes_instead_of_pausing(self):
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = {
@@ -841,7 +841,7 @@ class ReproductionTest(unittest.TestCase):
 
         self.spotify.start_playback.assert_not_called()
         self.spotify.next_track.assert_not_called()
-        self.streamlit.error.assert_called_once()
+        self.streamlit.error.assert_not_called()
 
     def test_next_after_pause_does_not_use_stale_card_when_queue_unavailable(self):
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = {
@@ -866,7 +866,7 @@ class ReproductionTest(unittest.TestCase):
 
         self.spotify.start_playback.assert_not_called()
         self.spotify.next_track.assert_not_called()
-        self.streamlit.error.assert_called_once()
+        self.streamlit.error.assert_not_called()
 
     def test_next_after_pause_uses_live_queue_instead_of_stale_card(self):
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = {

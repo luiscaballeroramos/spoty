@@ -19,7 +19,6 @@ from services.reproduction import ReproductionService
 from spotifyapi.spotifyclient import SpotifyClient
 from spotifyapi.streamlit_auth import (
     has_spotify_auth_available,
-    render_oauth_feedback,
     render_spotify_authorization_section,
 )
 
@@ -443,13 +442,11 @@ def _resume_playback(
     device_id = (snapshot.get("device") or {}).get("id")
     item = snapshot.get("item") or {}
     if not device_id:
-        st.error("No se ha identificado el dispositivo de reproducción.")
         return None
 
     live_device_id = (live_playback.get("device") or {}).get("id")
     target_is_active = live_device_id == device_id
     if not target_is_active and not client.transfer_playback(device_id):
-        st.error("No se pudo activar el dispositivo original en Spotify.")
         return None
 
     paused_at = snapshot.get("paused_at")
@@ -515,10 +512,6 @@ def _handle_play_pause(client: SpotifyClient, playback: dict) -> None:
         _invalidate_playback_cache()
         _request_playback_refresh_window()
         st.rerun()
-    action_label = "pausar" if currently_playing else "reanudar"
-    st.error(f"No se pudo {action_label} la reproducción.")
-
-
 def _handle_previous_track(client: SpotifyClient, previous_track: dict) -> None:
     if client.previous_track():
         _invalidate_playback_cache()
@@ -526,7 +519,6 @@ def _handle_previous_track(client: SpotifyClient, previous_track: dict) -> None:
         st.session_state[ADJACENT_PREVIOUS_REQUEST_KEY] = previous_track.get("id")
         _request_playback_refresh_window()
         st.rerun()
-    st.error("No se pudo volver a la canción anterior.")
 
 
 def _handle_next_track(client: SpotifyClient, playback: dict) -> None:
@@ -545,7 +537,6 @@ def _handle_next_track(client: SpotifyClient, playback: dict) -> None:
         )
         if device is not None and not device.get("is_active"):
             if not client.transfer_playback(device_id):
-                st.error("No se pudo activar el dispositivo original en Spotify.")
                 return
 
     saved_playback = st.session_state.get(PAUSED_PLAYBACK_KEY) or {}
@@ -570,7 +561,6 @@ def _handle_next_track(client: SpotifyClient, playback: dict) -> None:
             )
             queued_current_id = (queue.get("currently_playing") or {}).get("id")
             if queued_current_id and queued_current_id != current_id:
-                st.error("La cola de Spotify ha cambiado. Actualiza la reproducción.")
                 return
             queue_uris = [
                 track["uri"]
@@ -583,7 +573,6 @@ def _handle_next_track(client: SpotifyClient, playback: dict) -> None:
             "uri"
         )
         if not queue_uris or queue_uris[0] == current_uri:
-            st.error("No se conoce la siguiente canción para reanudar la reproducción.")
             return
 
     if needs_restore:
@@ -608,7 +597,6 @@ def _handle_next_track(client: SpotifyClient, playback: dict) -> None:
         st.session_state.pop(ADJACENT_PREVIOUS_REQUEST_KEY, None)
         _request_playback_refresh_window()
         st.rerun()
-    st.error("No se pudo avanzar a la siguiente canción.")
 
 
 def _is_track_liked(client: SpotifyClient, track_id: str | None) -> bool:
@@ -1109,19 +1097,13 @@ def render_reproduction_page():
         unsafe_allow_html=True,
     )
     # st.subheader("Reproduction")
-    render_oauth_feedback()
-
     if not has_spotify_auth_available():
-        st.warning(
-            "No hay sesión OAuth válida de Spotify. Autoriza desde aquí para usar los controles."
-        )
         render_spotify_authorization_section()
         return
 
     try:
         client = _get_spotify_client()
-    except Exception as exc:
-        st.error(f"No se pudo conectar con Spotify: {exc}")
+    except Exception:
         return
 
     reproduction_service = ReproductionService(client)
@@ -1147,15 +1129,6 @@ def render_reproduction_page():
     previous_track, next_track = _get_adjacent_tracks(client, item)
 
     artists_text = ", ".join(artist_names)
-
-    if st.session_state.pop("liked_track_saved", False):
-        st.toast("Canción añadida a Liked Songs y a la base de datos.")
-    if st.session_state.pop("liked_track_error", False):
-        st.error("No se pudo guardar la canción en Liked Songs.")
-    if st.session_state.pop("unliked_track_saved", False):
-        st.toast("Canción retirada de Liked Songs y de la base de datos.")
-    if st.session_state.pop("unliked_track_error", False):
-        st.error("No se pudo retirar la canción de Liked Songs.")
 
     _render_playback_controls(
         client=client,
