@@ -11,7 +11,6 @@ from streamlit_lab.layout import Group, Layout
 from streamlit_lab.renderer import render_button, render_group, render_page_style
 from streamlit_lab.styles import (
     BlockStyle,
-    ButtonDimensions,
     ButtonStyle,
     Insets,
     PageStyle,
@@ -75,8 +74,7 @@ REPRODUCTION_TRACK_BLOCKS = [
             Size(
                 100,
                 "dvh",
-                offset_px=REPRODUCTION_VIEWPORT_OFFSET_PX
-                + REPRODUCTION_TEXT_HEIGHT_PX,
+                offset_px=REPRODUCTION_VIEWPORT_OFFSET_PX,
             )
             if part == "image"
             else Size(REPRODUCTION_TEXT_HEIGHT_PX)
@@ -89,7 +87,6 @@ REPRODUCTION_TRACK_BLOCKS = [
                     REPRODUCTION_VIEWPORT_OFFSET_PX
                     * weight
                     / sum(REPRODUCTION_COLUMN_RATIOS)
-                    + REPRODUCTION_TEXT_HEIGHT_PX
                 ),
             )
             if part == "image"
@@ -97,6 +94,7 @@ REPRODUCTION_TRACK_BLOCKS = [
         ),
         style=BlockStyle(
             padding=0 if part == "image" else 2,
+            background_opacity=1 if part == "image" else 0,
             radius=0,
             content_gap_px=0,
             content_horizontal="center",
@@ -141,17 +139,15 @@ REPRODUCTION_CONTROL_STYLE = ButtonStyle(
 REPRODUCTION_CORNER_ACTION_STYLE = ButtonStyle(
     color="white",
     border="none",
-    border_radius="50%",
+    border_radius="0",
     background="rgba(0, 0, 0, 0.28)",
     padding="0",
-    width="4rem",
+    width="48px",
+    height="48px",
     aspect_ratio="1 / 1",
-    min_height="4rem",
-    font_size="1.6rem",
+    min_height="48px",
+    font_size="1.25rem",
     text_align="center",
-    portrait=ButtonDimensions(
-        width="2.75rem", height="2.75rem", min_height="0"
-    ),
 )
 
 
@@ -674,7 +670,7 @@ def _render_playback_controls(
                 )
             ):
                 if render_button(
-                    "♥",
+                    "♪",
                     key="reproduction_corner_action",
                     style=REPRODUCTION_CORNER_ACTION_STYLE,
                     help=(
@@ -697,26 +693,89 @@ def _render_playback_controls(
 
 def _render_control_styles() -> None:
     st.html(f"""<style>
+        .st-key-reproduction-controls :is(
+            .st-key-lab-group-reproduction-previous,
+            .st-key-lab-group-reproduction-current,
+            .st-key-lab-group-reproduction-next
+        ) {{
+            position: relative !important;
+            grid-template-rows: minmax(0, 1fr) !important;
+        }}
+        .st-key-reproduction-controls :is(
+            .st-key-lab-group-reproduction-current,
+            .st-key-lab-group-reproduction-next
+        )::after {{
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -3px;
+            width: 6px;
+            height: 100%;
+            background: #000000;
+            z-index: 6;
+            pointer-events: none;
+        }}
+        .st-key-reproduction-controls [data-testid="stLayoutWrapper"]:has(> :is(
+            .st-key-lab-reproduction-previous-title,
+            .st-key-lab-reproduction-current-title,
+            .st-key-lab-reproduction-next-title
+        )) {{
+            position: absolute !important;
+            inset: 0 !important;
+            height: 100% !important;
+            grid-row: auto !important;
+            grid-column: auto !important;
+            z-index: 3;
+            pointer-events: none;
+        }}
+        .st-key-reproduction-controls :is(
+            .st-key-lab-reproduction-previous-title,
+            .st-key-lab-reproduction-current-title,
+            .st-key-lab-reproduction-next-title
+        ) {{
+            height: 100% !important;
+            padding: 0 !important;
+        }}
         .st-key-reproduction-controls .reproduction-portrait-track-info {{
             min-height: 0 !important;
             margin: 0 !important;
-            padding: 0.25rem 0.5rem !important;
+            padding: 0 !important;
+            background: transparent !important;
+        }}
+        .st-key-reproduction-controls :is(
+            .reproduction-portrait-track-info,
+            .reproduction-track-title,
+            .reproduction-track-artists,
+            .reproduction-track-album
+        ) {{
+            color: #ffffff !important;
+        }}
+        .st-key-reproduction-controls .st-key-lab-reproduction-current-title
+        .reproduction-track-title {{
+            margin-left: 48px;
+        }}
+        .st-key-reproduction-controls .st-key-reproduction_corner_action {{
+            position: absolute !important;
+            top: 0;
+            right: auto;
+            left: 0;
+            bottom: auto;
+            width: 48px !important;
+            height: 48px !important;
+            z-index: 4;
         }}
         @media (orientation: portrait) {{
+            .st-key-reproduction-controls :is(
+                .st-key-lab-group-reproduction-current,
+                .st-key-lab-group-reproduction-next
+            )::after {{
+                top: -3px;
+                left: 0;
+                width: 100%;
+                height: 6px;
+            }}
             .st-key-reproduction-controls .reproduction-portrait-track-info {{
-                padding: 0 0.5rem !important;
-            }}
-            .st-key-reproduction-controls .st-key-reproduction_corner_action {{
-                width: 2.75rem !important;
-                left: 0.5rem;
-                bottom: 0.5rem;
-            }}
-            .st-key-reproduction-controls .st-key-reproduction_corner_action
-            [data-testid="stButton"] button {{
-                width: 2.75rem !important;
-                height: 2.75rem !important;
-                min-height: 0 !important;
-                font-size: 1.25rem !important;
+                padding: 0 !important;
             }}
         }}
         </style>""")
@@ -725,10 +784,22 @@ def _render_control_styles() -> None:
 def _render_adjacent_track_info(track: dict, fallback_title: str) -> None:
     title = html.escape(track.get("name") or fallback_title)
     artists = html.escape(_get_track_artists(track) or "Artista desconocido")
+    album = html.escape((track.get("album") or {}).get("name") or "Álbum desconocido")
     st.markdown(
         f'<div class="reproduction-portrait-track-info reproduction-adjacent-info">'
         f'<div class="reproduction-track-title">{title}</div>'
-        f'<div class="reproduction-track-artists">{artists}</div></div>',
+        f'<div class="reproduction-track-details">'
+        f'<button type="button" class="reproduction-detail-button" '
+        f'aria-label="Artista" title="Artista">'
+        f'<span class="reproduction-detail-icon" aria-hidden="true">person</span></button>'
+        f'<div class="reproduction-track-metadata">'
+        f'<div class="reproduction-track-artists" title="{artists}">{artists}</div>'
+        f'<div class="reproduction-track-album" title="{album}">{album}</div>'
+        f'</div>'
+        f'<button type="button" class="reproduction-detail-button" '
+        f'aria-label="Álbum" title="Álbum">'
+        f'<span class="reproduction-detail-icon" aria-hidden="true">album</span></button>'
+        f'</div></div>',
         unsafe_allow_html=True,
     )
 
@@ -744,24 +815,71 @@ def render_reproduction_page():
         }
 
         .reproduction-track-title {
-            color: #111111 !important;
-            font-size: min(40cqh, 5cqi, 1.4rem);
+            color: #ffffff !important;
+            font-size: min(5cqi, 1.4rem);
             font-weight: 800;
-            line-height: 1;
-            align-self: center;
-            overflow-wrap: anywhere;
-            display: -webkit-box;
-            -webkit-box-orient: vertical;
-            -webkit-line-clamp: 2;
+            line-height: 24px;
+            box-sizing: border-box;
+            padding: 12px 0.5rem;
+            white-space: nowrap;
+            text-overflow: ellipsis;
             overflow: hidden;
+            background: rgba(0, 0, 0, 0.5);
             opacity: 1 !important;
             text-shadow: none !important;
         }
-        .reproduction-track-artists {
-            color: #111111 !important;
+        .reproduction-track-details {
+            display: grid;
+            grid-row: 3;
+            grid-template-columns: 48px minmax(0, 1fr) 48px;
+            min-width: 0;
+            align-items: stretch;
+            background: rgba(0, 0, 0, 0.5);
+        }
+        .reproduction-track-metadata {
+            display: grid;
+            grid-template-rows: repeat(2, minmax(0, 1fr));
+            min-width: 0;
+            padding: 0 0.5rem;
+        }
+        .st-key-reproduction-controls .reproduction-detail-button {
+            box-sizing: border-box;
+            width: 48px;
+            height: 48px;
+            padding: 0;
+            border: none;
+            border-radius: 0;
+            display: grid;
+            place-items: center;
+            background: #ffffff;
+            color: #000000 !important;
+            font-size: 1.5rem;
+            line-height: 1;
+            cursor: pointer;
+            pointer-events: auto;
+        }
+        .st-key-reproduction-controls .reproduction-detail-icon {
+            font-family: "Material Symbols Rounded" !important;
+            font-size: 28px;
+            font-weight: 400;
+            font-style: normal;
+            font-feature-settings: "liga";
+            font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24;
+            line-height: 1;
+            letter-spacing: 0;
+            color: #000000 !important;
+        }
+        .st-key-reproduction-controls .reproduction-detail-button:focus-visible {
+            outline: 2px solid #000000;
+            outline-offset: -2px;
+        }
+        .reproduction-track-artists,
+        .reproduction-track-album {
+            color: #ffffff !important;
             font-size: min(22cqh, 4cqi, 1rem);
-            line-height: 0.9;
+            line-height: 1.1;
             align-self: center;
+            min-width: 0;
             font-weight: 600;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -769,10 +887,16 @@ def render_reproduction_page():
             opacity: 1 !important;
             text-shadow: none !important;
         }
+        .reproduction-track-artists {
+            text-align: left;
+        }
+        .reproduction-track-album {
+            text-align: right;
+        }
         .reproduction-portrait-track-info {
             box-sizing: border-box;
             display: grid;
-            grid-template-rows: minmax(0, 4fr) minmax(0, 1fr);
+            grid-template-rows: 48px minmax(0, 1fr) 48px;
             position: absolute;
             inset: 0;
             text-align: center;
@@ -783,8 +907,8 @@ def render_reproduction_page():
             overflow-wrap: anywhere;
             overflow: hidden;
             container-type: size;
-            color: #111111 !important;
-            background: #ffffff !important;
+            color: #ffffff !important;
+            background: rgba(0, 0, 0, 0.5) !important;
         }
         .reproduction-adjacent-info {
             min-height: 0;
@@ -906,16 +1030,9 @@ def render_reproduction_page():
                 position: absolute !important;
                 inset: 0;
                 z-index: 3;
-                color: #111111 !important;
-                background: #ffffff !important;
+                color: #ffffff !important;
+                background: rgba(0, 0, 0, 0.5) !important;
             }
-        }
-        .st-key-reproduction_corner_action {
-            position: absolute !important;
-            left: 0.75rem;
-            bottom: 0.75rem;
-            width: 4rem !important;
-            z-index: 2;
         }
         .st-key-reproduction_corner_action [data-testid="stButton"] button {
             opacity: 1 !important;
