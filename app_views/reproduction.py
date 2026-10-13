@@ -727,10 +727,10 @@ def _render_control_styles() -> None:
             content: "";
             position: absolute;
             top: 0;
-            left: -3px;
-            width: 6px;
+            left: -2px;
+            width: 4px;
             height: 100%;
-            background: #000000;
+            background: linear-gradient(to right, #000000 50%, #ffffff 50%);
             z-index: 6;
             pointer-events: none;
         }}
@@ -796,10 +796,11 @@ def _render_control_styles() -> None:
                 .st-key-lab-group-reproduction-current,
                 .st-key-lab-group-reproduction-next
             )::after {{
-                top: -3px;
+                top: -2px;
                 left: 0;
                 width: 100%;
-                height: 6px;
+                height: 4px;
+                background: linear-gradient(to bottom, #000000 50%, #ffffff 50%);
             }}
             .st-key-reproduction-controls .reproduction-portrait-track-info {{
                 padding: 0 !important;

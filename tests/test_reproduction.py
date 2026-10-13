@@ -267,14 +267,17 @@ class ReproductionTest(unittest.TestCase):
         self.assertEqual(style.min_height, "48px")
         self.assertIsNone(style.portrait)
 
-    def test_track_separators_are_thick_black_lines_in_both_orientations(self):
+    def test_track_separators_use_black_and_white_lines_in_both_orientations(self):
         reproduction._render_control_styles()
 
         css = self.streamlit.html.call_args.args[0]
         self.assertIn(')::after {', css)
-        self.assertIn("width: 6px", css)
-        self.assertIn("height: 6px", css)
-        self.assertIn("background: #000000", css)
+        self.assertIn("width: 4px", css)
+        self.assertIn("height: 4px", css)
+        self.assertIn("left: -2px", css)
+        self.assertIn("top: -2px", css)
+        self.assertIn("linear-gradient(to right, #000000 50%, #ffffff 50%)", css)
+        self.assertIn("linear-gradient(to bottom, #000000 50%, #ffffff 50%)", css)
         self.assertIn("@media (orientation: portrait)", css)
 
     def test_track_info_renders_artist_and_album_below_title(self):
