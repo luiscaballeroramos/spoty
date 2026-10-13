@@ -1095,7 +1095,7 @@ def render_reproduction_page():
             height: 30px;
             margin: 0;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.5) !important;
+            background: #ffffff !important;
             color: #000000 !important;
         }
         .st-key-reproduction-controls [class*="st-key-reproduction-corner-action-unliked-"]
