@@ -55,10 +55,6 @@ def _extract_oauth_code_and_state(raw_callback: str):
 def complete_spotify_oauth_authorization(oauth_code: str, oauth_state: str = None):
     expected_state = st.session_state.get("spotify_oauth_state")
     if expected_state and oauth_state and oauth_state != expected_state:
-        st.session_state["oauth_feedback"] = {
-            "type": "error",
-            "message": "El estado OAuth no coincide. Pulsa Autorizar Spotify de nuevo.",
-        }
         st.session_state.pop("spotify_oauth_state", None)
         return
 
@@ -73,16 +69,9 @@ def complete_spotify_oauth_authorization(oauth_code: str, oauth_state: str = Non
         )
         if not token_info:
             raise RuntimeError("Spotify no devolvió un token válido.")
-    except Exception as exc:
-        st.session_state["oauth_feedback"] = {
-            "type": "error",
-            "message": f"No se pudo completar la autorización OAuth: {exc}",
-        }
+    except Exception:
+        pass
     else:
-        st.session_state["oauth_feedback"] = {
-            "type": "success",
-            "message": "Spotify autorizado correctamente. Ya puedes pulsar Actualizar.",
-        }
         st.session_state["spotify_oauth_manual_callback"] = ""
     finally:
         st.session_state.pop("spotify_oauth_state", None)
@@ -106,10 +95,6 @@ def process_spotify_oauth_callback() -> None:
         return
 
     if oauth_error:
-        st.session_state["oauth_feedback"] = {
-            "type": "error",
-            "message": f"Spotify devolvió un error de autorización: {oauth_error}",
-        }
         st.session_state.pop("spotify_oauth_state", None)
         _clear_oauth_query_params()
         return
@@ -132,26 +117,10 @@ def get_spotify_authorize_url():
         return None, str(exc)
 
 
-def render_oauth_feedback():
-    feedback = st.session_state.pop("oauth_feedback", None)
-    if not feedback:
-        return
-
-    message = feedback.get("message")
-    feedback_type = feedback.get("type")
-
-    if not message:
-        return
-
-    icons = {"error": "❌", "warning": "⚠️", "success": "✅"}
-    st.toast(message, icon=icons.get(feedback_type, "ℹ️"))
-
-
 def render_spotify_authorization_section() -> None:
     authorize_url, auth_error = get_spotify_authorize_url()
 
     if auth_error:
-        st.error(f"No se pudo iniciar OAuth de Spotify: {auth_error}")
         return
 
     st.markdown(f"[🔐 Autorizar Spotify]({authorize_url})")
@@ -173,12 +142,7 @@ def render_spotify_authorization_section() -> None:
 
     if st.button("Completar autorización", key="complete_spotify_oauth"):
         oauth_code, oauth_state = _extract_oauth_code_and_state(manual_callback)
-        if not oauth_code:
-            st.session_state["oauth_feedback"] = {
-                "type": "error",
-                "message": "No se encontró el parámetro code en el callback pegado.",
-            }
-        else:
+        if oauth_code:
             complete_spotify_oauth_authorization(oauth_code, oauth_state)
 
 

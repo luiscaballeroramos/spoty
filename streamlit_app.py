@@ -49,6 +49,7 @@ st.set_page_config(
     layout="wide",
 )
 
+
 try:
     from app_views.reproduction import (
         refresh_playback_on_page_entry,
@@ -57,8 +58,7 @@ try:
     from app_views.summary import render_summary_page, run_registration_with_feedback
     from app_views.top_navigation import render_top_navigation
     from spotifyapi.streamlit_auth import process_spotify_oauth_callback
-except Exception as exc:
-    st.error(f"No se pudo iniciar la app ({type(exc).__name__}): {exc}")
+except Exception:
     st.stop()
 
 st.markdown(
@@ -160,5 +160,8 @@ def render_current_page():
     st.session_state[PREVIOUS_PAGE_STATE_KEY] = current_page
 
 
-process_spotify_oauth_callback()
-render_current_page()
+try:
+    process_spotify_oauth_callback()
+    render_current_page()
+except Exception:
+    st.stop()

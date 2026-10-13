@@ -9,7 +9,6 @@ from psycopg.rows import dict_row
 from config import DATABASE_URL
 from spotifyapi.streamlit_auth import (
     has_spotify_auth_available,
-    render_oauth_feedback,
     render_spotify_authorization_section,
 )
 
@@ -30,54 +29,13 @@ else:
 
 def run_registration_with_feedback():
     if register_listeningevents is None:
-        st.session_state["registration_feedback"] = {
-            "type": "error",
-            "message": "No se pudo importar la función de registro del repo.",
-        }
         return
 
     try:
         with st.spinner("Actualizando datos desde Spotify..."):
-            summary = register_listeningevents() or {}
-    except Exception as exc:
-        st.session_state["registration_feedback"] = {
-            "type": "error",
-            "message": f"Actualización fallida: {exc}",
-        }
+            register_listeningevents()
+    except Exception:
         return
-
-    fetched_items = summary.get("fetched_items")
-    inserted_events = summary.get("inserted_listening_events")
-
-    if isinstance(fetched_items, int) and isinstance(inserted_events, int):
-        st.session_state["registration_feedback"] = {
-            "type": "success",
-            "message": (
-                "Actualización completada. "
-                f"Elementos leídos: {fetched_items}. "
-                f"Listening events nuevos: {inserted_events}."
-            ),
-        }
-    else:
-        st.session_state["registration_feedback"] = {
-            "type": "success",
-            "message": "Actualización completada.",
-        }
-
-
-def render_registration_feedback():
-    feedback = st.session_state.pop("registration_feedback", None)
-    if not feedback:
-        return
-
-    message = feedback.get("message")
-    feedback_type = feedback.get("type")
-
-    if not message:
-        return
-
-    icons = {"error": "❌", "warning": "⚠️", "success": "✅"}
-    st.toast(message, icon=icons.get(feedback_type, "ℹ️"), duration=5)
 
 
 def query_database(query: str):
@@ -182,9 +140,6 @@ def _watch_summary_changes_fragment():
 def _render_spotify_dashboard():
     auth_available = has_spotify_auth_available()
 
-    render_oauth_feedback()
-    render_registration_feedback()
-
     if register_listeningevents is None:
         st.caption(
             "Registro disponible solo si el repo está configurado correctamente."
@@ -192,9 +147,6 @@ def _render_spotify_dashboard():
         if register_import_error:
             st.caption(f"Detalle de importación: {register_import_error}")
     elif not auth_available:
-        st.warning(
-            "No hay sesión OAuth válida de Spotify. Autoriza desde aquí para continuar."
-        )
         render_spotify_authorization_section()
 
     rows = query_database("""
@@ -266,7 +218,7 @@ def _render_spotify_dashboard():
     )
 
     if df.empty:
-        st.info("No hay listening events registrados todavía.")
+        st.caption("No hay listening events registrados todavía.")
         return
 
     artist_ids = set()
