@@ -2,4 +2,4 @@ spotipy
 psycopg[binary]
 pandas
 matplotlib
-streamlit
+-r streamlit_lab/requirements.txt
