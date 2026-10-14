@@ -24,9 +24,9 @@ from spotifyapi.streamlit_auth import (
     render_spotify_authorization_section,
 )
 
-PLAYBACK_FRAGMENT_INTERVAL_SECONDS = 1
 PLAYBACK_PLAYING_POLL_SECONDS = 5
 PLAYBACK_PAUSED_POLL_SECONDS = 5
+PLAYBACK_FRAGMENT_INTERVAL_SECONDS = 1
 PLAYBACK_RESTORE_AFTER_SECONDS = 60
 ADJACENT_TRACKS_POLL_SECONDS = 30
 PLAYBACK_CACHE_KEY = "reproduction_playback_cache"
@@ -36,6 +36,7 @@ PLAYBACK_STATE_PATH = Path(__file__).resolve().parents[1] / ".playback_state.jso
 SPOTIFY_CLIENT_CACHE_KEY = "reproduction_spotify_client"
 SPOTIFY_CLIENT_MAX_AGE_SECONDS = 50 * 60
 LIKED_CACHE_KEY = "reproduction_liked_cache"
+REPRODUCTION_VIEW_SIGNATURE_KEY = "reproduction_view_signature"
 ADJACENT_TRACKS_CACHE_KEY = "reproduction_adjacent_tracks_cache"
 ADJACENT_TRACK_HISTORY_KEY = "reproduction_adjacent_track_history"
 ADJACENT_PREVIOUS_REQUEST_KEY = "reproduction_previous_request"
@@ -597,6 +598,54 @@ def _cache_liked_statuses(
         liked_cache.update(client.are_tracks_liked(uncached_track_ids))
 
 
+def _get_reproduction_view_state(client: SpotifyClient) -> dict:
+    playback = _get_playback(client)
+    item = playback.get("item") or {}
+    track_id = item.get("id")
+    previous_track, next_track = _get_adjacent_tracks(client, item)
+    _cache_liked_statuses(
+        client,
+        [track_id, previous_track.get("id"), next_track.get("id")],
+    )
+    return {
+        "playback": playback,
+        "item": item,
+        "track_id": track_id,
+        "previous_track": previous_track,
+        "next_track": next_track,
+        "is_track_liked": _is_track_liked(client, track_id),
+        "is_previous_track_liked": _is_track_liked(
+            client, previous_track.get("id")
+        ),
+        "is_next_track_liked": _is_track_liked(client, next_track.get("id")),
+        "artists_text": _get_track_artists(item),
+    }
+
+
+def _track_view_signature(track: dict) -> tuple:
+    album = track.get("album") or {}
+    return (
+        track.get("id"),
+        track.get("name"),
+        _get_track_artists(track),
+        album.get("name"),
+        _get_track_image_url(track),
+    )
+
+
+def _reproduction_view_signature(view_state: dict) -> tuple:
+    playback = view_state["playback"]
+    return (
+        bool(playback.get("is_playing")),
+        _track_view_signature(view_state["item"]),
+        _track_view_signature(view_state["previous_track"]),
+        _track_view_signature(view_state["next_track"]),
+        view_state["is_track_liked"],
+        view_state["is_previous_track_liked"],
+        view_state["is_next_track_liked"],
+    )
+
+
 def _is_track_liked(client: SpotifyClient, track_id: str | None) -> bool:
     if not track_id:
         return False
@@ -841,8 +890,8 @@ def _render_adjacent_track_info(track: dict, fallback_title: str) -> None:
     )
 
 
-@st.fragment(run_every=PLAYBACK_FRAGMENT_INTERVAL_SECONDS)
-def render_reproduction_page():
+@st.fragment
+def _render_reproduction_controls():
     render_page_style(REPRODUCTION_PAGE_STYLE)
     st.markdown(
         """
@@ -1128,32 +1177,19 @@ def render_reproduction_page():
         return
 
     reproduction_service = ReproductionService(client)
-    playback = _get_playback(client)
+    view_state = _get_reproduction_view_state(client)
+    playback = view_state["playback"]
     is_playing = bool(playback.get("is_playing"))
-
-    item = playback.get("item") or {}
-    track_id = item.get("id")
-
+    item = view_state["item"]
+    track_id = view_state["track_id"]
     track_name = item.get("name")
-    artists = item.get("artists") or []
-    artist_names = [artist.get("name") for artist in artists if artist.get("name")]
-    album_images = (item.get("album") or {}).get("images") or []
-    track_image_url = next(
-        (
-            image.get("url")
-            for image in album_images
-            if isinstance(image, dict) and image.get("url")
-        ),
-        None,
+    previous_track = view_state["previous_track"]
+    next_track = view_state["next_track"]
+    is_track_liked = view_state["is_track_liked"]
+    artists_text = view_state["artists_text"]
+    st.session_state[REPRODUCTION_VIEW_SIGNATURE_KEY] = (
+        _reproduction_view_signature(view_state)
     )
-    previous_track, next_track = _get_adjacent_tracks(client, item)
-    _cache_liked_statuses(
-        client,
-        [track_id, previous_track.get("id"), next_track.get("id")],
-    )
-    is_track_liked = _is_track_liked(client, track_id)
-
-    artists_text = ", ".join(artist_names)
 
     _render_playback_controls(
         client=client,
@@ -1182,3 +1218,31 @@ def render_reproduction_page():
         result_key = f"{'liked' if action == 'like' else 'unliked'}_track_{'saved' if action_succeeded else 'error'}"
         st.session_state[result_key] = True
         st.rerun()
+
+
+def _check_reproduction_view_state() -> None:
+    if not has_spotify_auth_available():
+        return
+
+    try:
+        client = _get_spotify_client()
+        view_state = _get_reproduction_view_state(client)
+    except Exception:
+        return
+
+    signature = _reproduction_view_signature(view_state)
+    previous_signature = st.session_state.get(REPRODUCTION_VIEW_SIGNATURE_KEY)
+    if previous_signature is None:
+        st.session_state[REPRODUCTION_VIEW_SIGNATURE_KEY] = signature
+    elif signature != previous_signature:
+        st.rerun()
+
+
+@st.fragment(run_every=PLAYBACK_FRAGMENT_INTERVAL_SECONDS)
+def _watch_reproduction_view_state() -> None:
+    _check_reproduction_view_state()
+
+
+def render_reproduction_page() -> None:
+    _render_reproduction_controls()
+    _watch_reproduction_view_state()
