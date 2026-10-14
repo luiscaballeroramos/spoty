@@ -7,6 +7,19 @@ from urllib.parse import urlsplit
 
 Alignment = Literal["start", "center", "end"]
 
+_CSS_VALUE_PATTERN = re.compile(r"^[A-Za-z0-9#%(),./ _+*-]+$")
+_CSS_LENGTH_PATTERN = re.compile(
+    r"^(?:0|(?:\d+(?:\.\d*)?|\.\d+)(?:px|%|em|rem|vw|vh|dvh|svh|lvh|vmin|vmax|ch|ex|cm|mm|in|pt|pc)|"
+    r"(?:auto|min-content|max-content|fit-content|stretch|available)|"
+    r"(?:calc|min|max|clamp|var|fit-content)\([A-Za-z0-9#%(),./ _+*-]+\))$",
+    re.IGNORECASE,
+)
+_CSS_NUMBER_PATTERN = re.compile(r"^(?:\d+(?:\.\d*)?|\.\d+)$")
+_FONT_SIZE_KEYWORDS = {
+    "xx-small", "x-small", "small", "medium", "large", "x-large",
+    "xx-large", "xxx-large", "smaller", "larger",
+}
+
 
 def validate_number(value: float, label: str, minimum: float = 0):
     if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < minimum:
@@ -21,6 +34,91 @@ def validate_color(value: str):
 def validate_alignment(value: str):
     if value not in ("start", "center", "end"):
         raise ValueError("Alineacion no admitida")
+
+
+def _validate_css_value(value: str | None, label: str) -> None:
+    if value is None:
+        return
+    if (
+        not isinstance(value, str)
+        or not value.strip()
+        or not _CSS_VALUE_PATTERN.fullmatch(value)
+        or "/*" in value
+        or "*/" in value
+        or re.search(r"(?:url|expression)\s*\(", value, re.IGNORECASE)
+    ):
+        raise ValueError(f"{label}: valor CSS no admitido")
+
+    depth = 0
+    for character in value:
+        if character == "(":
+            depth += 1
+        elif character == ")":
+            depth -= 1
+            if depth < 0:
+                raise ValueError(f"{label}: valor CSS no admitido")
+    if depth:
+        raise ValueError(f"{label}: valor CSS no admitido")
+
+
+def _validate_css_length(
+    value: str | None, label: str, *, allow_none: bool = False
+) -> None:
+    if value is None:
+        return
+    _validate_css_value(value, label)
+    normalized = value.strip().lower()
+    if allow_none and normalized == "none":
+        return
+    if not _CSS_LENGTH_PATTERN.fullmatch(normalized):
+        raise ValueError(f"{label}: se requiere una medida CSS valida")
+
+
+def _validate_aspect_ratio(value: str | None, label: str) -> None:
+    if value is None:
+        return
+    _validate_css_value(value, label)
+    normalized = value.strip().lower()
+    if normalized == "auto":
+        return
+    match = re.fullmatch(
+        r"(?:(auto)\s+)?(\d+(?:\.\d*)?|\.\d+)"
+        r"(?:\s*/\s*(\d+(?:\.\d*)?|\.\d+))?",
+        normalized,
+    )
+    if not match or any(
+        number is not None and float(number) <= 0
+        for number in match.groups()[1:]
+    ):
+        raise ValueError(f"{label}: se requiere una proporcion positiva")
+
+
+def _validate_font_weight(value: str | None) -> None:
+    if value is None:
+        return
+    _validate_css_value(value, "Peso de fuente")
+    normalized = value.strip().lower()
+    if normalized in ("normal", "bold", "bolder", "lighter"):
+        return
+    if not _CSS_NUMBER_PATTERN.fullmatch(normalized) or not 1 <= float(normalized) <= 1000:
+        raise ValueError("Peso de fuente: use normal, bold o un numero entre 1 y 1000")
+
+
+def _validate_text_alignment(value: str | None) -> None:
+    if value is None:
+        return
+    _validate_css_value(value, "Alineacion de texto")
+    if value.strip().lower() not in (
+        "start", "center", "end", "left", "right", "justify", "match-parent"
+    ):
+        raise ValueError("Alineacion de texto no admitida")
+
+
+def _validate_font_size(value: str | None) -> None:
+    if value is not None and value.strip().lower() in _FONT_SIZE_KEYWORDS:
+        _validate_css_value(value, "Tamano de fuente")
+        return
+    _validate_css_length(value, "Tamano de fuente")
 
 
 @dataclass(frozen=True)
@@ -144,6 +242,11 @@ class ButtonDimensions:
     min_height: str | None = None
     aspect_ratio: str | None = None
 
+    def __post_init__(self):
+        for name in ("width", "height", "min_height"):
+            _validate_css_length(getattr(self, name), name.replace("_", " ").capitalize())
+        _validate_aspect_ratio(self.aspect_ratio, "Proporcion")
+
 
 @dataclass(frozen=True)
 class ButtonStyle:
@@ -180,6 +283,20 @@ class ButtonStyle:
                 raise ValueError("La imagen debe ser una URL HTTP(S) sin caracteres especiales sin codificar")
         if self.background_fit not in ("cover", "contain"):
             raise ValueError("Ajuste de imagen no admitido")
+        for name in (
+            "background", "color", "padding", "border", "border_radius", "box_shadow",
+        ):
+            _validate_css_value(getattr(self, name), name.replace("_", " ").capitalize())
+        for name in ("width", "min_height", "height"):
+            _validate_css_length(getattr(self, name), name.replace("_", " ").capitalize())
+        for name in ("max_width", "max_height"):
+            _validate_css_length(
+                getattr(self, name), name.replace("_", " ").capitalize(), allow_none=True
+            )
+        _validate_font_size(self.font_size)
+        _validate_aspect_ratio(self.aspect_ratio, "Proporcion")
+        _validate_font_weight(self.font_weight)
+        _validate_text_alignment(self.text_align)
 
 
 @dataclass(frozen=True)
