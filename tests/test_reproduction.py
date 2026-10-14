@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
 from streamlit_lab import renderer
-from streamlit_lab.blocks import Position
+from streamlit_lab import Position
 
 with patch.dict(sys.modules, {
     "register.artist": MagicMock(),

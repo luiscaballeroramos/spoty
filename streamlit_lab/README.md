@@ -2,14 +2,14 @@
 
 Subproyecto independiente para experimentar con interfaces definidas mediante
 reglas. No importa codigo de Spotify ni necesita sus credenciales o base de datos.
-Requiere Python 3.10 o posterior. Todos los comandos parten de esta carpeta.
+Requiere Python 3.10 o posterior. Los comandos de abajo parten de la raiz del repositorio.
 
 ## Ejecutar en PowerShell
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe -m streamlit run app.py --server.port 8502
+python -m venv streamlit_lab/.venv
+.\streamlit_lab\.venv\Scripts\python.exe -m pip install -r streamlit_lab/requirements.txt
+.\streamlit_lab\.venv\Scripts\python.exe -m streamlit run streamlit_lab/app.py --server.port 8502
 ```
 
 ## Estructura
@@ -21,6 +21,17 @@ python -m venv .venv
 - `renderer.py`: traduce las reglas a CSS y devuelve un contenedor Streamlit.
 - `app.py`: ejemplos y controles para experimentar.
 - `test_blocks.py`: pruebas de reglas y de la aplicacion.
+
+## API interna
+
+Los modelos de configuracion se importan desde `streamlit_lab` y no cargan
+Streamlit. Los renderizadores publicos se importan desde
+`streamlit_lab.renderer`; los controles de `controls.py` son internos a la demo.
+
+```python
+from streamlit_lab import Block, BlockStyle, Group, Layout, Size
+from streamlit_lab.renderer import render_group, render_page_style
+```
 
 ## Definir un bloque
 
@@ -45,8 +56,8 @@ ajusta el margen de los captions. `render_button` conserva los argumentos
 habituales de `st.button` y acepta una imagen HTTP(S) como fondo.
 
 ```python
-from renderer import render_button, render_page_style
-from styles import ButtonDimensions, ButtonStyle, Insets, PageStyle
+from streamlit_lab.renderer import render_button, render_page_style
+from streamlit_lab.styles import ButtonDimensions, ButtonStyle, Insets, PageStyle
 
 render_page_style(PageStyle(
     hide_header=True,
@@ -82,9 +93,8 @@ y la vista conserva la ultima configuracion valida.
 ## Posicion y alineacion
 
 ```python
-from blocks import Block, Position, Size
-from layout import Layout
-from renderer import render_block, render_layout
+from streamlit_lab import Block, Layout, Position, Size
+from streamlit_lab.renderer import render_block, render_layout
 
 layout = Layout(rows=2, columns=2, horizontal="center", vertical="end", gap_px=16)
 blocks = [
@@ -127,8 +137,8 @@ Cada bloque conserva sus dimensiones y apariencia. El orden declarado en
 `children` determina el recorrido; no se necesita `order`.
 
 ```python
-from layout import Group, Layout
-from renderer import render_group
+from streamlit_lab import Group, Layout
+from streamlit_lab.renderer import render_group
 
 dashboard = Group(
     "dashboard",
@@ -156,7 +166,7 @@ pero los valores guardados y los estilos y medidas de los bloques se conservan.
 1 x 1. Funciona con posicion fija o automatica:
 
 ```python
-from blocks import Block, Position, Span
+from streamlit_lab import Block, Position, Span
 
 block = Block("principal", position=Position(1, 1), span=Span(rows=2, columns=2))
 ```
@@ -188,9 +198,18 @@ pixeles; las opacidades estan entre 0 y 1. Ninguna clase de datos requiere Strea
 
 ```python
 from dataclasses import replace
-from blocks import Block, Position, Size, Span
-from layout import Layout
-from styles import BlockStyle, Border, Corners, Insets, Shadow
+from streamlit_lab import (
+    Block,
+    BlockStyle,
+    Border,
+    Corners,
+    Insets,
+    Layout,
+    Position,
+    Shadow,
+    Size,
+    Span,
+)
 
 layout = Layout(
     rows=3, columns=4,

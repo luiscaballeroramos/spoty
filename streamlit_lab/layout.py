@@ -5,12 +5,8 @@ import math
 import re
 from typing import Literal
 
-if __package__:
-    from .blocks import Block, Position, Size, Span
-    from .styles import Insets, validate_number
-else:
-    from blocks import Block, Position, Size, Span
-    from styles import Insets, validate_number
+from .blocks import Block, Position, Size, Span
+from .styles import Insets, validate_number
 
 
 @dataclass(frozen=True)
