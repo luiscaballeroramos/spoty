@@ -8,10 +8,7 @@ from typing import TYPE_CHECKING, Literal
 if TYPE_CHECKING:
     from .styles import Alignment
 
-if __package__:
-    from .styles import BlockStyle, validate_alignment, validate_number
-else:
-    from styles import BlockStyle, validate_alignment, validate_number
+from .styles import BlockStyle, validate_alignment, validate_number
 
 
 @dataclass(frozen=True)

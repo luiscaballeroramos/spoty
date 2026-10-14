@@ -1,23 +1,25 @@
 import unittest
 from dataclasses import replace
 
-from blocks import Block, Position, Size, Span
-from layout import Group, Layout
-from styles import (
+from streamlit_lab import (
+    Block,
     BlockStyle,
     Border,
     ButtonDimensions,
     ButtonStyle,
     Corners,
+    Group,
     Insets,
+    Layout,
     PageStyle,
+    Position,
     Shadow,
+    Size,
+    Span,
 )
-
-
 class StyleTests(unittest.TestCase):
     def test_style_css(self):
-        from renderer import style_css
+        from streamlit_lab.renderer import style_css
 
         css = style_css(BlockStyle(
             padding=Insets(1, 2, 3, 4), radius=Corners(1, 2, 3, 4),
@@ -60,9 +62,9 @@ class StyleTests(unittest.TestCase):
     def test_page_style_renders_shared_streamlit_page_rules(self):
         from unittest.mock import patch
 
-        from renderer import render_page_style
+        from streamlit_lab.renderer import render_page_style
 
-        with patch("renderer.st.html") as html:
+        with patch("streamlit_lab.renderer.st.html") as html:
             render_page_style(PageStyle(
                 hide_header=True,
                 content_padding=0,
@@ -85,10 +87,10 @@ class StyleTests(unittest.TestCase):
     def test_render_button_applies_style_and_background_image(self):
         from unittest.mock import patch
 
-        from renderer import render_button
+        from streamlit_lab.renderer import render_button
 
-        with patch("renderer.st.html") as html, patch(
-            "renderer.st.button", return_value=True
+        with patch("streamlit_lab.renderer.st.html") as html, patch(
+            "streamlit_lab.renderer.st.button", return_value=True
         ) as button:
             clicked = render_button(
                 "Play",
@@ -150,11 +152,11 @@ class BlockTests(unittest.TestCase):
 
     def test_portrait_height_is_rendered_only_when_configured(self):
         from unittest.mock import patch
-        from renderer import render_block
+        from streamlit_lab.renderer import render_block
 
         for size in (None, Size(30, "dvh", offset_px=20)):
-            with self.subTest(size=size), patch("renderer.st.html") as html:
-                with patch("renderer.st.container"):
+            with self.subTest(size=size), patch("streamlit_lab.renderer.st.html") as html:
+                with patch("streamlit_lab.renderer.st.container"):
                     render_block(Block("responsive", portrait_height=size))
                 css = html.call_args.args[0]
                 self.assertEqual("@media (orientation: portrait)" in css, size is not None)
@@ -212,10 +214,10 @@ class LayoutTests(unittest.TestCase):
         from contextlib import nullcontext
         from unittest.mock import patch
 
-        from renderer import render_layout
+        from streamlit_lab.renderer import render_layout
 
-        with patch("renderer.st.html") as html:
-            with patch("renderer.st.container", return_value=nullcontext()):
+        with patch("streamlit_lab.renderer.st.html") as html:
+            with patch("streamlit_lab.renderer.st.container", return_value=nullcontext()):
                 render_layout([], Layout(parent_gap_px=0), key="flush")
 
         css = html.call_args.args[0]
@@ -238,12 +240,12 @@ class LayoutTests(unittest.TestCase):
 
     def test_portrait_collapse_is_opt_in_and_independent_of_breakpoint(self):
         from unittest.mock import patch
-        from renderer import render_layout
+        from streamlit_lab.renderer import render_layout
 
         blocks = [Block("first"), Block("second")]
         for enabled in (False, True):
-            with self.subTest(enabled=enabled), patch("renderer.st.html") as html:
-                with patch("renderer.st.container"):
+            with self.subTest(enabled=enabled), patch("streamlit_lab.renderer.st.html") as html:
+                with patch("streamlit_lab.renderer.st.container"):
                     render_layout(
                         blocks,
                         Layout(rows=1, columns=2, collapse_on_portrait=enabled),
@@ -257,10 +259,10 @@ class LayoutTests(unittest.TestCase):
 
     def test_portrait_collapse_uses_explicit_row_weights(self):
         from unittest.mock import patch
-        from renderer import render_layout
+        from streamlit_lab.renderer import render_layout
 
-        with patch("renderer.st.html") as html:
-            with patch("renderer.st.container"):
+        with patch("streamlit_lab.renderer.st.html") as html:
+            with patch("streamlit_lab.renderer.st.container"):
                 render_layout(
                     [Block("first"), Block("middle"), Block("last")],
                     Layout(
@@ -380,14 +382,14 @@ class LayoutTests(unittest.TestCase):
 class GroupTests(unittest.TestCase):
     def test_groups_use_layout_vertical_alignment_in_available_height(self):
         from unittest.mock import patch
-        from renderer import render_layout
+        from streamlit_lab.renderer import render_layout
 
         group = Group("track", ("image", "title"), Layout(rows=2, columns=1))
         layout = Layout(
             rows=1, columns=1, vertical="center",
             height=Size(100, "dvh", offset_px=64),
         )
-        with patch("renderer.st.html") as html, patch("renderer.st.container"):
+        with patch("streamlit_lab.renderer.st.html") as html, patch("streamlit_lab.renderer.st.container"):
             render_layout([group], layout)
         css = html.call_args.args[0]
         self.assertIn("justify-content: center", css)
@@ -423,14 +425,14 @@ class GroupTests(unittest.TestCase):
         from contextlib import nullcontext
         from unittest.mock import patch
 
-        from renderer import render_group
+        from streamlit_lab.renderer import render_group
 
         blocks = [Block("first"), Block("second")]
         child = Group("child", ("first", "second"), Layout(rows=1, columns=2))
         parent = Group("parent", (child,), Layout(rows=1, columns=1, mobile_breakpoint_px=640))
 
-        with patch("renderer.render_layout", return_value=nullcontext()) as render_layout:
-            with patch("renderer.render_block", return_value=nullcontext()):
+        with patch("streamlit_lab.renderer.render_layout", return_value=nullcontext()) as render_layout:
+            with patch("streamlit_lab.renderer.render_block", return_value=nullcontext()):
                 render_group(parent, blocks, lambda block: None)
 
         collapse_by_key = {

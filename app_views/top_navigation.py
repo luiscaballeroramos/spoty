@@ -1,9 +1,7 @@
 import streamlit as st
 
-from streamlit_lab.blocks import Block
-from streamlit_lab.layout import Group, Layout
+from streamlit_lab import Block, BlockStyle, Group, Layout
 from streamlit_lab.renderer import render_group
-from streamlit_lab.styles import BlockStyle
 
 
 NAVIGATION_STYLE = BlockStyle(

@@ -2,9 +2,9 @@ from dataclasses import replace
 
 import streamlit as st
 
-from blocks import Block, Size
-from layout import Layout
-from styles import BlockStyle, Border, Corners, Insets, Shadow
+from .blocks import Block, Size
+from .layout import Layout
+from .styles import BlockStyle, Border, Corners, Insets, Shadow
 
 
 def edge_controls(label: str, value: float | Insets | Corners, key: str, corners: bool = False):

@@ -3,10 +3,9 @@ import json
 
 import streamlit as st
 
-from blocks import Block, Position, Size, Span
-from controls import block_controls, layout_controls, size_controls, style_controls
-from layout import Group, Layout
-from renderer import render_group
+from streamlit_lab import Block, Group, Layout, Position, Size, Span
+from streamlit_lab.controls import block_controls, layout_controls, size_controls, style_controls
+from streamlit_lab.renderer import render_group
 
 
 st.set_page_config(page_title="Laboratorio de bloques", page_icon=":material/dashboard:", layout="wide")

@@ -6,15 +6,17 @@ from pathlib import Path
 
 import streamlit as st
 
-from streamlit_lab.blocks import Block, Size
-from streamlit_lab.layout import Group, Layout
-from streamlit_lab.renderer import render_button, render_group, render_page_style
-from streamlit_lab.styles import (
+from streamlit_lab import (
+    Block,
     BlockStyle,
     ButtonStyle,
+    Group,
     Insets,
+    Layout,
     PageStyle,
+    Size,
 )
+from streamlit_lab.renderer import render_button, render_group, render_page_style
 from services.reproduction import ReproductionService
 from spotifyapi.spotifyclient import SpotifyClient
 from spotifyapi.streamlit_auth import (
