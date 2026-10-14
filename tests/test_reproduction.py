@@ -2,12 +2,19 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, Mock, patch
 
 from streamlit_lab import renderer
 from streamlit_lab import Position
 
 with patch.dict(sys.modules, {
+    "config": SimpleNamespace(
+        CLIENT_ID="test-client-id",
+        CLIENT_SECRET="test-client-secret",
+        REDIRECT_URI="http://127.0.0.1:8888/",
+        VERBOSE=True,
+    ),
     "register.artist": MagicMock(),
     "services.reproduction": MagicMock(),
 }):
@@ -374,7 +381,7 @@ class ReproductionTest(unittest.TestCase):
         self.assertIn(".st-key-reproduction_previous", css)
         self.assertIn(".st-key-reproduction_next", css)
         self.assertIn("button::before", css)
-        self.assertIn("filter: blur(6px)", css)
+        self.assertIn("filter: blur(4px)", css)
 
     def test_track_info_renders_artist_and_album_below_title(self):
         reproduction._render_adjacent_track_info(
