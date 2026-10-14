@@ -10,6 +10,7 @@ import spotipy
 from config import CLIENT_ID, CLIENT_SECRET, REDIRECT_URI, VERBOSE
 from register.artist import Artist
 from spotipy.oauth2 import SpotifyOAuth
+from spotifyapi.diagnostics import OPERATIONS
 from spotifyapi.errors import (
     SpotifyAuthorizationError,
     SpotifyInvalidResponseError,
@@ -65,6 +66,11 @@ class SpotifyClient:
     """Access Spotify using OAuth or a refresh token, validated reads, and explicit API errors."""
     def __init__(self):
         """Initialize a non-retrying Spotify transport from a refresh token or valid cached OAuth token."""
+        with OPERATIONS.observe("initialize Spotify client"):
+            self._initialize()
+
+    def _initialize(self):
+        """Select configured refresh-token or cached OAuth authentication without logging sensitive values."""
         refresh_token = os.getenv("SPOTIFY_REFRESH_TOKEN", "").strip()
 
         if refresh_token:
@@ -101,9 +107,12 @@ class SpotifyClient:
             response.raise_for_status()
             return response.json()
 
-        token_info = self._run("refresh Spotify token", refresh_access_token)
-        if not isinstance(token_info, dict) or not isinstance(token_info.get("access_token"), str) or not token_info["access_token"]:
-            raise SpotifyInvalidResponseError("refresh Spotify token")
+        def validate_token_info(token_info):
+            """Require a nonempty access token while keeping its value out of diagnostic metadata."""
+            if not isinstance(token_info, dict) or not isinstance(token_info.get("access_token"), str) or not token_info["access_token"]:
+                raise SpotifyInvalidResponseError("refresh Spotify token")
+
+        token_info = self._run("refresh Spotify token", refresh_access_token, validate=validate_token_info)
         access_token = token_info["access_token"]
 
         return spotipy.Spotify(
@@ -120,9 +129,25 @@ class SpotifyClient:
         operation: Callable[..., Any],
         *args: Any,
         command: bool = False,
+        validate: Callable[[Any], None] | None = None,
         **kwargs: Any,
     ) -> Any:
-        """Run an operation once, enforce shared cooldown, and raise categorized errors with their causes."""
+        """Measure and log one operation with optional response validation, preserving its result or typed error."""
+        with OPERATIONS.observe(action):
+            result = self._execute(action, operation, *args, command=command, **kwargs)
+            if validate is not None:
+                validate(result)
+            return result
+
+    def _execute(
+        self,
+        action: str,
+        operation: Callable[..., Any],
+        *args: Any,
+        command: bool = False,
+        **kwargs: Any,
+    ) -> Any:
+        """Execute once, enforce shared cooldown, and translate failures without logging exception text."""
         global _SPOTIFY_RATE_LIMITED_UNTIL
         remaining_cooldown = _SPOTIFY_RATE_LIMITED_UNTIL - time.monotonic()
         if remaining_cooldown > 0:
@@ -149,10 +174,6 @@ class SpotifyClient:
                 except (TypeError, ValueError):
                     retry_after_seconds = 1.0
                 _SPOTIFY_RATE_LIMITED_UNTIL = time.monotonic() + retry_after_seconds
-                print(
-                    "Spotify API rate limit hit (429). Pausing requests for "
-                    f"{retry_after_seconds:g} seconds."
-                )
                 raise SpotifyRateLimitError(action, retry_after_seconds) from exc
             if http_status in (401, 403):
                 raise SpotifyAuthorizationError(action, http_status) from exc
@@ -178,17 +199,18 @@ class SpotifyClient:
         **kwargs: Any,
     ) -> dict | None:
         """Validate an object response and optional list field, allowing None only when explicitly requested."""
-        response = self._run(action, operation, *args, **kwargs)
-        if response is None and allow_none:
-            return None
-        if not isinstance(response, dict):
-            raise SpotifyInvalidResponseError(action)
-        if list_key is not None and (
-            not isinstance(response.get(list_key), list)
-            or any(not isinstance(item, dict) for item in response[list_key])
-        ):
-            raise SpotifyInvalidResponseError(action)
-        return response
+        def validate_response(response):
+            """Reject invalid object or list shapes while accepting explicitly permitted absence."""
+            if response is None and allow_none:
+                return
+            if not isinstance(response, dict):
+                raise SpotifyInvalidResponseError(action)
+            if list_key is not None and (
+                not isinstance(response.get(list_key), list)
+                or any(not isinstance(item, dict) for item in response[list_key])
+            ):
+                raise SpotifyInvalidResponseError(action)
+        return self._run(action, operation, *args, validate=validate_response, **kwargs)
 
     def get_artist_byid(self, artist_id: str) -> Artist:
         """Fetch an artist by Spotify ID and convert its name and image URLs into an Artist model."""
@@ -221,7 +243,7 @@ class SpotifyClient:
 
     def get_track_byid(self, track_id: str):
         """Return a validated track object for the given Spotify ID."""
-        return self._read_object(f"get track {track_id}", self.sp.track, track_id)
+        return self._read_object("get track", self.sp.track, track_id)
 
     def get_currently_playing(self):
         """Return the currently playing item payload, allowing None when Spotify reports no item."""
@@ -318,7 +340,7 @@ class SpotifyClient:
                 print("Invalid repeat mode. Use: off, track, or context")
             return False
         return self._run(
-            f"set repeat mode to {normalized_mode}",
+            "set repeat mode",
             self.sp.repeat,
             normalized_mode,
             command=True,
@@ -349,7 +371,7 @@ class SpotifyClient:
                 print("uri is required")
             return False
         return self._run(
-            f"add uri to queue: {uri}",
+            "add to queue",
             self.sp.add_to_queue,
             uri=uri,
             device_id=device_id,
@@ -363,7 +385,7 @@ class SpotifyClient:
     def like_track(self, track_id: str) -> bool:
         """Save a track to the Spotify library, returning True on success and raising on failure."""
         return self._run(
-            f"like track {track_id}",
+            "like track",
             self.sp.current_user_saved_tracks_add,
             [track_id],
             command=True,
@@ -372,7 +394,7 @@ class SpotifyClient:
     def unlike_track(self, track_id: str) -> bool:
         """Remove a track from the Spotify library, returning True on success and raising on failure."""
         return self._run(
-            f"unlike track {track_id}",
+            "unlike track",
             self.sp.current_user_saved_tracks_delete,
             [track_id],
             command=True,
@@ -386,17 +408,21 @@ class SpotifyClient:
         if not unique_track_ids:
             return {}
 
+        def validate_response(response):
+            """Require one boolean for every requested ID without constructing false negatives."""
+            if (
+                not isinstance(response, list)
+                or len(response) != len(unique_track_ids)
+                or any(not isinstance(liked, bool) for liked in response)
+            ):
+                raise SpotifyInvalidResponseError("check liked status for tracks")
+
         response = self._run(
             "check liked status for tracks",
             self.sp.current_user_saved_tracks_contains,
             unique_track_ids,
+            validate=validate_response,
         )
-        if (
-            not isinstance(response, list)
-            or len(response) != len(unique_track_ids)
-            or any(not isinstance(liked, bool) for liked in response)
-        ):
-            raise SpotifyInvalidResponseError("check liked status for tracks")
         return {
             track_id: response[index]
             for index, track_id in enumerate(unique_track_ids)
