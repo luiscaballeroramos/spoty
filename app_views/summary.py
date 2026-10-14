@@ -7,6 +7,7 @@ from psycopg import connect
 from psycopg.rows import dict_row
 
 from config import DATABASE_URL
+from spotifyapi.errors import SpotifyError
 from spotifyapi.streamlit_auth import (
     has_spotify_auth_available,
     render_spotify_authorization_section,
@@ -28,17 +29,21 @@ else:
 
 
 def run_registration_with_feedback():
+    """Run available listening-event registration with a spinner and display Spotify failures."""
     if register_listeningevents is None:
         return
 
     try:
         with st.spinner("Actualizando datos desde Spotify..."):
             register_listeningevents()
+    except SpotifyError as exc:
+        st.warning(str(exc))
     except Exception:
         return
 
 
 def query_database(query: str):
+    """Execute a SQL query, fetch dictionary rows, and close the cursor and connection."""
     with connect(DATABASE_URL, row_factory=dict_row) as conn:
         with conn.cursor() as cur:
             cur.execute(query)
@@ -50,6 +55,7 @@ def build_dashboard_signature(
     latest_played_at: int,
     summary: pd.Series,
 ) -> tuple[str, int, int, int, int, int, int]:
+    """Combine the latest listening event and catalog counts into a dashboard change signature."""
     return (
         latest_track_id,
         latest_played_at,
@@ -62,6 +68,7 @@ def build_dashboard_signature(
 
 
 def query_dashboard_signature() -> tuple[str, int, int, int, int, int, int]:
+    """Read the latest event and table counts, returning a zero signature when no row is available."""
     rows = query_database("""
         WITH latest_event AS (
             SELECT track_id, played_at
@@ -95,6 +102,7 @@ def query_dashboard_signature() -> tuple[str, int, int, int, int, int, int]:
 
 
 def format_duration(duration_ms):
+    """Format milliseconds as minutes and seconds, using a dash for missing durations."""
     if pd.isna(duration_ms):
         return "-"
 
@@ -104,6 +112,7 @@ def format_duration(duration_ms):
 
 
 def get_image(images):
+    """Return the first URL from a JSON image list or None for missing or invalid data."""
     if not images:
         return None
 
@@ -119,6 +128,7 @@ def get_image(images):
 
 @st.fragment(run_every=REFRESH_INTERVAL_LABEL)
 def _watch_summary_changes_fragment():
+    """Poll dashboard changes, record their local time, and rerun when the signature changes."""
     try:
         current_signature = query_dashboard_signature()
     except Exception:
@@ -138,6 +148,7 @@ def _watch_summary_changes_fragment():
 
 
 def _render_spotify_dashboard():
+    """Query and render the latest listening event, catalog totals, and recent listening history."""
     auth_available = has_spotify_auth_available()
 
     if register_listeningevents is None:
@@ -243,6 +254,7 @@ def _render_spotify_dashboard():
         artist_names = {row["id"]: row["name"] for row in artist_rows}
 
     def get_artists(value):
+        """Resolve JSON artist IDs to names, retaining unknown IDs and using a dash for invalid data."""
         if not value:
             return "-"
 
@@ -310,5 +322,6 @@ def _render_spotify_dashboard():
 
 
 def render_summary_page():
+    """Render the summary dashboard and start its periodic database change watcher."""
     _watch_summary_changes_fragment()
     _render_spotify_dashboard()

@@ -7,6 +7,15 @@ from unittest.mock import MagicMock, Mock, patch
 
 from streamlit_lab import renderer
 from streamlit_lab import Position
+import requests
+from spotifyapi.errors import (
+    SpotifyAuthorizationError,
+    SpotifyInvalidResponseError,
+    SpotifyRateLimitError,
+    SpotifyRequestError,
+    SpotifyTimeoutError,
+    SpotifyUnavailableError,
+)
 
 with patch.dict(sys.modules, {
     "config": SimpleNamespace(
@@ -24,11 +33,15 @@ with patch.dict(sys.modules, {
 
 
 class RerunRequested(Exception):
+    """Simulate the execution interruption caused by st.rerun during tests."""
     pass
 
 
 class ReproductionTest(unittest.TestCase):
+    """Test playback, UI behavior, and Spotify contracts using mocks and temporary files."""
+
     def setUp(self):
+        """Create isolated session state, mocked clients, and a temporary snapshot with cleanup."""
         self.playback_temp_dir = tempfile.TemporaryDirectory()
         self.addCleanup(self.playback_temp_dir.cleanup)
         self.playback_path_patch = patch.object(
@@ -61,6 +74,10 @@ class ReproductionTest(unittest.TestCase):
         self.spotify = MagicMock()
         self.spotify.current_playback.return_value = None
         self.spotify.queue.return_value = None
+        self.spotify.current_user_recently_played.return_value = {"items": []}
+        self.spotify.current_user_saved_tracks_contains.return_value = [False]
+        self.device_error = RuntimeError("device unavailable")
+        self.device_error.http_status = 404
         self.spotify.devices.return_value = {
             "devices": [{"id": "original-device", "is_active": True}]
         }
@@ -81,6 +98,7 @@ class ReproductionTest(unittest.TestCase):
         }
 
     def click_play_pause(self, playback):
+        """Simulate a play/pause click and require the controls to request a rerun."""
         with self.assertRaises(RerunRequested):
             reproduction._render_playback_controls(
                 client=self.client,
@@ -95,6 +113,7 @@ class ReproductionTest(unittest.TestCase):
             )
 
     def test_like_buttons_target_their_own_track(self):
+        """Verify each card targets its own track for liking or unliking without changing playback."""
         for position, track_id, key in (
             ("previous", "previous-id", "reproduction_previous_corner_action"),
             ("current", "track-id", "reproduction_corner_action"),
@@ -130,6 +149,7 @@ class ReproductionTest(unittest.TestCase):
                     self.spotify.pause_playback.assert_not_called()
 
     def test_liked_status_uses_cache_and_pending_action_for_each_track(self):
+        """Verify cached liked status avoids duplicate requests and pending actions override it."""
         self.spotify.current_user_saved_tracks_contains.return_value = [True]
         self.assertTrue(reproduction._is_track_liked(self.client, "previous-id"))
         self.assertTrue(reproduction._is_track_liked(self.client, "previous-id"))
@@ -144,6 +164,7 @@ class ReproductionTest(unittest.TestCase):
         self.assertEqual(self.spotify.current_user_saved_tracks_contains.call_count, 1)
 
     def test_visible_track_liked_statuses_are_fetched_in_one_batch(self):
+        """Fetch unique visible track IDs in one batch and reuse their cached liked status."""
         self.spotify.current_user_saved_tracks_contains.return_value = [
             True, False, True,
         ]
@@ -162,6 +183,7 @@ class ReproductionTest(unittest.TestCase):
         self.assertEqual(self.spotify.current_user_saved_tracks_contains.call_count, 1)
 
     def test_view_signature_ignores_playback_progress_but_tracks_visible_changes(self):
+        """Verify progress changes preserve the view signature while pausing changes it."""
         view_state = {
             "playback": self.playback.copy(),
             "item": self.track,
@@ -186,6 +208,7 @@ class ReproductionTest(unittest.TestCase):
         )
 
     def test_view_state_check_reruns_only_when_visible_state_changes(self):
+        """Verify polling requests a rerun only when visible playback state changes."""
         view_state = {
             "playback": self.playback,
             "item": self.track,
@@ -221,6 +244,7 @@ class ReproductionTest(unittest.TestCase):
         self.streamlit.rerun.assert_called_once_with()
 
     def test_spotify_429_logs_and_honors_retry_after(self):
+        """Verify a 429 preserves its cause, logs the cooldown, and blocks requests until Retry-After expires."""
         rate_limit_error = RuntimeError("rate limited")
         rate_limit_error.http_status = 429
         rate_limit_error.headers = {"Retry-After": "30"}
@@ -231,8 +255,13 @@ class ReproductionTest(unittest.TestCase):
             patch("time.monotonic", side_effect=[100, 100, 105, 130]),
             patch("builtins.print") as print_mock,
         ):
-            self.assertIsNone(self.client._run("test request", operation))
-            self.assertIsNone(self.client._run("test request", operation))
+            with self.assertRaises(SpotifyRateLimitError) as first:
+                self.client._run("test request", operation)
+            self.assertEqual(first.exception.retry_after, 30)
+            self.assertIs(first.exception.__cause__, rate_limit_error)
+            with self.assertRaises(SpotifyRateLimitError) as cooldown:
+                self.client._run("test request", operation)
+            self.assertEqual(cooldown.exception.retry_after, 25)
             self.assertEqual(self.client._run("test request", operation), "recovered")
 
         self.assertEqual(operation.call_count, 2)
@@ -240,7 +269,174 @@ class ReproductionTest(unittest.TestCase):
             "Spotify API rate limit hit (429). Pausing requests for 30 seconds."
         )
 
+    def test_spotify_valid_empty_response_is_not_an_error(self):
+        """Accept valid empty reads and treat a command returning no content as successful."""
+        self.assertIsNone(self.client._run("playback", Mock(return_value=None)))
+        self.assertEqual(self.client._run("read", Mock(return_value=[])), [])
+        self.assertTrue(self.client._run("command", Mock(return_value=None), command=True))
+
+    def test_spotify_errors_preserve_category_and_cause(self):
+        """Verify HTTP, timeout, connection, and JSON failures retain their category and original cause."""
+        for status, expected in (
+            (401, SpotifyAuthorizationError),
+            (403, SpotifyAuthorizationError),
+            (404, SpotifyRequestError),
+            (503, SpotifyUnavailableError),
+        ):
+            with self.subTest(status=status):
+                original = RuntimeError("provider detail")
+                original.http_status = status
+                with self.assertRaises(expected) as caught:
+                    self.client._run("read", Mock(side_effect=original))
+                self.assertIs(caught.exception.__cause__, original)
+                self.assertEqual(caught.exception.http_status, status)
+                self.assertNotIn("provider detail", str(caught.exception))
+        for original, expected in (
+            (requests.Timeout(), SpotifyTimeoutError),
+            (requests.ConnectionError(), SpotifyUnavailableError),
+            (ValueError("invalid JSON"), SpotifyInvalidResponseError),
+        ):
+            with self.subTest(expected=expected):
+                with self.assertRaises(expected) as caught:
+                    self.client._run("read", Mock(side_effect=original))
+                self.assertIs(caught.exception.__cause__, original)
+
+    def test_failed_commands_are_not_reported_as_false_or_retried(self):
+        """Verify a timed-out command raises SpotifyTimeoutError without returning False or retrying."""
+        operation = Mock(side_effect=requests.Timeout())
+        with self.assertRaises(SpotifyTimeoutError):
+            self.client._run("next", operation, command=True)
+        operation.assert_called_once_with()
+
+    def test_liked_response_cannot_create_false_negatives(self):
+        """Reject incomplete or malformed liked responses instead of creating false negatives."""
+        for response in (None, [], [True], [True, None], {"items": []}):
+            with self.subTest(response=response):
+                self.spotify.current_user_saved_tracks_contains.return_value = response
+                with self.assertRaises(SpotifyInvalidResponseError):
+                    self.client.are_tracks_liked(["first", "second"])
+        self.spotify.current_user_saved_tracks_contains.return_value = [True, False]
+        self.assertEqual(self.client.are_tracks_liked(["first", "second"]), {"first": True, "second": False})
+
+    def test_liked_pages_distinguish_empty_from_invalid(self):
+        """Accept an empty liked page but reject responses without a valid items list."""
+        self.spotify.current_user_saved_tracks.return_value = {"items": []}
+        self.assertEqual(self.client.get_liked_songs(), {"items": []})
+        for response in (None, {}, {"items": None}):
+            with self.subTest(response=response):
+                self.spotify.current_user_saved_tracks.return_value = response
+                with self.assertRaises(SpotifyInvalidResponseError):
+                    self.client.get_liked_songs()
+
+    def test_playback_failure_does_not_overwrite_valid_cache(self):
+        """Verify a playback refresh timeout preserves the existing cache and writes no snapshot."""
+        cached = {"playback": self.playback, "fetched_at": 0}
+        self.session_state[reproduction.PLAYBACK_CACHE_KEY] = cached
+        self.spotify.current_playback.side_effect = requests.Timeout()
+        with patch("time.monotonic", return_value=100):
+            with self.assertRaises(SpotifyTimeoutError):
+                reproduction._get_playback(self.client)
+        self.assertIs(self.session_state[reproduction.PLAYBACK_CACHE_KEY], cached)
+        self.assertFalse((Path(self.playback_temp_dir.name) / "playback.json").exists())
+
+    def test_liked_failure_does_not_update_cache(self):
+        """Verify a liked-status timeout preserves cached values without adding a false negative."""
+        self.session_state[reproduction.LIKED_CACHE_KEY] = {"first": True}
+        self.spotify.current_user_saved_tracks_contains.side_effect = requests.Timeout()
+        with self.assertRaises(SpotifyTimeoutError):
+            reproduction._cache_liked_statuses(self.client, ["second"])
+        self.assertEqual(self.session_state[reproduction.LIKED_CACHE_KEY], {"first": True})
+
+    def test_view_failure_preserves_last_valid_state_and_recovers(self):
+        """Preserve the last valid view as stale during a timeout and clear the error after recovery."""
+        valid = {"playback": self.playback, "is_track_liked": True}
+        with patch.object(reproduction, "_get_reproduction_view_state", side_effect=[valid, SpotifyTimeoutError("read"), valid]):
+            self.assertFalse(reproduction._read_reproduction_view_state(self.client)["is_stale"])
+            stale = reproduction._read_reproduction_view_state(self.client)
+            self.assertTrue(stale["is_stale"])
+            self.assertTrue(stale["is_track_liked"])
+            self.assertEqual(stale["playback"], self.playback)
+            self.assertFalse(reproduction._read_reproduction_view_state(self.client)["is_stale"])
+        self.assertNotIn(reproduction.REPRODUCTION_ERROR_KEY, self.session_state)
+
+    def test_invalid_playback_and_recent_history_are_not_empty_data(self):
+        """Reject malformed playback and recent-history responses rather than treating them as empty."""
+        self.spotify.current_playback.return_value = []
+        with self.assertRaises(SpotifyInvalidResponseError):
+            self.client.get_current_playback()
+        self.spotify.current_user_recently_played.return_value = {}
+        with self.assertRaises(SpotifyInvalidResponseError):
+            self.client.get_recently_played()
+
+    def test_restore_fallback_only_handles_explicit_rejections(self):
+        """Allow restoration fallback after an explicit 404 but propagate timeouts without repeating the command."""
+        original = RuntimeError("context unavailable")
+        original.http_status = 404
+        self.spotify.start_playback.side_effect = original
+        self.assertFalse(reproduction._start_playback_for_restore(self.client, uri=self.track["uri"]))
+        self.spotify.start_playback.reset_mock()
+        self.spotify.start_playback.side_effect = requests.Timeout()
+        with self.assertRaises(SpotifyTimeoutError):
+            reproduction._start_playback_for_restore(self.client, uri=self.track["uri"])
+        self.spotify.start_playback.assert_called_once()
+
+    def test_transport_does_not_retry_commands(self):
+        """Verify token refresh creates a Spotipy transport with automatic retries disabled."""
+        response = Mock()
+        response.json.return_value = {"access_token": "test-access-token"}
+        with (
+            patch.object(spotifyclient.requests, "post", return_value=response),
+            patch.object(spotifyclient.spotipy, "Spotify") as transport,
+        ):
+            self.client._create_client_from_refresh_token("test-refresh-token")
+        self.assertEqual(transport.call_args.kwargs["retries"], 0)
+        self.assertEqual(transport.call_args.kwargs["status_retries"], 0)
+
+    def test_polling_error_reruns_once_and_never_becomes_empty_playback(self):
+        """Verify repeated polling timeouts trigger one rerun without fabricating valid playback state."""
+        with (
+            patch.object(reproduction, "has_spotify_auth_available", return_value=True),
+            patch.object(reproduction, "_get_spotify_client", return_value=self.client),
+            patch.object(reproduction, "_get_reproduction_view_state", side_effect=SpotifyTimeoutError("read")),
+        ):
+            with self.assertRaises(RerunRequested):
+                reproduction._check_reproduction_view_state()
+            reproduction._check_reproduction_view_state()
+        self.streamlit.rerun.assert_called_once()
+        self.assertIsInstance(self.session_state[reproduction.REPRODUCTION_ERROR_KEY], SpotifyTimeoutError)
+        self.assertNotIn(reproduction.LAST_VALID_VIEW_STATE_KEY, self.session_state)
+
+    def test_liked_sync_failure_never_reaches_deletions(self):
+        """Verify a liked-page timeout aborts synchronization before reading local IDs or deleting favorites."""
+        with patch.dict(sys.modules, {
+            "config": SimpleNamespace(
+                DBNAME="unused",
+                VERBOSE=False,
+                CLIENT_ID="test-client-id",
+                CLIENT_SECRET="test-client-secret",
+                REDIRECT_URI="http://127.0.0.1:8888/",
+            ),
+            "register.db": MagicMock(),
+            "register.artist": MagicMock(),
+        }):
+            import _liked_tracks as liked_tracks
+        database = MagicMock()
+        self.spotify.current_user_saved_tracks.side_effect = [
+            {"items": [{"track": {"id": "first"}}]},
+            requests.Timeout(),
+        ]
+        with (
+            patch.object(liked_tracks, "SpotifyClient", return_value=self.client),
+            patch.object(liked_tracks, "SimpleDB", return_value=database),
+            patch.object(liked_tracks.time, "sleep"),
+        ):
+            with self.assertRaises(SpotifyTimeoutError):
+                liked_tracks.save_liked_track_ids(limit=1)
+        database.delete_ids.assert_not_called()
+        database.get_all_ids.assert_not_called()
+
     def test_like_buttons_are_disabled_without_track_id(self):
+        """Disable liked buttons without track IDs and prevent pending actions or reruns."""
         self.streamlit.button.side_effect = None
         self.streamlit.button.return_value = True
         for position in ("previous", "current", "next"):
@@ -250,6 +446,7 @@ class ReproductionTest(unittest.TestCase):
         self.streamlit.rerun.assert_not_called()
 
     def test_track_blocks_use_automatic_responsive_layout(self):
+        """Verify automatic card placement, portrait proportions, and responsive sizing without st.columns."""
         self.streamlit.button.side_effect = None
         self.streamlit.button.return_value = False
 
@@ -342,6 +539,7 @@ class ReproductionTest(unittest.TestCase):
             self.assertIsNone(title.portrait_height.max_px)
 
     def test_track_titles_overlay_the_full_cover_without_intercepting_clicks(self):
+        """Verify title overlays cover the artwork without intercepting clicks and keep corner actions positioned."""
         reproduction._render_control_styles()
 
         css = self.streamlit.html.call_args.args[0]
@@ -367,6 +565,7 @@ class ReproductionTest(unittest.TestCase):
         self.assertIsNone(style.portrait)
 
     def test_track_separators_use_black_and_white_lines_in_both_orientations(self):
+        """Verify 4 px black-and-white separators in both orientations and 4 px blur on adjacent artwork."""
         reproduction._render_control_styles()
 
         css = self.streamlit.html.call_args.args[0]
@@ -384,6 +583,7 @@ class ReproductionTest(unittest.TestCase):
         self.assertIn("filter: blur(4px)", css)
 
     def test_track_info_renders_artist_and_album_below_title(self):
+        """Verify track metadata is HTML-escaped, ordered below the title, and paired with accessible controls."""
         reproduction._render_adjacent_track_info(
             {
                 "name": "Song <Title>",
@@ -410,11 +610,13 @@ class ReproductionTest(unittest.TestCase):
         self.assertTrue(self.streamlit.markdown.call_args.kwargs["unsafe_allow_html"])
 
     def test_track_info_handles_missing_album(self):
+        """Verify missing album metadata renders the unknown-album fallback text."""
         reproduction._render_adjacent_track_info({}, "Sin título")
 
         self.assertIn("Álbum desconocido", self.streamlit.markdown.call_args.args[0])
 
     def test_controls_use_the_shared_block_style_for_each_button(self):
+        """Verify playback buttons reuse shared styles, artwork, proportions, and liked-button styling."""
         self.streamlit.button.side_effect = None
         self.streamlit.button.return_value = False
 
@@ -489,6 +691,7 @@ class ReproductionTest(unittest.TestCase):
         )
 
     def test_pause_then_resume_after_spotify_loses_playback(self):
+        """Verify pausing saves artwork and playback resumes on the original device at 72 seconds after state loss."""
         self.spotify.current_playback.return_value = self.playback
         self.click_play_pause(self.playback)
         self.spotify.pause_playback.assert_called_once_with(device_id="original-device")
@@ -521,6 +724,7 @@ class ReproductionTest(unittest.TestCase):
         )
 
     def test_page_entry_refresh_fetches_playback_once(self):
+        """Verify page-entry invalidation fetches playback once and subsequent reads use the cache."""
         self.spotify.current_playback.return_value = self.playback
 
         with patch.object(reproduction.time, "monotonic", return_value=100):
@@ -531,6 +735,7 @@ class ReproductionTest(unittest.TestCase):
         self.spotify.current_playback.assert_called_once_with()
 
     def test_playing_track_near_end_respects_playback_poll_interval(self):
+        """Verify a track near its estimated end still respects the playback polling interval."""
         near_end_playback = {
             **self.playback,
             "progress_ms": self.track["duration_ms"] - 1_000,
@@ -551,6 +756,7 @@ class ReproductionTest(unittest.TestCase):
         self.spotify.current_playback.assert_called_once_with()
 
     def test_resume_preserves_queue_when_paused_track_is_still_available(self):
+        """Resume a recent pause without replacing the queue, setting a position, or transferring the device."""
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = {
             **self.playback, "paused_at": reproduction.time.monotonic()
         }
@@ -567,6 +773,7 @@ class ReproductionTest(unittest.TestCase):
         self.spotify.transfer_playback.assert_not_called()
 
     def test_resume_restores_context_when_spotify_loses_it(self):
+        """Verify resuming restores the saved playlist context, track offset, and position when context is lost."""
         context_uri = "spotify:playlist:playlist-id"
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = {
             **self.playback,
@@ -587,6 +794,7 @@ class ReproductionTest(unittest.TestCase):
         )
 
     def test_resume_restores_paused_track_when_live_track_changed(self):
+        """Restore the saved paused track and position when Spotify reports a different track in the same playlist."""
         context_uri = "spotify:playlist:playlist-id"
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = {
             **self.playback,
@@ -612,6 +820,7 @@ class ReproductionTest(unittest.TestCase):
         )
 
     def test_long_pause_restores_saved_track_and_position(self):
+        """Verify resuming after a long pause explicitly restores the saved track URI and 72-second position."""
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = {
             **self.playback, "paused_at": reproduction.time.monotonic() - 120
         }
@@ -625,6 +834,7 @@ class ReproductionTest(unittest.TestCase):
         )
 
     def test_pause_saves_queue_for_long_resume_without_context(self):
+        """Save the queue when pausing without context and restore the current track plus queued tracks in order."""
         self.spotify.current_playback.return_value = self.playback
         self.spotify.queue.return_value = {
             "currently_playing": self.track,
@@ -653,6 +863,7 @@ class ReproductionTest(unittest.TestCase):
         )
 
     def test_long_pause_restores_playlist_context_and_track_position(self):
+        """Restore playlist context, track offset, and saved position after a long pause with no live playback."""
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = {
             **self.playback,
             "context": {"uri": "spotify:playlist:playlist-id"},
@@ -670,6 +881,7 @@ class ReproductionTest(unittest.TestCase):
         )
 
     def test_persisted_pause_restores_context_and_position_in_new_session(self):
+        """Load a persisted pause in a new session and resume its original playlist, track, and position."""
         with tempfile.TemporaryDirectory() as temp_dir:
             state_path = Path(temp_dir) / "playback.json"
             with patch.object(reproduction, "PLAYBACK_STATE_PATH", state_path):
@@ -697,6 +909,7 @@ class ReproductionTest(unittest.TestCase):
         )
 
     def test_persisted_playing_track_is_available_when_spotify_has_no_playback(self):
+        """Recover a persisted playing track and progress as paused when Spotify reports no playback."""
         with tempfile.TemporaryDirectory() as temp_dir:
             state_path = Path(temp_dir) / "playback.json"
             with patch.object(reproduction, "PLAYBACK_STATE_PATH", state_path):
@@ -711,6 +924,7 @@ class ReproductionTest(unittest.TestCase):
         self.assertFalse(paused["is_playing"])
 
     def test_playback_poll_persists_track_for_a_new_session(self):
+        """Verify playback polling persists a snapshot that restores track and progress in a new session."""
         self.spotify.current_playback.return_value = self.playback
         reproduction._get_playback(self.client)
         self.assertTrue(reproduction.PLAYBACK_STATE_PATH.exists())
@@ -724,6 +938,7 @@ class ReproductionTest(unittest.TestCase):
         self.assertFalse(restored["is_playing"])
 
     def test_inactive_device_restores_track_even_when_paused_item_is_reported(self):
+        """Transfer to the original device and restore track and position without searching for other devices."""
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = self.playback
         self.spotify.current_playback.return_value = None
         self.click_play_pause({**self.playback, "is_playing": False})
@@ -738,9 +953,10 @@ class ReproductionTest(unittest.TestCase):
         )
 
     def test_missing_original_device_is_not_replaced_by_another_device(self):
+        """Verify an unavailable original device prevents playback without selecting a replacement."""
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = self.playback
         self.spotify.current_playback.return_value = None
-        self.spotify.transfer_playback.side_effect = RuntimeError("device unavailable")
+        self.spotify.transfer_playback.side_effect = self.device_error
         reproduction._render_playback_controls(
             client=self.client,
             playback={**self.playback, "is_playing": False},
@@ -757,6 +973,7 @@ class ReproductionTest(unittest.TestCase):
         self.streamlit.error.assert_not_called()
 
     def test_resume_does_not_search_for_a_replacement_device_id(self):
+        """Attempt the expired device ID once without searching for replacements or changing the snapshot."""
         snapshot = {
             **self.playback,
             "device": {
@@ -769,7 +986,7 @@ class ReproductionTest(unittest.TestCase):
         }
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = snapshot
         self.spotify.current_playback.return_value = None
-        self.spotify.transfer_playback.side_effect = RuntimeError("device unavailable")
+        self.spotify.transfer_playback.side_effect = self.device_error
 
         reproduction._handle_play_pause(
             self.client, {**self.playback, "is_playing": False}
@@ -786,6 +1003,7 @@ class ReproductionTest(unittest.TestCase):
         )
 
     def test_resume_does_not_guess_between_duplicate_device_matches(self):
+        """Verify duplicate device names never justify choosing a replacement for the saved device ID."""
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = {
             **self.playback,
             "device": {
@@ -796,7 +1014,7 @@ class ReproductionTest(unittest.TestCase):
             "paused_at": reproduction.time.monotonic() - 120,
         }
         self.spotify.current_playback.return_value = None
-        self.spotify.transfer_playback.side_effect = RuntimeError("device unavailable")
+        self.spotify.transfer_playback.side_effect = self.device_error
         self.spotify.devices.return_value = {
             "devices": [
                 {
@@ -826,6 +1044,7 @@ class ReproductionTest(unittest.TestCase):
         self.streamlit.error.assert_not_called()
 
     def test_stale_playing_view_resumes_instead_of_pausing(self):
+        """Use live paused state to resume playback even when the rendered view still appears to be playing."""
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = {
             **self.playback, "paused_at": reproduction.time.monotonic()
         }
@@ -839,6 +1058,7 @@ class ReproductionTest(unittest.TestCase):
         )
 
     def test_missing_item_keeps_saved_cover(self):
+        """Preserve the saved track and artwork as paused when Spotify returns no current item."""
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = self.playback
         self.spotify.current_playback.return_value = {
             "item": None, "is_playing": False
@@ -849,6 +1069,7 @@ class ReproductionTest(unittest.TestCase):
         self.assertEqual(reproduction._get_playback(self.client), paused)
 
     def test_next_discards_saved_paused_track(self):
+        """Verify skipping clears paused snapshots and playback cache so the old track cannot reappear."""
         self.spotify.current_playback.return_value = self.playback
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = self.playback
         self.session_state[reproduction.PLAYBACK_CACHE_KEY] = {
@@ -879,6 +1100,7 @@ class ReproductionTest(unittest.TestCase):
         self.assertEqual(reproduction._get_playback(self.client), {})
 
     def test_next_reactivates_original_device_after_idle(self):
+        """Reactivate the original idle device and start the queued track instead of issuing next_track."""
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = {
             **self.playback,
             "paused_at": reproduction.time.monotonic() - 120,
@@ -915,6 +1137,7 @@ class ReproductionTest(unittest.TestCase):
         self.spotify.next_track.assert_not_called()
 
     def test_next_after_long_pause_with_stale_live_item(self):
+        """Start the next queued URI after a long pause even when Spotify still reports the paused track."""
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = {
             **self.playback,
             "paused_at": reproduction.time.monotonic() - 120,
@@ -950,6 +1173,7 @@ class ReproductionTest(unittest.TestCase):
         self.spotify.next_track.assert_not_called()
 
     def test_next_without_queued_song_does_not_restart_current_track(self):
+        """Verify an empty queue after a long pause neither restarts the current track nor sends next_track."""
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = {
             **self.playback,
             "paused_at": reproduction.time.monotonic() - 120,
@@ -976,6 +1200,7 @@ class ReproductionTest(unittest.TestCase):
         self.streamlit.error.assert_not_called()
 
     def test_next_after_pause_does_not_use_stale_card_when_queue_unavailable(self):
+        """Ignore a stale next-track card when no queue is available after a long pause."""
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = {
             **self.playback,
             "paused_at": reproduction.time.monotonic() - 120,
@@ -1001,6 +1226,7 @@ class ReproductionTest(unittest.TestCase):
         self.streamlit.error.assert_not_called()
 
     def test_next_after_pause_uses_live_queue_instead_of_stale_card(self):
+        """Choose the live queue's next track instead of the stale track displayed on the card."""
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = {
             **self.playback,
             "paused_at": reproduction.time.monotonic() - 120,
@@ -1036,6 +1262,7 @@ class ReproductionTest(unittest.TestCase):
         )
 
     def test_next_after_long_pause_restores_remaining_queue(self):
+        """Verify skipping after a long pause restores all remaining queue URIs in order without a saved position."""
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = {
             **self.playback,
             "paused_at": reproduction.time.monotonic() - 120,
@@ -1072,6 +1299,7 @@ class ReproductionTest(unittest.TestCase):
         )
 
     def test_next_after_long_pause_restores_playlist_context(self):
+        """Restore the saved playlist context at the next track without applying the previous track's progress."""
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = {
             **self.playback,
             "context": {"uri": "spotify:playlist:playlist-id"},
@@ -1107,6 +1335,7 @@ class ReproductionTest(unittest.TestCase):
         )
 
     def test_adjacent_next_track_refreshes_after_long_pause(self):
+        """Refresh the adjacent next track from Spotify when its cached queue is stale after a long pause."""
         self.session_state[reproduction.ADJACENT_TRACKS_CACHE_KEY] = {
             "current_track_id": "track-id",
             "current": self.track,
@@ -1123,6 +1352,7 @@ class ReproductionTest(unittest.TestCase):
         self.assertEqual(next_track["uri"], "spotify:track:next-id")
 
     def test_adjacent_queue_is_not_refreshed_before_thirty_seconds(self):
+        """Verify adjacent queue polling waits 30 seconds and fetches once when that threshold is reached."""
         self.session_state[reproduction.ADJACENT_TRACKS_CACHE_KEY] = {
             "current_track_id": "track-id",
             "current": self.track,
