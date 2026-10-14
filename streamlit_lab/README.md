@@ -55,6 +55,13 @@ con `fill_container` y `portrait=ButtonDimensions(...)`. `PageStyle.caption_marg
 ajusta el margen de los captions. `render_button` conserva los argumentos
 habituales de `st.button` y acepta una imagen HTTP(S) como fondo.
 
+`ButtonStyle` y `ButtonDimensions` validan las medidas, proporciones y opciones
+tipográficas antes de generar CSS, y rechazan delimitadores de declaración,
+etiquetas, comentarios y funciones `url()` en valores CSS libres. Esta
+validación protege la estructura de las reglas; no sustituye a un parser CSS ni
+garantiza que todo valor admitido sea visualmente válido. Para imágenes usa
+`background_image`, que valida URLs HTTP(S).
+
 ```python
 from streamlit_lab.renderer import render_button, render_page_style
 from streamlit_lab.styles import ButtonDimensions, ButtonStyle, Insets, PageStyle
@@ -182,10 +189,15 @@ Los hijos se apilan según su layout local. `Layout.place()` sigue disponible pa
 composiciones planas que necesiten posiciones o extensiones explícitas.
 
 El panel `Distribucion` edita el layout raíz. El selector de bloque conserva los
-controles de apariencia y dimensiones individuales. `Restablecer ejemplo` recupera
-los cinco bloques y sus grupos. Los cambios duran durante la sesión. El JSON incluye
-la jerarquía de grupos y la configuración de los bloques; todavía no se puede
-importar. La estructura inicial está en `DEFAULT_GROUP` dentro de `app.py`.
+controles de apariencia y dimensiones individuales. En `Apariencia del bloque`,
+`Variante de estilo` permite editar `Normal`, `Hover`, `Seleccionado` y
+`Deshabilitado`. Las variantes opcionales se personalizan por separado, parten
+del estilo normal y pueden restablecerse para heredar ese estilo. El estado que
+se previsualiza se cambia aparte en `Comportamiento del bloque`. `Restablecer
+ejemplo` recupera los cinco bloques y sus grupos. Los cambios duran durante la
+sesión. El JSON incluye la jerarquía de grupos y la configuración de los bloques;
+todavía no se puede importar. La estructura inicial está en `DEFAULT_GROUP`
+dentro de `app.py`.
 
 El renderizador usa la clase `st-key-...` del contenedor y CSS: hay que comprobar
 la vista al actualizar Streamlit. La dependencia queda fijada a la version probada.
@@ -282,8 +294,8 @@ Los estilos por estado sustituyen al normal, no se mezclan campo a campo: usa
 visual sobre seleccionado; no se aplica a deshabilitado. Seleccionado tiene un
 contorno interior y deshabilitado reduce la opacidad. Son estados de apariencia,
 no bloquean teclado, eventos ni widgets hijos: cada widget debe recibir su propio
-`disabled=True` cuando corresponda. El panel permite elegir el estado; los estilos
-alternativos se definen en Python.
+`disabled=True` cuando corresponda. El panel permite elegir el estado a previsualizar
+y editar cada estilo alternativo sin modificar los demás.
 
 ### Apariencia
 
