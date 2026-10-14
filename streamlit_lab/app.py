@@ -64,7 +64,39 @@ with st.sidebar:
     try:
         candidate = block_controls(current)
         with st.expander("Apariencia del bloque"):
-            style = style_controls(current.style, f"{current.key}_style")
+            style_variants = {
+                "normal": "Normal",
+                "hover": "Hover",
+                "selected": "Seleccionado",
+                "disabled": "Deshabilitado",
+            }
+            style_variant = st.selectbox(
+                "Variante de estilo",
+                list(style_variants),
+                format_func=style_variants.__getitem__,
+                key=f"{current.key}_style_variant",
+            )
+            if style_variant == "normal":
+                candidate = replace(
+                    candidate,
+                    style=style_controls(current.style, f"{current.key}_style"),
+                )
+            else:
+                style_attribute = f"{style_variant}_style"
+                variant_style = getattr(current, style_attribute)
+                customize_variant = st.checkbox(
+                    "Personalizar esta variante",
+                    value=variant_style is not None,
+                    key=f"{current.key}_{style_variant}_style_custom",
+                )
+                if customize_variant:
+                    variant_style = style_controls(
+                        variant_style or current.style,
+                        f"{current.key}_{style_variant}_style",
+                    )
+                else:
+                    variant_style = None
+                candidate = replace(candidate, **{style_attribute: variant_style})
         width = size_controls("Ancho", current.width, f"{current.key}_width", ["%", "vw", "px"])
         auto_height = st.checkbox("Alto automatico", value=current.height is None, key=f"{current.key}_auto_height")
         ratio = None
@@ -76,7 +108,7 @@ with st.sidebar:
         else:
             height = size_controls("Alto", current.height or Size(180), f"{current.key}_height", ["vh", "px"])
         candidate_blocks = list(st.session_state.blocks)
-        candidate_blocks[selected] = replace(candidate, color=color, width=width, height=height, style=style, aspect_ratio=ratio)
+        candidate_blocks[selected] = replace(candidate, color=color, width=width, height=height, aspect_ratio=ratio)
         st.session_state.group.validate({block.key: block for block in candidate_blocks})
         st.session_state.blocks = candidate_blocks
     except ValueError as error:

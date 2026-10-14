@@ -166,6 +166,28 @@ class BlockTests(unittest.TestCase):
             with self.subTest(arguments=arguments), self.assertRaises(ValueError):
                 Block(**arguments)
 
+    def test_render_block_emits_custom_hover_style(self):
+        from contextlib import nullcontext
+        from unittest.mock import patch
+
+        from streamlit_lab.renderer import render_block
+
+        with patch("streamlit_lab.renderer.st.html") as html, patch(
+            "streamlit_lab.renderer.st.container", return_value=nullcontext()
+        ):
+            with render_block(
+                Block(
+                    "hovered",
+                    hover_style=BlockStyle(border=Border(2, "#123456")),
+                )
+            ):
+                pass
+
+        css = html.call_args.args[0]
+        self.assertIn(".st-key-lab-hovered:hover", css)
+        self.assertIn("border-width: 2px", css)
+        self.assertIn("border-color: #123456", css)
+
     def test_portrait_height_is_rendered_only_when_configured(self):
         from unittest.mock import patch
         from streamlit_lab.renderer import render_block
@@ -393,6 +415,41 @@ class LayoutTests(unittest.TestCase):
         self.assertFalse(app.exception)
         self.assertIsNone(app.session_state.blocks[0].height)
         self.assertEqual(app.session_state.blocks[0].aspect_ratio, 2)
+
+    def test_state_style_variants_are_edited_independently_and_resettable(self):
+        from pathlib import Path
+        from streamlit.testing.v1 import AppTest
+
+        app = AppTest.from_file(str(Path(__file__).with_name("app.py"))).run()
+        initial_style = app.session_state.blocks[0].style
+
+        app.selectbox(key="principal_style_variant").select("hover").run()
+        app.checkbox(key="principal_hover_style_custom").check().run()
+        app.number_input(key="principal_hover_style_radius_all").set_value(12).run()
+
+        block = app.session_state.blocks[0]
+        self.assertFalse(app.exception)
+        self.assertEqual(block.style, initial_style)
+        self.assertEqual(block.hover_style.radius, 12)
+        self.assertIsNone(block.selected_style)
+
+        app.selectbox(key="principal_state").select("selected").run()
+        app.selectbox(key="principal_style_variant").select("selected").run()
+        app.checkbox(key="principal_selected_style_custom").check().run()
+        app.number_input(key="principal_selected_style_radius_all").set_value(4).run()
+
+        block = app.session_state.blocks[0]
+        self.assertFalse(app.exception)
+        self.assertEqual(block.state, "selected")
+        self.assertEqual(block.hover_style.radius, 12)
+        self.assertEqual(block.selected_style.radius, 4)
+
+        app.selectbox(key="principal_style_variant").select("hover").run()
+        app.checkbox(key="principal_hover_style_custom").uncheck().run()
+        block = app.session_state.blocks[0]
+        self.assertFalse(app.exception)
+        self.assertIsNone(block.hover_style)
+        self.assertEqual(block.selected_style.radius, 4)
 
 
 class GroupTests(unittest.TestCase):
