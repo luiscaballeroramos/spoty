@@ -416,6 +416,16 @@ class ReproductionTest(unittest.TestCase):
             position_ms=72_000,
         )
 
+    def test_page_entry_refresh_fetches_playback_once(self):
+        self.spotify.current_playback.return_value = self.playback
+
+        with patch.object(reproduction.time, "monotonic", return_value=100):
+            reproduction.refresh_playback_on_page_entry()
+            reproduction._get_playback(self.client)
+            reproduction._get_playback(self.client)
+
+        self.spotify.current_playback.assert_called_once_with()
+
     def test_resume_preserves_queue_when_paused_track_is_still_available(self):
         self.session_state[reproduction.PAUSED_PLAYBACK_KEY] = {
             **self.playback, "paused_at": reproduction.time.monotonic()
