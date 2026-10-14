@@ -33,6 +33,11 @@ class StyleTests(unittest.TestCase):
         self.assertEqual(Insets(1, 2, 3, 4).css(), "1px 2px 3px 4px")
         self.assertEqual(Corners(1, 2, 3, 4).css(), "1px 2px 3px 4px")
         self.assertIn("rgba(0, 0, 0, 0.15)", Shadow().css())
+        self.assertEqual(
+            ButtonStyle(max_width="none", font_size="small").max_width,
+            "none",
+        )
+        self.assertEqual(ButtonDimensions(width="fit-content(20rem)").width, "fit-content(20rem)")
         style = BlockStyle(padding=Insets(left=8), radius=Corners(top_left=6), border=Border(2))
         self.assertEqual(Block("styled", style=style).active_style(), style)
         self.assertEqual(Block("selected", selected_style=style, state="selected").active_style(), style)
@@ -47,6 +52,17 @@ class StyleTests(unittest.TestCase):
             lambda: BlockStyle(background_image="javascript:alert(1)"),
             lambda: BlockStyle(content_horizontal="invalid"), lambda: BlockStyle(overflow="invalid"),
             lambda: ButtonStyle(portrait="invalid"),
+            lambda: ButtonStyle(background="red; color: blue"),
+            lambda: ButtonStyle(background="</style><script>alert(1)</script>"),
+            lambda: ButtonStyle(background="url(javascript:alert(1))"),
+            lambda: ButtonStyle(width="100%; color: red"),
+            lambda: ButtonStyle(max_width="20rem; display: none"),
+            lambda: ButtonStyle(aspect_ratio="0 / 1"),
+            lambda: ButtonStyle(font_weight="1001"),
+            lambda: ButtonStyle(text_align="center; display: none"),
+            lambda: ButtonDimensions(width="100%; display: none"),
+            lambda: ButtonDimensions(height="calc(100% - 1rem"),
+            lambda: ButtonDimensions(aspect_ratio="1 / -1"),
             lambda: PageStyle(caption_margin_px=-1),
             lambda: Block("ratio", aspect_ratio=2), lambda: Block("ratio", height=None, aspect_ratio=0),
             lambda: Layout(column_weights=(1, 2)),

@@ -11,7 +11,6 @@ with patch.dict(sys.modules, {
     "register.artist": MagicMock(),
     "services.reproduction": MagicMock(),
 }):
-    from app_views import interface_layout
     from app_views import reproduction
     from spotifyapi.spotifyclient import SpotifyClient
 
@@ -45,11 +44,6 @@ class ReproductionTest(unittest.TestCase):
         self.streamlit_patch = patch.object(reproduction, "st", self.streamlit)
         self.streamlit_patch.start()
         self.addCleanup(self.streamlit_patch.stop)
-        self.layout_streamlit_patch = patch.object(
-            interface_layout, "st", self.streamlit
-        )
-        self.layout_streamlit_patch.start()
-        self.addCleanup(self.layout_streamlit_patch.stop)
         self.renderer_streamlit_patch = patch.object(
             renderer, "st", self.streamlit
         )
