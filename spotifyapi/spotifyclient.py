@@ -1,4 +1,5 @@
 import os
+import time
 from pathlib import Path
 from typing import Any, Callable
 
@@ -19,6 +20,7 @@ SPOTIFY_SCOPE = (
     "user-library-modify"
 )
 DEFAULT_CACHE_PATH = Path(__file__).resolve().parents[1] / ".cache"
+_SPOTIFY_RATE_LIMITED_UNTIL = 0.0
 
 
 def _create_oauth_manager() -> SpotifyOAuth:
@@ -107,10 +109,32 @@ class SpotifyClient:
         command: bool = False,
         **kwargs: Any,
     ) -> Any:
+        global _SPOTIFY_RATE_LIMITED_UNTIL
+        remaining_cooldown = _SPOTIFY_RATE_LIMITED_UNTIL - time.monotonic()
+        if remaining_cooldown > 0:
+            if VERBOSE:
+                print(
+                    f"Skipping {action}; Spotify rate limit cooldown has "
+                    f"{remaining_cooldown:.0f} seconds remaining."
+                )
+            return False if command else None
+
         try:
             result = operation(*args, **kwargs)
             return True if command else result
         except Exception as exc:
+            if getattr(exc, "http_status", None) == 429:
+                headers = getattr(exc, "headers", {}) or {}
+                retry_after = headers.get("Retry-After", headers.get("retry-after", 1))
+                try:
+                    retry_after_seconds = max(0.0, float(retry_after))
+                except (TypeError, ValueError):
+                    retry_after_seconds = 1.0
+                _SPOTIFY_RATE_LIMITED_UNTIL = time.monotonic() + retry_after_seconds
+                print(
+                    "Spotify API rate limit hit (429). Pausing requests for "
+                    f"{retry_after_seconds:g} seconds."
+                )
             if VERBOSE:
                 print(f"Error trying to {action}: {exc}")
             return False if command else None
@@ -279,10 +303,26 @@ class SpotifyClient:
             command=True,
         )
 
-    def is_track_liked(self, track_id: str) -> bool:
-        response = self._run(
-            f"check liked status for track {track_id}",
-            self.sp.current_user_saved_tracks_contains,
-            [track_id],
+    def are_tracks_liked(self, track_ids: list[str]) -> dict[str, bool]:
+        unique_track_ids = list(
+            dict.fromkeys(track_id for track_id in track_ids if track_id)
         )
-        return bool(response and response[0])
+        if not unique_track_ids:
+            return {}
+
+        response = self._run(
+            "check liked status for tracks",
+            self.sp.current_user_saved_tracks_contains,
+            unique_track_ids,
+        )
+        return {
+            track_id: (
+                bool(response[index])
+                if response and index < len(response)
+                else False
+            )
+            for index, track_id in enumerate(unique_track_ids)
+        }
+
+    def is_track_liked(self, track_id: str) -> bool:
+        return self.are_tracks_liked([track_id]).get(track_id, False)

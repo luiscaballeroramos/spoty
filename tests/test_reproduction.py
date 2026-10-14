@@ -12,6 +12,7 @@ with patch.dict(sys.modules, {
     "services.reproduction": MagicMock(),
 }):
     from app_views import reproduction
+    import spotifyapi.spotifyclient as spotifyclient
     from spotifyapi.spotifyclient import SpotifyClient
 
 
@@ -134,6 +135,44 @@ class ReproductionTest(unittest.TestCase):
         self.assertFalse(reproduction._is_track_liked(self.client, "previous-id"))
         self.assertFalse(reproduction._is_track_liked(self.client, None))
         self.assertEqual(self.spotify.current_user_saved_tracks_contains.call_count, 1)
+
+    def test_visible_track_liked_statuses_are_fetched_in_one_batch(self):
+        self.spotify.current_user_saved_tracks_contains.return_value = [
+            True, False, True,
+        ]
+
+        reproduction._cache_liked_statuses(
+            self.client,
+            ["track-id", "previous-id", "track-id", None, "next-id"],
+        )
+
+        self.spotify.current_user_saved_tracks_contains.assert_called_once_with(
+            ["track-id", "previous-id", "next-id"]
+        )
+        self.assertTrue(reproduction._is_track_liked(self.client, "track-id"))
+        self.assertFalse(reproduction._is_track_liked(self.client, "previous-id"))
+        self.assertTrue(reproduction._is_track_liked(self.client, "next-id"))
+        self.assertEqual(self.spotify.current_user_saved_tracks_contains.call_count, 1)
+
+    def test_spotify_429_logs_and_honors_retry_after(self):
+        rate_limit_error = RuntimeError("rate limited")
+        rate_limit_error.http_status = 429
+        rate_limit_error.headers = {"Retry-After": "30"}
+        operation = Mock(side_effect=[rate_limit_error, "recovered"])
+
+        with (
+            patch.object(spotifyclient, "_SPOTIFY_RATE_LIMITED_UNTIL", 0),
+            patch("time.monotonic", side_effect=[100, 100, 105, 130]),
+            patch("builtins.print") as print_mock,
+        ):
+            self.assertIsNone(self.client._run("test request", operation))
+            self.assertIsNone(self.client._run("test request", operation))
+            self.assertEqual(self.client._run("test request", operation), "recovered")
+
+        self.assertEqual(operation.call_count, 2)
+        print_mock.assert_any_call(
+            "Spotify API rate limit hit (429). Pausing requests for 30 seconds."
+        )
 
     def test_like_buttons_are_disabled_without_track_id(self):
         self.streamlit.button.side_effect = None
@@ -402,7 +441,6 @@ class ReproductionTest(unittest.TestCase):
             "https://example.com/cover.jpg",
         )
 
-        self.session_state.pop(reproduction.PLAYBACK_FORCE_REFRESH_UNTIL_KEY, None)
         self.assertEqual(reproduction._get_playback(self.client), paused)
         self.spotify.devices.return_value["devices"][0]["is_active"] = False
         self.click_play_pause(paused)
@@ -421,6 +459,26 @@ class ReproductionTest(unittest.TestCase):
 
         with patch.object(reproduction.time, "monotonic", return_value=100):
             reproduction.refresh_playback_on_page_entry()
+            reproduction._get_playback(self.client)
+            reproduction._get_playback(self.client)
+
+        self.spotify.current_playback.assert_called_once_with()
+
+    def test_playing_track_near_end_respects_playback_poll_interval(self):
+        near_end_playback = {
+            **self.playback,
+            "progress_ms": self.track["duration_ms"] - 1_000,
+        }
+        self.spotify.current_playback.return_value = near_end_playback
+        self.session_state[reproduction.PLAYBACK_CACHE_KEY] = {
+            "playback": near_end_playback,
+            "fetched_at": 100,
+        }
+
+        clock = Mock()
+        clock.monotonic.side_effect = [101, 104, 105]
+        with patch.object(reproduction, "time", clock):
+            reproduction._get_playback(self.client)
             reproduction._get_playback(self.client)
             reproduction._get_playback(self.client)
 
@@ -997,6 +1055,30 @@ class ReproductionTest(unittest.TestCase):
         _, next_track = reproduction._get_adjacent_tracks(self.client, self.track)
 
         self.assertEqual(next_track["uri"], "spotify:track:next-id")
+
+    def test_adjacent_queue_is_not_refreshed_before_thirty_seconds(self):
+        self.session_state[reproduction.ADJACENT_TRACKS_CACHE_KEY] = {
+            "current_track_id": "track-id",
+            "current": self.track,
+            "previous": {},
+            "next": {},
+            "fetched_at": 100,
+        }
+
+        clock = Mock()
+        clock.monotonic.return_value = 120
+        with patch.object(reproduction, "time", clock):
+            reproduction._get_adjacent_tracks(self.client, self.track)
+        self.spotify.queue.assert_not_called()
+
+        self.spotify.queue.return_value = {
+            "queue": [{"id": "next-id", "uri": "spotify:track:next-id"}]
+        }
+        clock = Mock()
+        clock.monotonic.side_effect = [130, 130]
+        with patch.object(reproduction, "time", clock):
+            reproduction._get_adjacent_tracks(self.client, self.track)
+        self.spotify.queue.assert_called_once_with()
 
 
 if __name__ == "__main__":
