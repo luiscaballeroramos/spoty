@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, Mock, patch
 from streamlit_lab import renderer
 from streamlit_lab import Position
 import requests
+from spotifyapi.diagnostics import OPERATIONS, OperationFormatter, OperationLog
 from spotifyapi.errors import (
     SpotifyAuthorizationError,
     SpotifyInvalidResponseError,
@@ -42,6 +43,9 @@ class ReproductionTest(unittest.TestCase):
 
     def setUp(self):
         """Create isolated session state, mocked clients, and a temporary snapshot with cleanup."""
+        self.incidents_patch = patch.object(OPERATIONS, "_incidents", {})
+        self.incidents_patch.start()
+        self.addCleanup(self.incidents_patch.stop)
         self.playback_temp_dir = tempfile.TemporaryDirectory()
         self.addCleanup(self.playback_temp_dir.cleanup)
         self.playback_path_patch = patch.object(
@@ -253,7 +257,7 @@ class ReproductionTest(unittest.TestCase):
         with (
             patch.object(spotifyclient, "_SPOTIFY_RATE_LIMITED_UNTIL", 0),
             patch("time.monotonic", side_effect=[100, 100, 105, 130]),
-            patch("builtins.print") as print_mock,
+            self.assertLogs("spoty.operations", level="INFO") as captured,
         ):
             with self.assertRaises(SpotifyRateLimitError) as first:
                 self.client._run("test request", operation)
@@ -265,15 +269,126 @@ class ReproductionTest(unittest.TestCase):
             self.assertEqual(self.client._run("test request", operation), "recovered")
 
         self.assertEqual(operation.call_count, 2)
-        print_mock.assert_any_call(
-            "Spotify API rate limit hit (429). Pausing requests for 30 seconds."
-        )
+        self.assertEqual([record.msg for record in captured.records], ["operation_failed", "operation_recovered"])
+        self.assertEqual(captured.records[0].retry_after, 30)
+        self.assertEqual(captured.records[1].count, 2)
 
     def test_spotify_valid_empty_response_is_not_an_error(self):
         """Accept valid empty reads and treat a command returning no content as successful."""
         self.assertIsNone(self.client._run("playback", Mock(return_value=None)))
         self.assertEqual(self.client._run("read", Mock(return_value=[])), [])
         self.assertTrue(self.client._run("command", Mock(return_value=None), command=True))
+
+    def test_operation_logs_exclude_sensitive_exception_text_and_action_arguments(self):
+        """Verify diagnostic metadata excludes tokens, callback codes, DSNs, and raw exception messages."""
+        observer = OperationLog()
+        original = SpotifyTimeoutError("read")
+        original.args = ("token=secret-token code=secret-code postgresql://user:password@host/db",)
+        with self.assertLogs("spoty.operations", level="WARNING") as captured:
+            with self.assertRaises(SpotifyTimeoutError):
+                with observer.observe("read secret-token", "spotify"):
+                    raise original
+        formatted = OperationFormatter().format(captured.records[0])
+        for secret in ("secret-token", "secret-code", "password", "postgresql://"):
+            self.assertNotIn(secret, formatted)
+        self.assertIn('"operation": "operation"', formatted)
+        self.assertIn('"error_type": "SpotifyTimeoutError"', formatted)
+        self.assertIn('"duration_ms":', formatted)
+        self.assertIn(original.run_id, formatted)
+
+    def test_operation_logs_group_repeated_failures_and_report_recovery(self):
+        """Verify repeated failures and nested catches log once until a successful operation resets the incident."""
+        observer = OperationLog()
+        with self.assertLogs("spoty.operations", level="INFO") as captured:
+            for attempt in range(3):
+                with self.assertRaises(SpotifyTimeoutError):
+                    with observer.observe("get current playback"):
+                        with observer.observe("get current playback"):
+                            raise SpotifyTimeoutError("get current playback")
+            with observer.observe("get current playback"):
+                pass
+            with self.assertRaises(SpotifyTimeoutError):
+                with observer.observe("get current playback"):
+                    raise SpotifyTimeoutError("get current playback")
+        self.assertEqual([record.msg for record in captured.records], ["operation_failed", "operation_recovered", "operation_failed"])
+        self.assertEqual(captured.records[1].count, 3)
+        self.assertEqual(captured.records[0].run_id, captured.records[1].run_id)
+        self.assertNotEqual(captured.records[0].run_id, captured.records[2].run_id)
+
+    def test_invalid_responses_remain_one_incident_until_valid_data_recovers(self):
+        """Verify malformed responses stay grouped until response validation succeeds."""
+        self.spotify.current_user_saved_tracks_contains.return_value = []
+        with self.assertLogs("spoty.operations", level="INFO") as captured:
+            for attempt in range(2):
+                with self.assertRaises(SpotifyInvalidResponseError):
+                    self.client.are_tracks_liked(["track-id"])
+            self.spotify.current_user_saved_tracks_contains.return_value = [True]
+            self.assertTrue(self.client.is_track_liked("track-id"))
+        self.assertEqual([record.msg for record in captured.records], ["operation_failed", "operation_recovered"])
+        self.assertEqual(captured.records[1].count, 2)
+
+    def _create_liked_service(self, database_factory):
+        """Load the real liked-track service with mocked configuration, client imports, and database access."""
+        with patch.dict(sys.modules, {
+            "config": SimpleNamespace(DBNAME="unused", VERBOSE=False),
+            "register.db": SimpleNamespace(SimpleDB=database_factory),
+            "spotifyapi.spotifyclient": SimpleNamespace(SpotifyClient=SpotifyClient),
+        }):
+            from services.reproduction import ReproductionService
+        return ReproductionService(self.client)
+
+    def test_database_failure_logs_safe_metadata_once(self):
+        """Verify a local liked-track failure logs one database event without leaking its exception message."""
+        database = Mock()
+        database.insert.side_effect = RuntimeError("postgresql://user:secret-password@host/db")
+        service = self._create_liked_service(Mock(return_value=database))
+        with self.assertLogs("spoty.operations", level="ERROR") as captured:
+            self.assertFalse(service.save_liked_track("track-id"))
+        self.assertEqual(len(captured.records), 1)
+        self.assertEqual(captured.records[0].provider, "postgresql")
+        self.assertEqual(captured.records[0].operation, "save liked track")
+        self.assertNotIn("secret-password", OperationFormatter().format(captured.records[0]))
+
+    def test_service_does_not_duplicate_client_failure_logs(self):
+        """Verify Spotify failures propagate through the service with one log and no local write."""
+        database_factory = Mock()
+        service = self._create_liked_service(database_factory)
+        self.spotify.current_user_saved_tracks_add.side_effect = requests.Timeout("secret-token")
+        with self.assertLogs("spoty.operations", level="WARNING") as captured:
+            with self.assertRaises(SpotifyTimeoutError):
+                service.save_liked_track("track-id")
+        self.assertEqual(len(captured.records), 1)
+        self.assertEqual(captured.records[0].provider, "spotify")
+        database_factory.assert_not_called()
+
+    def test_initialization_logs_missing_authorization_once(self):
+        """Verify missing cached authorization produces one safe initialization event without accessing real tokens."""
+        oauth = Mock()
+        oauth.cache_handler.get_cached_token.return_value = None
+        with (
+            patch.dict(spotifyclient.os.environ, {"SPOTIFY_REFRESH_TOKEN": ""}),
+            patch.object(spotifyclient, "_create_oauth_manager", return_value=oauth),
+            self.assertLogs("spoty.operations", level="WARNING") as captured,
+        ):
+            with self.assertRaises(SpotifyAuthorizationError):
+                SpotifyClient()
+        self.assertEqual(len(captured.records), 1)
+        self.assertEqual(captured.records[0].operation, "initialize Spotify client")
+
+    def test_malformed_token_response_logs_without_leaking_token_values(self):
+        """Verify invalid token payloads are logged before recovery without exposing refresh tokens or response contents."""
+        response = Mock()
+        response.json.return_value = {"unexpected": "secret-response"}
+        with (
+            patch.object(spotifyclient.requests, "post", return_value=response),
+            self.assertLogs("spoty.operations", level="WARNING") as captured,
+        ):
+            with self.assertRaises(SpotifyInvalidResponseError):
+                self.client._create_client_from_refresh_token("secret-refresh-token")
+        self.assertEqual(len(captured.records), 1)
+        formatted = OperationFormatter().format(captured.records[0])
+        self.assertNotIn("secret-response", formatted)
+        self.assertNotIn("secret-refresh-token", formatted)
 
     def test_spotify_errors_preserve_category_and_cause(self):
         """Verify HTTP, timeout, connection, and JSON failures retain their category and original cause."""
