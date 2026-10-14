@@ -24,18 +24,15 @@ from spotifyapi.streamlit_auth import (
     render_spotify_authorization_section,
 )
 
-PLAYBACK_REFRESH_MARGIN_MS = 2_000
 PLAYBACK_FRAGMENT_INTERVAL_SECONDS = 1
 PLAYBACK_PLAYING_POLL_SECONDS = 5
 PLAYBACK_PAUSED_POLL_SECONDS = 5
 PLAYBACK_RESTORE_AFTER_SECONDS = 60
-PLAYBACK_CONTROL_REFRESH_SECONDS = 4
-ADJACENT_TRACKS_POLL_SECONDS = 15
+ADJACENT_TRACKS_POLL_SECONDS = 30
 PLAYBACK_CACHE_KEY = "reproduction_playback_cache"
 PAUSED_PLAYBACK_KEY = "reproduction_paused_playback"
 PERSISTED_PLAYBACK_LOADED_KEY = "reproduction_persisted_playback_loaded"
 PLAYBACK_STATE_PATH = Path(__file__).resolve().parents[1] / ".playback_state.json"
-PLAYBACK_FORCE_REFRESH_UNTIL_KEY = "reproduction_force_refresh_until"
 SPOTIFY_CLIENT_CACHE_KEY = "reproduction_spotify_client"
 SPOTIFY_CLIENT_MAX_AGE_SECONDS = 50 * 60
 LIKED_CACHE_KEY = "reproduction_liked_cache"
@@ -246,14 +243,9 @@ def _copy_playback_with_estimated_progress(
 def _get_playback(client: SpotifyClient) -> dict:
     _load_persisted_playback()
     now = time.monotonic()
-    force_refresh_until = st.session_state.get(PLAYBACK_FORCE_REFRESH_UNTIL_KEY, 0)
-    should_force_refresh = now < force_refresh_until
-    if force_refresh_until and not should_force_refresh:
-        st.session_state.pop(PLAYBACK_FORCE_REFRESH_UNTIL_KEY, None)
-
     saved_playback = st.session_state.get(PAUSED_PLAYBACK_KEY)
     cached = st.session_state.get(PLAYBACK_CACHE_KEY)
-    if cached and not should_force_refresh:
+    if cached:
         playback = cached["playback"]
         item = playback.get("item") or {}
         progress_ms = playback.get("progress_ms")
@@ -275,7 +267,6 @@ def _get_playback(client: SpotifyClient) -> dict:
             isinstance(progress_ms, (int, float))
             and isinstance(duration_ms, (int, float))
             and elapsed_ms < PLAYBACK_PLAYING_POLL_SECONDS * 1000
-            and progress_ms + elapsed_ms + PLAYBACK_REFRESH_MARGIN_MS < duration_ms
         ):
             return _copy_playback_with_estimated_progress(
                 playback, cached["fetched_at"], now
@@ -319,18 +310,11 @@ def _invalidate_playback_cache() -> None:
     st.session_state.pop(PLAYBACK_CACHE_KEY, None)
 
 
-def _request_playback_refresh_window() -> None:
-    st.session_state[PLAYBACK_FORCE_REFRESH_UNTIL_KEY] = (
-        time.monotonic() + PLAYBACK_CONTROL_REFRESH_SECONDS
-    )
-
-
 def refresh_playback_on_page_entry() -> None:
     _invalidate_playback_cache()
     st.session_state.pop(ADJACENT_TRACKS_CACHE_KEY, None)
     st.session_state.pop(ADJACENT_TRACK_HISTORY_KEY, None)
     st.session_state.pop(ADJACENT_PREVIOUS_REQUEST_KEY, None)
-    _request_playback_refresh_window()
 
 
 def _get_track_artists(track: dict) -> str:
@@ -512,14 +496,12 @@ def _handle_play_pause(client: SpotifyClient, playback: dict) -> None:
 
     if succeeded:
         _invalidate_playback_cache()
-        _request_playback_refresh_window()
         st.rerun()
 def _handle_previous_track(client: SpotifyClient, previous_track: dict) -> None:
     if client.previous_track():
         _invalidate_playback_cache()
         _clear_paused_playback()
         st.session_state[ADJACENT_PREVIOUS_REQUEST_KEY] = previous_track.get("id")
-        _request_playback_refresh_window()
         st.rerun()
 
 
@@ -597,8 +579,22 @@ def _handle_next_track(client: SpotifyClient, playback: dict) -> None:
         _invalidate_playback_cache()
         _clear_paused_playback()
         st.session_state.pop(ADJACENT_PREVIOUS_REQUEST_KEY, None)
-        _request_playback_refresh_window()
         st.rerun()
+
+
+def _cache_liked_statuses(
+    client: SpotifyClient, track_ids: list[str | None]
+) -> None:
+    liked_cache = st.session_state.setdefault(LIKED_CACHE_KEY, {})
+    uncached_track_ids = list(
+        dict.fromkeys(
+            track_id
+            for track_id in track_ids
+            if track_id and track_id not in liked_cache
+        )
+    )
+    if uncached_track_ids:
+        liked_cache.update(client.are_tracks_liked(uncached_track_ids))
 
 
 def _is_track_liked(client: SpotifyClient, track_id: str | None) -> bool:
@@ -609,7 +605,7 @@ def _is_track_liked(client: SpotifyClient, track_id: str | None) -> bool:
         return pending_action.get("action") == "like"
     liked_cache = st.session_state.setdefault(LIKED_CACHE_KEY, {})
     if track_id not in liked_cache:
-        liked_cache[track_id] = client.is_track_liked(track_id)
+        _cache_liked_statuses(client, [track_id])
     return bool(liked_cache[track_id])
 
 
@@ -1138,7 +1134,6 @@ def render_reproduction_page():
     item = playback.get("item") or {}
     track_id = item.get("id")
 
-    is_track_liked = _is_track_liked(client, track_id)
     track_name = item.get("name")
     artists = item.get("artists") or []
     artist_names = [artist.get("name") for artist in artists if artist.get("name")]
@@ -1152,6 +1147,11 @@ def render_reproduction_page():
         None,
     )
     previous_track, next_track = _get_adjacent_tracks(client, item)
+    _cache_liked_statuses(
+        client,
+        [track_id, previous_track.get("id"), next_track.get("id")],
+    )
+    is_track_liked = _is_track_liked(client, track_id)
 
     artists_text = ", ".join(artist_names)
 
