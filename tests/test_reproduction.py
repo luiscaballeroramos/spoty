@@ -154,6 +154,65 @@ class ReproductionTest(unittest.TestCase):
         self.assertTrue(reproduction._is_track_liked(self.client, "next-id"))
         self.assertEqual(self.spotify.current_user_saved_tracks_contains.call_count, 1)
 
+    def test_view_signature_ignores_playback_progress_but_tracks_visible_changes(self):
+        view_state = {
+            "playback": self.playback.copy(),
+            "item": self.track,
+            "previous_track": {},
+            "next_track": {},
+            "is_track_liked": False,
+            "is_previous_track_liked": False,
+            "is_next_track_liked": False,
+        }
+        initial_signature = reproduction._reproduction_view_signature(view_state)
+
+        view_state["playback"] = {**self.playback, "progress_ms": 73_000}
+        self.assertEqual(
+            reproduction._reproduction_view_signature(view_state),
+            initial_signature,
+        )
+
+        view_state["playback"] = {**self.playback, "is_playing": False}
+        self.assertNotEqual(
+            reproduction._reproduction_view_signature(view_state),
+            initial_signature,
+        )
+
+    def test_view_state_check_reruns_only_when_visible_state_changes(self):
+        view_state = {
+            "playback": self.playback,
+            "item": self.track,
+            "previous_track": {},
+            "next_track": {},
+            "is_track_liked": False,
+            "is_previous_track_liked": False,
+            "is_next_track_liked": False,
+        }
+        self.session_state[reproduction.REPRODUCTION_VIEW_SIGNATURE_KEY] = (
+            reproduction._reproduction_view_signature(view_state)
+        )
+        with (
+            patch.object(reproduction, "has_spotify_auth_available", return_value=True),
+            patch.object(reproduction, "_get_spotify_client", return_value=self.client),
+            patch.object(reproduction, "_get_reproduction_view_state", return_value=view_state),
+        ):
+            reproduction._check_reproduction_view_state()
+            self.streamlit.rerun.assert_not_called()
+
+            changed_view_state = {
+                **view_state,
+                "playback": {**self.playback, "is_playing": False},
+            }
+            with patch.object(
+                reproduction,
+                "_get_reproduction_view_state",
+                return_value=changed_view_state,
+            ):
+                with self.assertRaises(RerunRequested):
+                    reproduction._check_reproduction_view_state()
+
+        self.streamlit.rerun.assert_called_once_with()
+
     def test_spotify_429_logs_and_honors_retry_after(self):
         rate_limit_error = RuntimeError("rate limited")
         rate_limit_error.http_status = 429
