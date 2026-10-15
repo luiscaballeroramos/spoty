@@ -23,6 +23,9 @@ SPOTY_DISPLAY_TIMEZONE=Europe/Rome
 
 ## Database schema
 
+See [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) for the entity-relationship diagram,
+column types, and current database constraints.
+
 Schema changes are versioned and are not run by normal application startup. For
 a new database, or to register the existing schema before upgrading the app,
 run the migration command explicitly:
