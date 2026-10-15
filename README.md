@@ -19,11 +19,11 @@ SPOTIFY_CLIENT_ID=tu_client_id
 SPOTIFY_CLIENT_SECRET=tu_client_secret
 SPOTIFY_REDIRECT_URI=http://127.0.0.1:8888/
 DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/spoty
-SPOTY_DISPLAY_TIMEZONE=Etc/GMT-4
+SPOTY_DISPLAY_TIMEZONE=Europe/Rome
 
 `SPOTY_DISPLAY_TIMEZONE` accepts an IANA timezone name and defaults to
-`Etc/GMT-4` (UTC+04:00), preserving the current summary display. For example,
-set it to `Europe/Madrid` to use that region's daylight-saving rules.
+`Europe/Rome`, which follows Italy's daylight-saving rules. Set it to
+`Europe/Madrid` to use Spain's local time instead.
 
 <!-- config streamlit iphone visualization -->
 streamlit

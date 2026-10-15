@@ -38,9 +38,9 @@ def _load_env_file() -> None:
 _load_env_file()
 
 VERBOSE = True
-DISPLAY_TIMEZONE = os.getenv("SPOTY_DISPLAY_TIMEZONE", "Etc/GMT-4").strip()
+DISPLAY_TIMEZONE = os.getenv("SPOTY_DISPLAY_TIMEZONE", "Europe/Rome").strip()
 if not DISPLAY_TIMEZONE:
-    DISPLAY_TIMEZONE = "Etc/GMT-4"
+    DISPLAY_TIMEZONE = "Europe/Rome"
 
 # Load credentials from environment variables.
 # Never store real secrets in source code for public repositories.
