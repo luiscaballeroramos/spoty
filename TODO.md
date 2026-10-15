@@ -282,6 +282,8 @@ errores de YAML ni impacto funcional.
 - [ ] **19. Crear el servicio de enriquecimiento.** Leer candidatos de PostgreSQL,
 	consultar proveedores fuera de transacciones y persistir datos normalizados
 	con origen y fecha, conservando respuestas originales cuando sea util.
+	Priorizar generos, imagenes y fechas de lanzamiento; incluir popularidad,
+	seguidores o audio features solo si se confirma una fuente fiable y accesible.
 	Cierre: una prueba cubre DB -> proveedor -> DB sin sobrescribir datos fiables
 	con vacios, y repetir el proceso no duplica resultados.
 - [ ] **20. Habilitar enriquecimiento bajo demanda.** Ofrecer un comando y, si
@@ -301,6 +303,22 @@ errores de YAML ni impacto funcional.
 	memoria y llamadas API; evaluar indices, pooling, cache o tareas adicionales.
 	Cierre: cada optimizacion responde a un cuello de botella medido y tiene
 	comparacion antes/despues, sin romper integridad ni contratos.
+
+## Fase 8 - Playlists, tras definir y validar el caso de uso
+
+- [ ] **24. Definir la seleccion de playlists.** Acordar listas iniciales basadas
+	en canciones destacadas y recientes, junto con filtros configurables y su
+	comportamiento ante datos insuficientes. Cierre: ejemplos verificables y
+	criterios de inclusion/exclusion antes de implementar consultas dinamicas.
+- [ ] **25. Generar playlists revisables.** Reutilizar servicios de consulta y
+	mostrar una vista previa antes de escribir en Spotify; definir como evitar
+	duplicados y manejar fallos parciales. Cierre: pruebas deterministas cubren
+	seleccion y errores, y ninguna playlist se modifica sin una accion explicita.
+- [ ] **26. Automatizar actualizaciones si aportan valor.** Programar la
+	actualizacion de playlists aprobadas mediante GitHub Actions, con limites,
+	idempotencia y registro de resultados; no requiere un worker permanente.
+	Cierre: ejecuciones repetidas son seguras y los fallos no borran ni reemplazan
+	una playlist con resultados incompletos.
 
 ## Fuera de alcance por ahora
 
