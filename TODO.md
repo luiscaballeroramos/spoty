@@ -215,25 +215,37 @@ atomica, snapshots obsoletos, cambios locales durante la descarga y replica pend
 
 ## Fase 4 - Servicios e interfaz
 
-- [ ] **12. Extraer el servicio de sincronizacion.** Reunir registro y favoritos
+- [x] **12. Extraer el servicio de sincronizacion.** Reunir registro y favoritos
 	bajo casos de uso reutilizables con resultados completado/parcial/aplazado/fallido.
 	Cierre: CLI y Streamlit llaman a los mismos servicios; los entrypoints solo
 	configuran dependencias y presentan resultados.
-- [ ] **13. Conectar GitHub Actions al servicio.** Mantener jobs separados de CI,
+- [x] **13. Conectar GitHub Actions al servicio.** Mantener jobs separados de CI,
 	ejecutar los entrypoints compartidos y resumir contadores/resultados. Cierre:
 	un trabajo fallido o incompleto que incumple su objetivo termina con codigo no
 	cero; los secretos solo se necesitan en jobs de integracion real.
-- [ ] **14. Extraer las consultas del resumen.** Encapsular SQL y acceso a DB en
+- [x] **14. Extraer las consultas del resumen.** Encapsular SQL y acceso a DB en
 	persistencia/servicio de consulta, reutilizando reglas con los analisis donde
 	corresponda. Cierre: la vista renderiza datos sin abrir conexiones ni construir SQL.
-- [ ] **15. Extraer el controlador de reproduccion.** Separar coordinacion, cache,
+- [x] **15. Extraer el controlador de reproduccion.** Separar coordinacion, cache,
 	snapshots y reloj del renderizado; conservar polling, restauracion y lotes.
 	Cierre: la logica se prueba sin Streamlit y la interfaz conserva su comportamiento
 	y composicion en escritorio y movil.
-- [ ] **16. Mostrar fallos sin ruido.** Conservar el ultimo dato valido con su hora,
+- [x] **16. Mostrar fallos sin ruido.** Conservar el ultimo dato valido con su hora,
 	mostrar un aviso por incidente y ofrecer detalle desplegable. Cierre: los reruns
 	no multiplican avisos y cada accion explicita comunica fallo, incertidumbre o
 	replica pendiente; no reintentar a ciegas comandos no idempotentes.
+
+Implementacion de Fase 4, 2026-10-15: registro y favoritos delegan en
+`SynchronizationService`, que devuelve estados completado/parcial/aplazado/fallido,
+contadores y codigo de salida. CLI imprime JSON; Actions invoca los mismos
+entrypoints y valida secretos sin mostrarlos. CI descubre todos los
+`tests/test_*.py`. Las queries del resumen viven en `SummaryQueryService`; la vista
+mantiene datos cacheados durante fallos. `PlaybackController` coordina polling,
+cache, snapshot, restauracion, cola y transporte sin depender de Streamlit. Los
+avisos quedan agrupados por incidente, con detalles seguros y recuperacion visible.
+
+Validacion: 101 tests de producto y 32 de laboratorio, compilacion y Pylance sin
+errores. Suites ejecutadas localmente sin credenciales de Spotify ni Neon.
 
 ## Fase 5 - Estructura y configuracion
 

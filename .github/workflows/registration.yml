@@ -24,9 +24,13 @@ jobs:
         env:
           SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
           SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+          SPOTIFY_REFRESH_TOKEN: ${{ secrets.SPOTIFY_REFRESH_TOKEN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          test -n "$SPOTIFY_CLIENT_ID" && echo "CLIENT_ID OK" || echo "CLIENT_ID MISSING"
-          test -n "$SPOTIFY_CLIENT_SECRET" && echo "CLIENT_SECRET OK" || echo "CLIENT_SECRET MISSING"
+          test -n "$SPOTIFY_CLIENT_ID"
+          test -n "$SPOTIFY_CLIENT_SECRET"
+          test -n "$SPOTIFY_REFRESH_TOKEN"
+          test -n "$DATABASE_URL"
 
       - name: Run registration
         env:
@@ -35,4 +39,4 @@ jobs:
           SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
           SPOTIFY_REDIRECT_URI: ${{ secrets.SPOTIFY_REDIRECT_URI }}
           SPOTIFY_REFRESH_TOKEN: ${{ secrets.SPOTIFY_REFRESH_TOKEN }}
-        run: python _registration.py
+        run: python -m _registration

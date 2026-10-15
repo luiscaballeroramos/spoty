@@ -1,5 +1,4 @@
 import html
-import json
 import time
 from dataclasses import replace
 from pathlib import Path
@@ -17,7 +16,9 @@ from streamlit_lab import (
     Size,
 )
 from streamlit_lab.renderer import render_button, render_group, render_page_style
+from app_views.error_feedback import clear_incident, render_incident_notice
 from services.errors import LikedTrackReplicaPendingError
+from services.playback import PlaybackController, PlaybackSnapshotStore
 from services.reproduction import ReproductionService
 from spotifyapi.spotifyclient import SpotifyClient
 from spotifyapi.errors import SpotifyError, SpotifyRequestError
@@ -154,58 +155,28 @@ REPRODUCTION_CORNER_ACTION_STYLE = ButtonStyle(
 )
 
 
-def _load_persisted_playback() -> None:
-    """Load the saved playback once per session and reconstruct its monotonic pause timestamp."""
-    if st.session_state.get(PERSISTED_PLAYBACK_LOADED_KEY):
-        return
-    st.session_state[PERSISTED_PLAYBACK_LOADED_KEY] = True
-
-    try:
-        saved_state = json.loads(PLAYBACK_STATE_PATH.read_text(encoding="utf-8"))
-        playback = saved_state.get("playback")
-        if not isinstance(playback, dict) or not playback.get("item"):
-            return
-
-        paused_at_epoch = saved_state.get("paused_at_epoch")
-        if isinstance(paused_at_epoch, (int, float)):
-            paused_elapsed = max(0, time.time() - paused_at_epoch)
-            playback["paused_at"] = time.monotonic() - paused_elapsed
-        st.session_state[PAUSED_PLAYBACK_KEY] = playback
-    except (OSError, json.JSONDecodeError, AttributeError):
-        return
+def _playback_controller(client: SpotifyClient) -> PlaybackController:
+    return PlaybackController(
+        client=client,
+        state=st.session_state,
+        snapshot_store=PlaybackSnapshotStore(PLAYBACK_STATE_PATH),
+        monotonic=time.monotonic,
+        playing_poll_seconds=PLAYBACK_PLAYING_POLL_SECONDS,
+        paused_poll_seconds=PLAYBACK_PAUSED_POLL_SECONDS,
+        restore_after_seconds=PLAYBACK_RESTORE_AFTER_SECONDS,
+        playback_cache_key=PLAYBACK_CACHE_KEY,
+        paused_playback_key=PAUSED_PLAYBACK_KEY,
+        persisted_loaded_key=PERSISTED_PLAYBACK_LOADED_KEY,
+        previous_request_key=ADJACENT_PREVIOUS_REQUEST_KEY,
+        adjacent_cache_key=ADJACENT_TRACKS_CACHE_KEY,
+        adjacent_history_key=ADJACENT_TRACK_HISTORY_KEY,
+        adjacent_poll_seconds=ADJACENT_TRACKS_POLL_SECONDS,
+    )
 
 
 def _persist_playback(playback: dict) -> None:
     """Persist playback through a temporary file, converting pause time to a restart-safe epoch timestamp."""
-    if not playback.get("item"):
-        return
-
-    snapshot = dict(playback)
-    paused_at = snapshot.pop("paused_at", None)
-    saved_state = {
-        "playback": snapshot,
-        "paused_at_epoch": (
-            time.time() - (time.monotonic() - paused_at)
-            if isinstance(paused_at, (int, float))
-            else None
-        ),
-    }
-    temporary_path = PLAYBACK_STATE_PATH.with_suffix(".tmp")
-    try:
-        temporary_path.write_text(
-            json.dumps(saved_state, ensure_ascii=True), encoding="utf-8"
-        )
-        temporary_path.replace(PLAYBACK_STATE_PATH)
-    except OSError:
-        temporary_path.unlink(missing_ok=True)
-
-
-def _clear_persisted_playback() -> None:
-    """Delete the playback snapshot if present, ignoring filesystem errors."""
-    try:
-        PLAYBACK_STATE_PATH.unlink(missing_ok=True)
-    except OSError:
-        return
+    PlaybackSnapshotStore(PLAYBACK_STATE_PATH).save(playback)
 
 
 def _get_spotify_client() -> SpotifyClient:
@@ -231,90 +202,12 @@ def _copy_playback_with_estimated_progress(
     playback: dict, fetched_at: float, now: float
 ) -> dict:
     """Copy playback and advance valid playing progress without exceeding the track duration."""
-    estimated_playback = dict(playback)
-    if not playback.get("is_playing"):
-        return estimated_playback
-
-    item = playback.get("item") or {}
-    progress_ms = playback.get("progress_ms")
-    duration_ms = item.get("duration_ms")
-    if not isinstance(progress_ms, (int, float)) or not isinstance(
-        duration_ms, (int, float)
-    ):
-        return estimated_playback
-
-    elapsed_ms = (now - fetched_at) * 1000
-    estimated_playback["progress_ms"] = min(
-        int(progress_ms + elapsed_ms), int(duration_ms)
-    )
-    return estimated_playback
+    return PlaybackController.estimate_progress(playback, fetched_at, now)
 
 
 def _get_playback(client: SpotifyClient) -> dict:
     """Read cached or live playback, persist valid tracks, and use the saved pause when no item is reported."""
-    _load_persisted_playback()
-    now = time.monotonic()
-    saved_playback = st.session_state.get(PAUSED_PLAYBACK_KEY)
-    cached = st.session_state.get(PLAYBACK_CACHE_KEY)
-    if cached:
-        playback = cached["playback"]
-        item = playback.get("item") or {}
-        progress_ms = playback.get("progress_ms")
-        duration_ms = item.get("duration_ms")
-        elapsed_ms = (now - cached["fetched_at"]) * 1000
-
-        if not playback.get("is_playing"):
-            if elapsed_ms < PLAYBACK_PAUSED_POLL_SECONDS * 1000:
-                return (
-                    playback
-                    if playback.get("item")
-                    else (
-                        {**saved_playback, "is_playing": False}
-                        if saved_playback
-                        else {}
-                    )
-                )
-        elif (
-            isinstance(progress_ms, (int, float))
-            and isinstance(duration_ms, (int, float))
-            and elapsed_ms < PLAYBACK_PLAYING_POLL_SECONDS * 1000
-        ):
-            return _copy_playback_with_estimated_progress(
-                playback, cached["fetched_at"], now
-            )
-        elif not isinstance(progress_ms, (int, float)) or not isinstance(
-            duration_ms, (int, float)
-        ):
-            return playback
-
-    playback = client.get_current_playback() or {}
-    if saved_playback and playback.get("item"):
-        if playback["item"].get("id") != (saved_playback.get("item") or {}).get(
-            "id"
-        ) or playback.get("is_playing"):
-            st.session_state.pop(PAUSED_PLAYBACK_KEY, None)
-            saved_playback = None
-    if playback.get("item"):
-        saved_item_id = (saved_playback or {}).get("item", {}).get("id")
-        if (
-            not playback.get("is_playing")
-            and saved_playback
-            and saved_item_id == playback["item"].get("id")
-        ):
-            if saved_playback.get("paused_at") is not None:
-                playback["paused_at"] = saved_playback["paused_at"]
-            if saved_playback.get("queue_uris"):
-                playback["queue_uris"] = saved_playback["queue_uris"]
-        elif not playback.get("is_playing"):
-            playback["paused_at"] = now
-        _persist_playback(playback)
-    st.session_state[PLAYBACK_CACHE_KEY] = {
-        "playback": playback,
-        "fetched_at": now,
-    }
-    if not playback.get("item") and saved_playback:
-        return {**saved_playback, "is_playing": False}
-    return playback
+    return _playback_controller(client).get_playback()
 
 
 def _invalidate_playback_cache() -> None:
@@ -356,272 +249,51 @@ def _get_adjacent_tracks(
     client: SpotifyClient, current_track: dict
 ) -> tuple[dict, dict]:
     """Resolve the previous track from session history or recent plays and the next track from the cached queue."""
-    current_track_id = current_track.get("id")
-    if not current_track_id:
-        return {}, {}
-
-    cached = st.session_state.get(ADJACENT_TRACKS_CACHE_KEY)
-    if cached and cached.get("current_track_id") == current_track_id:
-        if (
-            time.monotonic() - cached.get("fetched_at", 0)
-            >= ADJACENT_TRACKS_POLL_SECONDS
-        ):
-            queue = client.get_queue()
-            if queue is not None:
-                cached["next"] = next(
-                    (track for track in queue.get("queue") or [] if track.get("id")), {}
-                )
-                cached["fetched_at"] = time.monotonic()
-        return cached.get("previous") or {}, cached.get("next") or {}
-
-    history = st.session_state.setdefault(ADJACENT_TRACK_HISTORY_KEY, {})
-    previous_request = st.session_state.pop(ADJACENT_PREVIOUS_REQUEST_KEY, None)
-    if cached and current_track_id == previous_request:
-        previous_track = history.get(current_track_id) or {}
-    elif cached and (cached.get("current") or {}).get("id"):
-        previous_track = cached["current"]
-    else:
-        recently_played = client.get_recently_played() or {}
-        recent_tracks = [
-            entry.get("track") or {} for entry in recently_played.get("items") or []
-        ]
-        for index, track in enumerate(recent_tracks):
-            if track.get("id") and track["id"] not in history:
-                history[track["id"]] = next(
-                    (
-                        older
-                        for older in recent_tracks[index + 1 :]
-                        if older.get("id") and older["id"] != track["id"]
-                    ),
-                    {},
-                )
-        previous_track = next(
-            (
-                track
-                for track in recent_tracks
-                if track.get("id") and track["id"] != current_track_id
-            ),
-            {},
-        )
-
-    queue = client.get_queue() or {}
-    next_track = next(
-        (track for track in queue.get("queue") or [] if track.get("id")), {}
-    )
-    history[current_track_id] = previous_track
-    st.session_state[ADJACENT_TRACKS_CACHE_KEY] = {
-        "current_track_id": current_track_id,
-        "current": current_track,
-        "previous": previous_track,
-        "next": next_track,
-        "fetched_at": time.monotonic(),
-    }
-    return previous_track, next_track
+    return _playback_controller(client).adjacent_tracks(current_track)
 
 
 def _clear_paused_playback() -> None:
     """Remove the paused playback from session state and delete its persisted snapshot."""
     st.session_state.pop(PAUSED_PLAYBACK_KEY, None)
-    _clear_persisted_playback()
+    PlaybackSnapshotStore(PLAYBACK_STATE_PATH).clear()
 
 
 def _save_paused_playback(client: SpotifyClient, playback: dict) -> None:
     """Save pause time and matching queue URIs in session state and persist the playback snapshot."""
-    saved_playback = {**playback, "paused_at": time.monotonic()}
-    queue = client.get_queue() or {}
-    if (queue.get("currently_playing") or {}).get("id") == playback["item"].get("id"):
-        saved_playback["queue_uris"] = [
-            track["uri"]
-            for track in queue.get("queue") or []
-            if track.get("uri", "").startswith("spotify:track:")
-        ][:99]
-    st.session_state[PAUSED_PLAYBACK_KEY] = saved_playback
-    _persist_playback(saved_playback)
+    _playback_controller(client).save_paused_playback(playback)
 
 
 def _start_playback_for_restore(client: SpotifyClient, **kwargs) -> bool:
     """Start restoration, returning False only for explicit 400/404 rejections and propagating other errors."""
-    try:
-        return client.start_playback(**kwargs)
-    except SpotifyRequestError as exc:
-        if exc.http_status not in (400, 404):
-            raise
-        return False
+    return _playback_controller(client).start_playback_for_restore(**kwargs)
 
 
 def _resume_playback(
     client: SpotifyClient, playback: dict, live_playback: dict
 ) -> bool | None:
     """Resume on the saved device, restoring track, context, queue, and position when live state is insufficient."""
-    snapshot = st.session_state.get(PAUSED_PLAYBACK_KEY) or live_playback or playback
-    device_id = (snapshot.get("device") or {}).get("id")
-    item = snapshot.get("item") or {}
-    if not device_id:
-        return None
-
-    live_device_id = (live_playback.get("device") or {}).get("id")
-    target_is_active = live_device_id == device_id
-    if not target_is_active:
-        try:
-            if not client.transfer_playback(device_id):
-                return None
-        except SpotifyRequestError as exc:
-            if exc.http_status != 404:
-                raise
-            st.warning("El dispositivo original no esta disponible.")
-            return None
-
-    paused_at = snapshot.get("paused_at")
-    context_uri = (snapshot.get("context") or {}).get("uri")
-    live_context_uri = (live_playback.get("context") or {}).get("uri")
-    context_changed = bool(context_uri and live_context_uri != context_uri)
-    live_track_id = (live_playback.get("item") or {}).get("id")
-    missing_playback = (
-        not live_playback.get("item")
-        or not target_is_active
-        or live_track_id != item.get("id")
-        or paused_at is None
-        or time.monotonic() - paused_at >= PLAYBACK_RESTORE_AFTER_SECONDS
-        or context_changed
-    )
-    queue_uris = snapshot.get("queue_uris") or []
-    context_uri = context_uri if missing_playback else None
-    succeeded = _start_playback_for_restore(
-        client,
-        device_id=device_id,
-        uri=item.get("uri") if missing_playback else None,
-        position_ms=snapshot.get("progress_ms") if missing_playback else None,
-        **(
-            {"context_uri": context_uri}
-            if context_uri and item.get("uri")
-            else (
-                {"uris": [item["uri"], *queue_uris]}
-                if missing_playback and item.get("uri") and queue_uris
-                else {}
-            )
-        ),
-    )
-    if not succeeded and context_uri and item.get("uri"):
-        succeeded = _start_playback_for_restore(
-            client,
-            device_id=device_id,
-            uri=item["uri"],
-            uris=[item["uri"], *queue_uris] if queue_uris else None,
-            position_ms=snapshot.get("progress_ms"),
-        )
-    if not succeeded and not missing_playback and item.get("uri"):
-        succeeded = _start_playback_for_restore(
-            client,
-            device_id=device_id,
-            uri=item["uri"],
-            position_ms=snapshot.get("progress_ms"),
-        )
-    return succeeded
+    return _playback_controller(client).resume_playback(playback, live_playback)
 
 
 def _handle_play_pause(client: SpotifyClient, playback: dict) -> None:
     """Choose pause or resume from live state, save successful pauses, and rerun after a successful action."""
-    live_playback = client.get_current_playback() or {}
-    currently_playing = bool(live_playback.get("is_playing"))
-    if currently_playing:
-        snapshot = live_playback
-        device_id = (snapshot.get("device") or {}).get("id")
-        succeeded = client.pause_playback(device_id=device_id)
-        if succeeded and snapshot.get("item"):
-            _save_paused_playback(client, snapshot)
-    else:
-        succeeded = _resume_playback(client, playback, live_playback)
-        if succeeded is None:
-            return
-
+    succeeded = _playback_controller(client).toggle_playback(playback)
     if succeeded:
-        _invalidate_playback_cache()
+        clear_incident(st.session_state, "playback-command")
         st.rerun()
+
+
 def _handle_previous_track(client: SpotifyClient, previous_track: dict) -> None:
     """Skip backward, clear outdated playback, record the requested previous track, and rerun on success."""
-    if client.previous_track():
-        _invalidate_playback_cache()
-        _clear_paused_playback()
-        st.session_state[ADJACENT_PREVIOUS_REQUEST_KEY] = previous_track.get("id")
+    if _playback_controller(client).previous_track(previous_track):
+        clear_incident(st.session_state, "playback-command")
         st.rerun()
 
 
 def _handle_next_track(client: SpotifyClient, playback: dict) -> None:
     """Skip forward or restore the remaining queue after a long pause, clearing saved playback on success."""
-    live_playback = client.get_current_playback() or {}
-    device_id = (live_playback.get("device") or playback.get("device") or {}).get("id")
-    device = None
-    if device_id:
-        devices = client.get_devices()
-        device = next(
-            (
-                available
-                for available in (devices or {}).get("devices") or []
-                if available.get("id") == device_id
-            ),
-            None,
-        )
-        if device is not None and not device.get("is_active"):
-            if not client.transfer_playback(device_id):
-                return
-
-    saved_playback = st.session_state.get(PAUSED_PLAYBACK_KEY) or {}
-    paused_at = saved_playback.get("paused_at")
-    needs_restore = (
-        bool(saved_playback)
-        and not live_playback.get("is_playing")
-        and (
-            not live_playback.get("item")
-            or (device is not None and not device.get("is_active"))
-            or (
-                paused_at is not None
-                and time.monotonic() - paused_at >= PLAYBACK_RESTORE_AFTER_SECONDS
-            )
-        )
-    )
-    if needs_restore:
-        queue = client.get_queue()
-        if queue is not None:
-            current_id = (live_playback.get("item") or playback.get("item") or {}).get(
-                "id"
-            )
-            queued_current_id = (queue.get("currently_playing") or {}).get("id")
-            if queued_current_id and queued_current_id != current_id:
-                return
-            queue_uris = [
-                track["uri"]
-                for track in queue.get("queue") or []
-                if track.get("uri", "").startswith("spotify:track:")
-            ][:100]
-        else:
-            queue_uris = saved_playback.get("queue_uris") or []
-        current_uri = (live_playback.get("item") or playback.get("item") or {}).get(
-            "uri"
-        )
-        if not queue_uris or queue_uris[0] == current_uri:
-            return
-
-    if needs_restore:
-        context_uri = (saved_playback.get("context") or {}).get("uri")
-        succeeded = (
-            _start_playback_for_restore(
-                client,
-                device_id=device_id,
-                uri=queue_uris[0],
-                context_uri=context_uri,
-            )
-            if context_uri
-            else False
-        )
-        if not succeeded:
-            succeeded = _start_playback_for_restore(client, device_id=device_id, uris=queue_uris)
-    else:
-        succeeded = client.next_track(device_id=device_id)
-
-    if succeeded:
-        _invalidate_playback_cache()
-        _clear_paused_playback()
-        st.session_state.pop(ADJACENT_PREVIOUS_REQUEST_KEY, None)
+    if _playback_controller(client).next_track(playback):
+        clear_incident(st.session_state, "playback-command")
         st.rerun()
 
 
@@ -676,7 +348,17 @@ def _read_reproduction_view_state(client: SpotifyClient) -> dict:
         if saved_state is None:
             raise
         return {**saved_state, "is_stale": True}
+    except Exception as exc:
+        error = RuntimeError("Playback data could not be processed.")
+        error.action = "process playback view"
+        error.__cause__ = exc
+        st.session_state[REPRODUCTION_ERROR_KEY] = error
+        saved_state = st.session_state.get(LAST_VALID_VIEW_STATE_KEY)
+        if saved_state is None:
+            raise error from exc
+        return {**saved_state, "is_stale": True}
     st.session_state.pop(REPRODUCTION_ERROR_KEY, None)
+    clear_incident(st.session_state, "playback-poll")
     st.session_state[LAST_VALID_VIEW_STATE_KEY] = view_state
     return {**view_state, "is_stale": False}
 
@@ -1242,19 +924,39 @@ def _render_reproduction_controls():
     try:
         client = _get_spotify_client()
     except SpotifyError as exc:
-        st.warning(str(exc))
+        render_incident_notice(
+            "playback-client", exc, "No se pudo consultar la reproducción de Spotify."
+        )
         return
-    except Exception:
+    except Exception as exc:
+        render_incident_notice(
+            "playback-client", exc, "No se pudo inicializar el cliente de reproducción."
+        )
         return
+    clear_incident(st.session_state, "playback-client")
 
     reproduction_service = ReproductionService(client)
     try:
         view_state = _read_reproduction_view_state(client)
     except SpotifyError as exc:
-        st.warning(str(exc))
+        render_incident_notice(
+            "playback-poll", exc, "No se pudo leer la reproducción de Spotify."
+        )
+        return
+    except Exception as exc:
+        render_incident_notice(
+            "playback-poll", exc, "No se pudo procesar el estado de reproducción."
+        )
         return
     if view_state["is_stale"]:
-        st.warning("No se pudo actualizar Spotify. Se muestra el ultimo estado valido.")
+        error = st.session_state.get(REPRODUCTION_ERROR_KEY) or RuntimeError(
+            "Playback data is stale."
+        )
+        render_incident_notice(
+            "playback-poll",
+            error,
+            "No se pudo actualizar Spotify. Se muestra el ultimo estado valido.",
+        )
     playback = view_state["playback"]
     is_playing = bool(playback.get("is_playing"))
     item = view_state["item"]
@@ -1281,8 +983,11 @@ def _render_reproduction_controls():
             next_track=next_track,
         )
     except SpotifyError as exc:
-        st.warning(str(exc))
+        render_incident_notice(
+            "playback-command", exc, "Spotify no pudo completar el control de reproducción."
+        )
         return
+    clear_incident(st.session_state, "playback-command")
 
     pending_library_action = st.session_state.pop("pending_library_action", None)
     if pending_library_action:
@@ -1295,14 +1000,22 @@ def _render_reproduction_controls():
                 else reproduction_service.remove_liked_track(pending_track_id)
             )
         except SpotifyError as exc:
-            st.warning(str(exc))
+            render_incident_notice(
+                "liked-track-remote", exc, "Spotify no pudo actualizar este favorito."
+            )
             return
         except LikedTrackReplicaPendingError as exc:
-            st.warning(str(exc))
+            render_incident_notice(
+                "liked-track-replica",
+                exc,
+                "Spotify cambió el favorito, pero la réplica local quedó pendiente.",
+            )
             return
         liked_cache = st.session_state.setdefault(LIKED_CACHE_KEY, {})
         if action_succeeded:
             liked_cache[pending_track_id] = action == "like"
+            clear_incident(st.session_state, "liked-track-remote")
+            clear_incident(st.session_state, "liked-track-replica")
         result_key = f"{'liked' if action == 'like' else 'unliked'}_track_{'saved' if action_succeeded else 'error'}"
         st.session_state[result_key] = True
         st.rerun()
@@ -1320,7 +1033,11 @@ def _check_reproduction_view_state() -> None:
     except SpotifyError as exc:
         st.session_state[REPRODUCTION_ERROR_KEY] = exc
         view_state = None
-    except Exception:
+    except Exception as exc:
+        st.session_state[REPRODUCTION_ERROR_KEY] = RuntimeError(
+            "Playback refresh failed."
+        )
+        st.session_state[REPRODUCTION_ERROR_KEY].action = "refresh playback"
         return
 
     has_error = REPRODUCTION_ERROR_KEY in st.session_state

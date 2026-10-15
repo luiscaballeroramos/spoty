@@ -4,10 +4,15 @@ from zoneinfo import ZoneInfo
 
 import pandas as pd
 import streamlit as st
-from psycopg import connect
-from psycopg.rows import dict_row
 
-from config import DATABASE_URL, DISPLAY_TIMEZONE
+from config import DISPLAY_TIMEZONE
+from app_views.error_feedback import (
+    clear_incident,
+    record_incident,
+    render_incident_notice,
+)
+from services.summary_queries import SummaryQueryService
+from services.synchronization import SyncStatus
 from spotifyapi.errors import SpotifyError
 from spotifyapi.streamlit_auth import (
     has_spotify_auth_available,
@@ -19,6 +24,8 @@ SIGNATURE_KEY = "summary_dashboard_signature"
 LAST_CHANGE_KEY = "summary_last_change_at"
 REFRESH_INTERVAL_SECONDS = 10
 REFRESH_INTERVAL_LABEL = f"{REFRESH_INTERVAL_SECONDS}s"
+SUMMARY_DATA_CACHE_KEY = "summary_last_valid_data"
+SUMMARY_ERROR_KEY = "summary_database_error"
 
 try:
     from _registration import register_listeningevents
@@ -36,19 +43,34 @@ def run_registration_with_feedback():
 
     try:
         with st.spinner("Actualizando datos desde Spotify..."):
-            register_listeningevents()
+            result = register_listeningevents()
     except SpotifyError as exc:
-        st.warning(str(exc))
-    except Exception:
+        render_incident_notice(
+            "summary_registration_error", exc, "No se pudieron actualizar los eventos de escucha."
+        )
+        return
+    except Exception as exc:
+        render_incident_notice(
+            "summary_registration_error", exc, "No se pudo completar la sincronización."
+        )
         return
 
+    if result.status is SyncStatus.COMPLETED:
+        clear_incident(st.session_state, "summary_registration_error")
+        st.success("Datos de escucha actualizados.")
+    else:
+        error = RuntimeError(result.message or result.status.value)
+        error.action = "sync listening events"
+        error.retry_after = result.retry_after
+        render_incident_notice(
+            "summary_registration_error", error,
+            f"Sincronización {result.status.value}: los datos locales pueden estar incompletos.",
+        )
 
-def query_database(query: str):
-    """Execute a SQL query, fetch dictionary rows, and close the cursor and connection."""
-    with connect(DATABASE_URL, row_factory=dict_row) as conn:
-        with conn.cursor() as cur:
-            cur.execute(query)
-            return cur.fetchall()
+
+def query_dashboard_signature() -> tuple[str, int, int, int, int, int, int]:
+    """Read the latest event and table counts through the summary query service."""
+    return SummaryQueryService().dashboard_signature()
 
 
 def build_dashboard_signature(
@@ -56,7 +78,6 @@ def build_dashboard_signature(
     latest_played_at: int,
     summary: pd.Series,
 ) -> tuple[str, int, int, int, int, int, int]:
-    """Combine the latest listening event and catalog counts into a dashboard change signature."""
     return (
         latest_track_id,
         latest_played_at,
@@ -65,40 +86,6 @@ def build_dashboard_signature(
         int(summary["total_albums"]),
         int(summary["total_liked_tracks"]),
         int(summary["total_listening_events"]),
-    )
-
-
-def query_dashboard_signature() -> tuple[str, int, int, int, int, int, int]:
-    """Read the latest event and table counts, returning a zero signature when no row is available."""
-    rows = query_database("""
-        WITH latest_event AS (
-            SELECT track_id, played_at
-            FROM listening_events
-            ORDER BY played_at DESC, track_id DESC
-            LIMIT 1
-        )
-        SELECT
-            COALESCE((SELECT track_id FROM latest_event), '') AS latest_track_id,
-            COALESCE((SELECT played_at FROM latest_event), 0) AS latest_played_at,
-            (SELECT COUNT(*) FROM tracks) AS total_tracks,
-            (SELECT COUNT(*) FROM artists) AS total_artists,
-            (SELECT COUNT(*) FROM albums) AS total_albums,
-            (SELECT COUNT(*) FROM liked_tracks) AS total_liked_tracks,
-            (SELECT COUNT(*) FROM listening_events) AS total_listening_events
-        """)
-
-    if not rows:
-        return ("", 0, 0, 0, 0, 0, 0)
-
-    row = rows[0]
-    return (
-        str(row.get("latest_track_id") or ""),
-        int(row.get("latest_played_at") or 0),
-        int(row.get("total_tracks") or 0),
-        int(row.get("total_artists") or 0),
-        int(row.get("total_albums") or 0),
-        int(row.get("total_liked_tracks") or 0),
-        int(row.get("total_listening_events") or 0),
     )
 
 
@@ -132,8 +119,10 @@ def _watch_summary_changes_fragment():
     """Poll dashboard changes, record their local time, and rerun when the signature changes."""
     try:
         current_signature = query_dashboard_signature()
-    except Exception:
+    except Exception as exc:
+        record_incident(st.session_state, SUMMARY_ERROR_KEY, exc)
         return
+    clear_incident(st.session_state, SUMMARY_ERROR_KEY)
 
     previous_signature = st.session_state.get(SIGNATURE_KEY)
     if previous_signature is None:
@@ -161,61 +150,47 @@ def _render_spotify_dashboard():
     elif not auth_available:
         render_spotify_authorization_section()
 
-    rows = query_database("""
-        WITH track_stats AS (
-            SELECT
-                track_id,
-                COUNT(*) AS track_play_count,
-                CEIL(
-                    100.0
-                    * ROW_NUMBER() OVER (ORDER BY COUNT(*) DESC, track_id)
-                    / NULLIF(COUNT(*) OVER (), 0)
-                )::int AS track_top_percent
-            FROM listening_events
-            GROUP BY track_id
+    queries = SummaryQueryService()
+    cached_data = st.session_state.get(SUMMARY_DATA_CACHE_KEY)
+    stale = False
+    try:
+        rows = queries.recent_listening_events(limit=100)
+        summary_data = queries.library_counts()
+        artist_ids = set()
+        for row in rows:
+            try:
+                ids = json.loads(row.get("artists_ids") or "[]")
+                if isinstance(ids, list):
+                    artist_ids.update(artist_id for artist_id in ids if artist_id)
+            except (json.JSONDecodeError, TypeError):
+                continue
+        artist_names = queries.artist_names(list(artist_ids))
+        cached_data = {
+            "rows": rows,
+            "summary": summary_data,
+            "artist_names": artist_names,
+            "saved_at": datetime.now(LOCAL_TIMEZONE),
+        }
+        st.session_state[SUMMARY_DATA_CACHE_KEY] = cached_data
+        clear_incident(st.session_state, SUMMARY_ERROR_KEY)
+    except Exception as exc:
+        stale = True
+        render_incident_notice(
+            SUMMARY_ERROR_KEY, exc, "No se pudo actualizar el resumen; se conserva el último dato válido."
         )
-        SELECT
-            le.played_at,
-            le.track_id,
-            ts.track_play_count,
-            ts.track_top_percent,
-            t.name AS track_name,
-            t.duration_ms,
-            t.artists_ids,
-            a.name AS album_name,
-            a.images AS album_images,
-            a.release_year
-        FROM listening_events AS le
-        LEFT JOIN track_stats AS ts ON le.track_id = ts.track_id
-        LEFT JOIN tracks AS t ON le.track_id = t.id
-        LEFT JOIN albums AS a ON t.album_id = a.id
-        ORDER BY le.played_at DESC
-        LIMIT 100
-        """)
+        if cached_data is None:
+            st.caption("Todavía no hay datos de resumen almacenados para mostrar.")
+            return
 
-    df = pd.DataFrame(rows)
-
-    summary = query_database("""
-        SELECT
-            (SELECT COUNT(*) FROM tracks) AS total_tracks,
-            (SELECT COUNT(*) FROM artists) AS total_artists,
-            (SELECT COUNT(*) FROM albums) AS total_albums,
-            (SELECT COUNT(*) FROM liked_tracks) AS total_liked_tracks,
-            (SELECT COUNT(*) FROM listening_events) AS total_listening_events
-        """)
-
-    if summary:
-        summary = pd.Series(summary[0])
-    else:
-        summary = pd.Series(
-            {
-                "total_tracks": 0,
-                "total_artists": 0,
-                "total_albums": 0,
-                "total_liked_tracks": 0,
-                "total_listening_events": 0,
-            }
+    if stale:
+        st.caption(
+            "Datos desactualizados desde "
+            f"{cached_data['saved_at'].astimezone(LOCAL_TIMEZONE).strftime('%H:%M:%S')}"
         )
+
+    df = pd.DataFrame(cached_data["rows"])
+    summary = pd.Series(cached_data["summary"])
+    artist_names = cached_data["artist_names"]
 
     latest_track_id = ""
     latest_played_at = 0
@@ -232,27 +207,6 @@ def _render_spotify_dashboard():
     if df.empty:
         st.caption("No hay listening events registrados todavía.")
         return
-
-    artist_ids = set()
-    for value in df["artists_ids"].dropna():
-        try:
-            ids = json.loads(value)
-            if isinstance(ids, list):
-                artist_ids.update(ids)
-        except (json.JSONDecodeError, TypeError):
-            continue
-
-    artist_names = {}
-    if artist_ids:
-        artist_array = ",".join(
-            f"'{artist_id.replace(chr(39), chr(39) * 2)}'" for artist_id in artist_ids
-        )
-        artist_rows = query_database(f"""
-            SELECT id, name
-            FROM artists
-            WHERE id = ANY(ARRAY[{artist_array}]::text[])
-            """)
-        artist_names = {row["id"]: row["name"] for row in artist_rows}
 
     def get_artists(value):
         """Resolve JSON artist IDs to names, retaining unknown IDs and using a dash for invalid data."""

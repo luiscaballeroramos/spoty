@@ -1,20 +1,9 @@
-from datetime import datetime, timezone
 from typing import Any
 
 from register.album import Album
 from register.artist import Artist
 from register.track import Track
-
-
-def parse_spotify_timestamp(value: str) -> datetime:
-    if not isinstance(value, str) or not value:
-        raise ValueError("Spotify played_at must be a nonempty ISO-8601 timestamp.")
-
-    normalized = value[:-1] + "+00:00" if value.endswith("Z") else value
-    parsed = datetime.fromisoformat(normalized)
-    if parsed.tzinfo is None or parsed.utcoffset() is None:
-        raise ValueError("Spotify played_at must include a timezone.")
-    return parsed.astimezone(timezone.utc)
+from spotifyapi.timestamps import parse_spotify_timestamp
 
 
 def models_from_spotify_track(

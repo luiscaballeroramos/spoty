@@ -1,10 +1,7 @@
-import io
 import sys
 import unittest
 from contextlib import nullcontext
-from contextlib import redirect_stdout
 from datetime import datetime, timezone
-from types import ModuleType
 from unittest.mock import MagicMock, Mock, patch
 
 
@@ -36,21 +33,21 @@ class SpotifyDataMappingTest(unittest.TestCase):
         database.insert.assert_not_called()
 
     def test_repeated_registration_keeps_one_utc_event(self):
-        """Register a repeated Spotify event only once using its UTC timestamp."""
+        """The shared registration use case inserts a repeated UTC event only once."""
         class MemoryDatabase:
-            def __init__(self, _database_url):
+            def __init__(self):
                 self.events = set()
                 self.transaction_count = 0
+
+            def transaction(self):
+                self.transaction_count += 1
+                return nullcontext()
 
             def __enter__(self):
                 return self
 
             def __exit__(self, exc_type, exc_value, traceback):
                 return False
-
-            def transaction(self):
-                self.transaction_count += 1
-                return nullcontext()
 
             def get_listening_event_keys(self, track_ids, min_played_at, max_played_at):
                 return {
@@ -69,7 +66,7 @@ class SpotifyDataMappingTest(unittest.TestCase):
                 self.events.add(event)
                 return True
 
-        database = MemoryDatabase("unused")
+        database = MemoryDatabase()
         track = {
             "id": "track-id",
             "name": "Track",
@@ -89,32 +86,54 @@ class SpotifyDataMappingTest(unittest.TestCase):
         spotify.get_recently_played.return_value = {
             "items": [{"track": track, "played_at": "2025-01-01T12:00:00Z"}]
         }
-        fake_config = ModuleType("config")
-        fake_config.DBNAME = "unused"
-        fake_config.VERBOSE = False
-        fake_db = ModuleType("register.db")
-        fake_db.SimpleDB = lambda _database_url: database
-        fake_spotify = ModuleType("spotifyapi.spotifyclient")
-        fake_spotify.SpotifyClient = lambda: spotify
+        class Model:
+            def save(self, _database, print_only_insert=False):
+                return False
+
+        class Event:
+            def __init__(self, track_id, played_at, context_uri):
+                self.track_id = track_id
+                self.played_at = played_at
+
+            def save(self, memory_database, print_only_insert=False):
+                return memory_database.insert(
+                    "listening_events",
+                    {
+                        "track_id": self.track_id,
+                        "played_at": int(self.played_at.timestamp()),
+                    },
+                )
+
+        spotify_data = MagicMock()
+        spotify_data.parse_spotify_timestamp.side_effect = lambda value: datetime.fromisoformat(
+            value.replace("Z", "+00:00")
+        )
+        spotify_data.models_from_spotify_track.return_value = (
+            Model(), Model(), []
+        )
+        listening_event = MagicMock()
+        listening_event.ListeningEvent = Event
 
         with patch.dict(sys.modules, {
-            "config": fake_config,
-            "register.db": fake_db,
-            "spotifyapi.spotifyclient": fake_spotify,
+            "register.listeningevent": listening_event,
+            "register.spotify_data": spotify_data,
         }):
-            import _registration as registration
+            from services.synchronization import SynchronizationService
 
-        with (
-            patch.object(registration, "SimpleDB", return_value=database),
-            patch.object(registration, "SpotifyClient", return_value=spotify),
-            redirect_stdout(io.StringIO()),
-        ):
-            first = registration.register_listeningevents()
-            second = registration.register_listeningevents()
+            service = SynchronizationService(
+                database_url="unused",
+                spotify_factory=lambda: spotify,
+                database_factory=lambda _database_url: database,
+                sleep=lambda _seconds: None,
+                delay=lambda _low, _high: 0,
+            )
+            first = service.sync_listening_events()
+            second = service.sync_listening_events()
 
-        self.assertEqual(first["inserted_listening_events"], 1)
-        self.assertEqual(second["inserted_listening_events"], 0)
-        self.assertEqual(second["skipped_existing_listening_events"], 1)
+        self.assertEqual(first.status.value, "completed", first.message)
+        self.assertEqual(first.counters["inserted_listening_events"], 1)
+        self.assertEqual(second.counters["inserted_listening_events"], 0)
+        self.assertEqual(second.counters["skipped_existing_listening_events"], 1)
         self.assertEqual(database.events, {("track-id", 1735732800)})
         self.assertEqual(database.transaction_count, 1)
 

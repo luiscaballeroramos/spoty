@@ -43,9 +43,9 @@ jobs:
           app_views services register spotifyapi streamlit_lab tests
           streamlit_app.py config.py
 
-      - name: Test reproduction
+      - name: Test product services and UI
         if: ${{ !cancelled() }}
-        run: python -m unittest discover -s tests -p test_reproduction.py -v
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
 
       - name: Test layout and demo
         if: ${{ !cancelled() }}
