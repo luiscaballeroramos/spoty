@@ -5,12 +5,14 @@ import json
 import os
 from typing import Any, Callable
 
-from services.enrichment import EnrichmentService
+from services.enrichment import EnrichmentService, PROVIDERS
 
 
 def run_enrichment(
     limit: int = 50,
     service_factory: Callable[..., Any] | None = None,
+    *,
+    provider: str = "all",
 ):
     """Run one bounded enrichment batch and return its structured result."""
     from config import DATABASE_URL
@@ -23,11 +25,15 @@ def run_enrichment(
             "MUSICBRAINZ_USER_AGENT", "Spoty/0.1.0 (metadata enrichment)"
         ),
     )
-    return service.enrich_pending(limit=limit)
+    if provider == "all":
+        return service.enrich_pending(limit=limit)
+    return service.enrich_pending(limit=limit, provider=provider)
 
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Enrich pending Spotify track metadata.")
+    parser.add_argument("--provider", choices=PROVIDERS, default="all",
+                        help="Run one source independently (default: all enabled sources).")
     parser.add_argument(
         "--limit",
         type=int,
@@ -39,7 +45,8 @@ def main(argv: list[str] | None = None) -> None:
         parser.error("--limit must be positive")
 
     try:
-        result = run_enrichment(limit=args.limit)
+        result = (run_enrichment(limit=args.limit) if args.provider == "all"
+              else run_enrichment(limit=args.limit, provider=args.provider))
         print(result.to_json())
         raise SystemExit(result.exit_code)
     except SystemExit:

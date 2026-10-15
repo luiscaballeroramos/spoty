@@ -38,18 +38,30 @@ The installed commands are `spoty-register`, `spoty-currently-playing`,
 `spoty-print-liked`, plus `spoty-import-smarterplaylists` and
 `spoty-refresh-smarterplaylists`.
 
-Run one bounded metadata-enrichment batch with:
+Run one bounded metadata-enrichment batch for a specific source:
 
 ```powershell
-spoty-enrich --limit 50
+spoty-enrich --provider lastfm --limit 50
+spoty-enrich --provider musicbrainz --limit 50
+spoty-enrich --provider acousticbrainz --limit 50
 ```
 
-The repository defines three independent GitHub Actions workflows:
+Only the selected provider's adapter is constructed, pending rows are filtered
+for that source, and other providers are not called or written. Explicit Last.fm
+requires `LASTFM_API_KEY`. AcousticBrainz uses already-matched MusicBrainz IDs in
+the database; it does not call MusicBrainz or trigger its workflow. Tracks without
+a matched ID remain pending until a future run. Schedules do not guarantee order.
+The manual combined command `spoty-enrich --limit 50` remains available (equivalent
+to `--provider all`); Summary keeps its existing combined manual action.
+
+The repository defines five independent GitHub Actions workflows:
 
 | Workflow | Daily Schedule (UTC) | Manual Trigger |
 | --- | --- | --- |
 | Liked Tracks | 04:00 | `workflow_dispatch` / `run-liked-tracks` |
-| Metadata Enrichment | 04:20 | `workflow_dispatch` / `run-metadata-enrichment` |
+| Last.fm Metadata | 04:10 | `workflow_dispatch` / `run-lastfm-enrichment` |
+| MusicBrainz Metadata | 04:20 | `workflow_dispatch` / `run-musicbrainz-enrichment` |
+| AcousticBrainz Metadata | 04:30 | `workflow_dispatch` / `run-acousticbrainz-enrichment` |
 | Smarter Playlists Metadata | 04:40 | `workflow_dispatch` / `run-smarterplaylists` |
 
 Each has its own concurrency group, timeout and credentials, without `needs`
@@ -57,7 +69,7 @@ dependencies. Schedules only become active after publishing the workflows to the
 default branch and configuring their secrets. Existing provider enrichment scans
 missing metadata; Smarter Playlists also revisits expired captures.
 The Summary page also has a manual provider-enrichment action
-for batches of 1 to 100 tracks. Before using either, apply the metadata schema
+for batches of 1 to 100 tracks. Before using enrichment, apply the metadata schema
 migration explicitly with the command below. Until the migration exists, the
 scheduled job reports enrichment as deferred and leaves liked-song sync intact.
 

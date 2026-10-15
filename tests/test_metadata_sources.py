@@ -149,6 +149,39 @@ class MusicBrainzAdapterTest(unittest.TestCase):
             adapter.get_entity("recording", "recording-id")
 
 
+    def test_retries_transient_failures_with_backoff_and_retry_after(self):
+        """Retry temporary HTTP failures without ignoring provider backpressure."""
+        import requests
+        from metadata_sources.musicbrainz import MusicBrainzAdapter
+
+        failure = Mock(status_code=503, headers={"Retry-After": "5"})
+        failure.raise_for_status.side_effect = requests.HTTPError(response=failure)
+        success = Mock(status_code=200)
+        success.json.return_value = {"recordings": []}
+        request = Mock(side_effect=[failure, requests.Timeout(), success])
+        sleep = Mock()
+        adapter = MusicBrainzAdapter("Spoty tests", request_get=request, sleep=sleep, monotonic=lambda: 0)
+        self.assertEqual(adapter.search_recordings("Title", "Artist"), {"recordings": []})
+        self.assertEqual(request.call_count, 3)
+        self.assertIn(unittest.mock.call(5.0), sleep.call_args_list)
+        self.assertIn(unittest.mock.call(4.0), sleep.call_args_list)
+
+    def test_retries_are_bounded_and_permanent_errors_fail_immediately(self):
+        """Stop after the retry budget and never retry permanent client errors."""
+        import requests
+        from metadata_sources.musicbrainz import MusicBrainzAdapter
+
+        for status, calls, headers in ((503, 4, {}), (400, 1, {}), (429, 1, {"Retry-After": "120"})):
+            with self.subTest(status=status):
+                response = Mock(status_code=status, headers=headers)
+                response.raise_for_status.side_effect = requests.HTTPError(response=response)
+                request = Mock(return_value=response)
+                adapter = MusicBrainzAdapter("Spoty tests", request_get=request, sleep=Mock(), monotonic=lambda: 0)
+                with self.assertRaises(requests.HTTPError):
+                    adapter.search_recordings("Title", "Artist")
+                self.assertEqual(request.call_count, calls)
+
+
 class AcousticBrainzAdapterTest(unittest.TestCase):
     def test_import_does_not_make_network_requests(self):
         """Importing the adapter must not contact AcousticBrainz."""

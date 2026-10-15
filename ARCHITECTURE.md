@@ -36,7 +36,9 @@ flowchart LR
     DBCLI[CLI: resumen y consultas locales] --> DBL
     PLAYCLI[CLI: reproduccion actual] --> SC
     GHJ[GitHub Actions: sincronizacion diaria de favoritos] --> SYCLI
-    GHM[GitHub Actions: enriquecimiento independiente] --> ENCLI
+    GHLFM[GitHub Actions: Last.fm] --> ENCLI
+    GHMB[GitHub Actions: MusicBrainz] --> ENCLI
+    GHAB[GitHub Actions: AcousticBrainz] --> ENCLI
     GHS[GitHub Actions: Smarter Playlists independiente] --> SPLCLI[CLI refresco Smarter Playlists]
     SPLCLI --> SPLREF[SmarterPlaylistsRefreshService]
     SPLREF --> SPLAD[SmarterPlaylistsAdapter]
@@ -88,8 +90,13 @@ flowchart LR
   Spotify se validan al crear el cliente, no al importar los modulos.
 - `pyproject.toml` publica los modulos, paquetes, entrypoints y el extra `ui`;
   `requirements.txt` instala el proyecto con la interfaz incluida.
-- Los workflows diarios son independientes: favoritos 04:00 UTC, proveedores
-  existentes 04:20 UTC y Smarter Playlists 04:40 UTC. No hay `needs` entre ellos;
+- Los workflows diarios son independientes: favoritos 04:00 UTC, Last.fm 04:10,
+  MusicBrainz 04:20, AcousticBrainz 04:30 y Smarter Playlists 04:40 UTC.
+  `spoty-enrich --provider` filtra pendientes y solo construye/consulta el
+  adaptador elegido. AcousticBrainz depende de MBID ya guardados, no de llamadas
+  ni de la ejecucion correcta de otro workflow; los pendientes esperan otra
+  ejecucion. El modo conjunto manual y Summary conservan compatibilidad.
+  No hay `needs` entre workflows;
   horarios, concurrencia, timeouts y disparadores manuales son independientes.
   Deben publicarse en la rama por defecto y configurarse sus secretos para que
   se ejecuten remotamente. Summary mantiene su disparador por lote.

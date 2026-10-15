@@ -54,11 +54,13 @@ else:
 @unittest.skipUnless(yaml, "Install the test extra to validate workflows")
 class WorkflowConfigurationTests(unittest.TestCase):
     def test_daily_workflows_have_independent_schedules_and_concurrency(self):
-        """Keep liked tracks, provider metadata and Smarter Playlists operationally independent."""
+        """Keep liked tracks and each metadata source operationally independent."""
         folder = Path(__file__).resolve().parents[1] / ".github/workflows"
         groups = set()
         schedules = set()
-        for name in ("liked_tracks.yml", "metadata_enrichment.yml", "smarterplaylists.yml"):
+        workflows = ("liked_tracks.yml", "metadata_lastfm.yml", "metadata_musicbrainz.yml",
+                 "metadata_acousticbrainz.yml", "smarterplaylists.yml")
+        for name in workflows:
             with self.subTest(workflow=name):
                 workflow = yaml.load((folder / name).read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
                 self.assertIn("workflow_dispatch", workflow["on"])
@@ -69,8 +71,22 @@ class WorkflowConfigurationTests(unittest.TestCase):
                 for job in workflow["jobs"].values():
                     self.assertNotIn("needs", job)
                     self.assertIn("timeout-minutes", job)
-        self.assertEqual(len(groups), 3)
-        self.assertEqual(len(schedules), 3)
+        self.assertEqual(len(groups), 5)
+        self.assertEqual(len(schedules), 5)
+        self.assertFalse((folder / "metadata_enrichment.yml").exists())
+
+    def test_each_metadata_workflow_selects_only_its_source(self):
+        """Run provider-specific commands without supplying other sources' secrets."""
+        folder = Path(__file__).resolve().parents[1] / ".github/workflows"
+        for provider in ("lastfm", "musicbrainz", "acousticbrainz"):
+            with self.subTest(provider=provider):
+                path = folder / f"metadata_{provider}.yml"
+                workflow = yaml.load(path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+                step = workflow["jobs"][provider]["steps"][-1]
+                self.assertIn(f"spoty-enrich --provider {provider} --limit 50", step["run"])
+                self.assertEqual("LASTFM_API_KEY" in step["env"], provider == "lastfm")
+                self.assertNotIn("SPOTIFY_CLIENT_SECRET", step["env"])
+                self.assertNotIn("SMARTERPLAYLISTS_SESSION_COOKIE", step["env"])
 
     def test_build_smoke_test_is_a_separate_ci_step(self):
         """Do not accidentally fold the wheel build into the Python compile command."""
