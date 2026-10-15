@@ -38,6 +38,9 @@ def _load_env_file() -> None:
 _load_env_file()
 
 VERBOSE = True
+DISPLAY_TIMEZONE = os.getenv("SPOTY_DISPLAY_TIMEZONE", "Etc/GMT-4").strip()
+if not DISPLAY_TIMEZONE:
+    DISPLAY_TIMEZONE = "Etc/GMT-4"
 
 # Load credentials from environment variables.
 # Never store real secrets in source code for public repositories.
@@ -49,8 +52,6 @@ if not CLIENT_ID or not CLIENT_SECRET:
     raise ValueError(
         "Missing Spotify credentials. Set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET as environment variables."
     )
-
-UTC_OFFSET = "+02:00"  # Adjust this if you want to store times in a specific timezone instead of UTC
 
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 

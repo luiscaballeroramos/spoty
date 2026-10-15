@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from register.db import SimpleDB
 
@@ -17,7 +17,10 @@ class ListeningEvent:
                 self.context_source, self.context_type, self.context_id = parts
 
     def save(self, db: "SimpleDB", print_only_insert=False) -> bool:
-        timestamp = int(self.played_at.timestamp())
+        if self.played_at.tzinfo is None or self.played_at.utcoffset() is None:
+            raise ValueError("Listening-event timestamps must be timezone-aware.")
+
+        timestamp = int(self.played_at.astimezone(timezone.utc).timestamp())
 
         return db.insert("listening_events", {
             "track_id": self.track_id,

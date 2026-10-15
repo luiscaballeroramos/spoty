@@ -1,19 +1,20 @@
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import streamlit as st
 from psycopg import connect
 from psycopg.rows import dict_row
 
-from config import DATABASE_URL
+from config import DATABASE_URL, DISPLAY_TIMEZONE
 from spotifyapi.errors import SpotifyError
 from spotifyapi.streamlit_auth import (
     has_spotify_auth_available,
     render_spotify_authorization_section,
 )
 
-LOCAL_TIMEZONE = timezone(timedelta(hours=4))
+LOCAL_TIMEZONE = ZoneInfo(DISPLAY_TIMEZONE)
 SIGNATURE_KEY = "summary_dashboard_signature"
 LAST_CHANGE_KEY = "summary_last_change_at"
 REFRESH_INTERVAL_SECONDS = 10

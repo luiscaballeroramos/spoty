@@ -521,6 +521,168 @@ class ReproductionTest(unittest.TestCase):
         self.assertIsInstance(self.session_state[reproduction.REPRODUCTION_ERROR_KEY], SpotifyTimeoutError)
         self.assertNotIn(reproduction.LAST_VALID_VIEW_STATE_KEY, self.session_state)
 
+    def test_liked_sync_rejects_partial_offset_before_accessing_services(self):
+        """Reject partial liked-library scans before any Spotify or database operation."""
+        with patch.dict(sys.modules, {
+            "config": SimpleNamespace(DBNAME="unused", VERBOSE=False),
+            "register.db": MagicMock(),
+            "spotifyapi.spotifyclient": SimpleNamespace(SpotifyClient=SpotifyClient),
+        }):
+            import _liked_tracks as liked_tracks
+        database_factory = Mock()
+        with (
+            patch.object(liked_tracks, "SpotifyClient", return_value=self.client),
+            patch.object(liked_tracks, "SimpleDB", database_factory),
+        ):
+            with self.assertRaises(ValueError):
+                liked_tracks.save_liked_track_ids(limit=1, offset=1)
+        database_factory.assert_not_called()
+        self.spotify.current_user_saved_tracks.assert_not_called()
+
+    def test_liked_sync_rejects_pages_without_pagination_metadata(self):
+        """Reject a short liked page that cannot prove the full library was downloaded."""
+        with patch.dict(sys.modules, {
+            "config": SimpleNamespace(DBNAME="unused", VERBOSE=False),
+            "register.db": MagicMock(),
+            "spotifyapi.spotifyclient": SimpleNamespace(SpotifyClient=SpotifyClient),
+        }):
+            import _liked_tracks as liked_tracks
+        database = Mock()
+        database.get_all_ids.return_value = ["stale"]
+        self.spotify.current_user_saved_tracks.return_value = {
+            "items": [{"track": {"id": "current"}}]
+        }
+        with (
+            patch.object(liked_tracks, "SpotifyClient", return_value=self.client),
+            patch.object(liked_tracks, "SimpleDB", return_value=database),
+        ):
+            with self.assertRaises(SpotifyInvalidResponseError):
+                liked_tracks.save_liked_track_ids(limit=2)
+        database.insert.assert_not_called()
+        database.delete_ids.assert_not_called()
+
+    def test_liked_sync_rejects_items_without_track_ids(self):
+        """Reject a fully paginated response when a liked item cannot be reconciled by ID."""
+        with patch.dict(sys.modules, {
+            "config": SimpleNamespace(DBNAME="unused", VERBOSE=False),
+            "register.db": MagicMock(),
+            "spotifyapi.spotifyclient": SimpleNamespace(SpotifyClient=SpotifyClient),
+        }):
+            import _liked_tracks as liked_tracks
+        database = Mock()
+        self.spotify.current_user_saved_tracks.return_value = {
+            "items": [{"track": {}}],
+            "offset": 0,
+            "limit": 2,
+            "total": 1,
+            "next": None,
+        }
+        with (
+            patch.object(liked_tracks, "SpotifyClient", return_value=self.client),
+            patch.object(liked_tracks, "SimpleDB", return_value=database),
+        ):
+            with self.assertRaises(SpotifyInvalidResponseError):
+                liked_tracks.save_liked_track_ids(limit=2)
+        database.insert.assert_not_called()
+        database.get_all_ids.assert_not_called()
+        database.delete_ids.assert_not_called()
+
+    def test_liked_sync_rejects_page_items_exceeding_declared_total(self):
+        """Reject a response whose item count contradicts its declared library total."""
+        with patch.dict(sys.modules, {
+            "config": SimpleNamespace(DBNAME="unused", VERBOSE=False),
+            "register.db": MagicMock(),
+            "spotifyapi.spotifyclient": SimpleNamespace(SpotifyClient=SpotifyClient),
+        }):
+            import _liked_tracks as liked_tracks
+        database = Mock()
+        self.spotify.current_user_saved_tracks.return_value = {
+            "items": [
+                {"track": {"id": "first"}},
+                {"track": {"id": "second"}},
+            ],
+            "offset": 0,
+            "limit": 2,
+            "total": 1,
+            "next": None,
+        }
+        with (
+            patch.object(liked_tracks, "SpotifyClient", return_value=self.client),
+            patch.object(liked_tracks, "SimpleDB", return_value=database),
+        ):
+            with self.assertRaises(SpotifyInvalidResponseError):
+                liked_tracks.save_liked_track_ids(limit=2)
+        database.insert.assert_not_called()
+        database.get_all_ids.assert_not_called()
+        database.delete_ids.assert_not_called()
+
+    def test_liked_sync_persists_only_after_all_pages_are_validated(self):
+        """Download every page before inserting IDs or reconciling the local library."""
+        with patch.dict(sys.modules, {
+            "config": SimpleNamespace(DBNAME="unused", VERBOSE=False),
+            "register.db": MagicMock(),
+            "spotifyapi.spotifyclient": SimpleNamespace(SpotifyClient=SpotifyClient),
+        }):
+            import _liked_tracks as liked_tracks
+        database = Mock()
+        database.insert.return_value = True
+        database.get_all_ids.return_value = ["first", "second", "third"]
+        pages = {
+            0: {
+                "items": [{"track": {"id": "first"}}, {"track": {"id": "second"}}],
+                "offset": 0,
+                "limit": 2,
+                "total": 3,
+                "next": "next-page",
+            },
+            2: {
+                "items": [{"track": {"id": "third"}}],
+                "offset": 2,
+                "limit": 2,
+                "total": 3,
+                "next": None,
+            },
+        }
+
+        def fetch_page(limit, offset):
+            if offset == 2:
+                self.assertEqual(database.insert.call_count, 0)
+            return pages[offset]
+
+        self.spotify.current_user_saved_tracks.side_effect = fetch_page
+        with (
+            patch.object(liked_tracks, "SpotifyClient", return_value=self.client),
+            patch.object(liked_tracks, "SimpleDB", return_value=database),
+            patch.object(liked_tracks.time, "sleep"),
+        ):
+            result = liked_tracks.save_liked_track_ids(limit=2)
+        self.assertEqual(result["saved_count"], 3)
+        self.assertEqual(database.insert.call_count, 3)
+        database.delete_ids.assert_not_called()
+
+    def test_liked_sync_accepts_complete_empty_library(self):
+        """Treat a verified empty Spotify library as valid and reconcile stale IDs."""
+        with patch.dict(sys.modules, {
+            "config": SimpleNamespace(DBNAME="unused", VERBOSE=False),
+            "register.db": MagicMock(),
+            "spotifyapi.spotifyclient": SimpleNamespace(SpotifyClient=SpotifyClient),
+        }):
+            import _liked_tracks as liked_tracks
+        database = Mock()
+        database.get_all_ids.return_value = ["stale"]
+        database.delete_ids.return_value = 1
+        self.spotify.current_user_saved_tracks.return_value = {
+            "items": [], "offset": 0, "limit": 2, "total": 0, "next": None
+        }
+        with (
+            patch.object(liked_tracks, "SpotifyClient", return_value=self.client),
+            patch.object(liked_tracks, "SimpleDB", return_value=database),
+        ):
+            result = liked_tracks.save_liked_track_ids(limit=2)
+        self.assertEqual(result, {"saved_count": 0, "stale_ids": ["stale"]})
+        database.insert.assert_not_called()
+        database.delete_ids.assert_called_once_with("liked_tracks", ["stale"])
+
     def test_liked_sync_failure_never_reaches_deletions(self):
         """Verify a liked-page timeout aborts synchronization before reading local IDs or deleting favorites."""
         with patch.dict(sys.modules, {
@@ -537,7 +699,13 @@ class ReproductionTest(unittest.TestCase):
             import _liked_tracks as liked_tracks
         database = MagicMock()
         self.spotify.current_user_saved_tracks.side_effect = [
-            {"items": [{"track": {"id": "first"}}]},
+            {
+                "items": [{"track": {"id": "first"}}],
+                "offset": 0,
+                "limit": 1,
+                "total": 2,
+                "next": "next-page",
+            },
             requests.Timeout(),
         ]
         with (
@@ -547,8 +715,32 @@ class ReproductionTest(unittest.TestCase):
         ):
             with self.assertRaises(SpotifyTimeoutError):
                 liked_tracks.save_liked_track_ids(limit=1)
+        database.insert.assert_not_called()
         database.delete_ids.assert_not_called()
         database.get_all_ids.assert_not_called()
+
+    def test_liked_sync_rate_limit_never_reaches_database_writes(self):
+        """Keep the database unchanged when Spotify rate limits the first page."""
+        with patch.dict(sys.modules, {
+            "config": SimpleNamespace(DBNAME="unused", VERBOSE=False),
+            "register.db": MagicMock(),
+            "spotifyapi.spotifyclient": SimpleNamespace(SpotifyClient=SpotifyClient),
+        }):
+            import _liked_tracks as liked_tracks
+        database = Mock()
+        self.spotify.current_user_saved_tracks.side_effect = SpotifyRateLimitError(
+            "get liked songs", 30
+        )
+        with (
+            patch.object(spotifyclient, "_SPOTIFY_RATE_LIMITED_UNTIL", 0.0),
+            patch.object(liked_tracks, "SpotifyClient", return_value=self.client),
+            patch.object(liked_tracks, "SimpleDB", return_value=database),
+        ):
+            with self.assertRaises(SpotifyRateLimitError):
+                liked_tracks.save_liked_track_ids(limit=1)
+        database.insert.assert_not_called()
+        database.get_all_ids.assert_not_called()
+        database.delete_ids.assert_not_called()
 
     def test_like_buttons_are_disabled_without_track_id(self):
         """Disable liked buttons without track IDs and prevent pending actions or reruns."""

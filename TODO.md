@@ -151,17 +151,30 @@ credenciales, con red bloqueada y sin modificar datos reales.
 
 ## Fase 2 - Sincronizacion segura
 
-- [ ] **5. Proteger la descarga de favoritos.** Descargar y validar todas las
+- [x] **5. Proteger la descarga de favoritos.** Descargar y validar todas las
 	paginas antes de calcular bajas; no reconciliar desde un offset parcial.
 	Cierre: pruebas de fallo inicial/intermedio, 429 y respuesta malformada impiden
 	borrados, y una biblioteca vacia completa se reconoce como valida.
-- [ ] **6. Unificar la conversion de datos Spotify.** Reutilizar el mapeo de tracks,
+- [x] **6. Unificar la conversion de datos Spotify.** Reutilizar el mapeo de tracks,
 	albums y artists en registro y recuperacion de metadata. Cierre: campos
 	opcionales ausentes no borran enriquecimiento previamente disponible.
-- [ ] **7. Verificar fechas e idempotencia.** Interpretar instantes Spotify en UTC,
+- [x] **7. Verificar fechas e idempotencia.** Interpretar instantes Spotify en UTC,
 	aplicar zona configurable al mostrar y conservar unicidad de eventos en DB.
 	Cierre: repetir una sincronizacion no duplica eventos; revisar una muestra
 	historica antes de decidir si hace falta corregir datos existentes.
+
+Verificacion del paso 7, 2026-10-15: los timestamps Spotify ahora se parsean
+como instantes aware y se almacenan como epoch UTC; la zona de presentacion se
+configura con `SPOTY_DISPLAY_TIMEZONE` (por defecto `Etc/GMT-4`). Una muestra de
+solo lectura comparo los 50 eventos mas recientes de Neon con Spotify: 43 IDs
+coincidieron y los 43 timestamps almacenados estaban 7200 segundos antes. El
+historial confirma que el registro aplicaba `+02:00` desde la primera version.
+Tras dry-run, sin colisiones potenciales, se corrigieron 10.606 filas en una
+transaccion, sumando 7200 segundos. La verificacion posterior mantuvo el conteo
+y encontro 47 coincidencias recientes con Spotify, todas con delta de 0 segundos.
+
+Backup previo fuera del repo: `%LOCALAPPDATA%\spoty\backups\listening_events_before_utc_fix_20261015T085727Z_61a05cde.csv`.
+SHA-256: `87a10b0126047eb55cc31dc44ebd043308a678acbc12e17090f52e99112435ee`.
 
 ## Fase 3 - Persistencia y transacciones
 
