@@ -5,7 +5,7 @@ import psycopg
 from psycopg import sql
 from psycopg.rows import dict_row
 
-from config import DBNAME
+from config import DBNAME, require_database_url
 from register.db import SimpleDB
 from spotifyapi.spotifyclient import SpotifyClient
 
@@ -149,7 +149,9 @@ def print_tops_db(limit: int = 10, time_range: str = "long_term") -> None:
             "time_range debe ser 'short_term', 'medium_term' o 'long_term'"
         )
 
-    with psycopg.connect(DBNAME, row_factory=dict_row) as connection:
+    with psycopg.connect(
+        require_database_url(DBNAME), row_factory=dict_row
+    ) as connection:
         with connection.cursor() as cursor:
             cursor.execute("SELECT MAX(played_at) AS latest_played_at FROM listening_events")
             latest_played_at = cursor.fetchone()["latest_played_at"]

@@ -17,9 +17,13 @@ class SummaryQueryService:
     def _query(self, query: str, parameters: tuple[Any, ...] | None = None):
         database_url = self._database_url
         if database_url is None:
-            from config import DATABASE_URL
+            from config import require_database_url
 
-            database_url = DATABASE_URL
+            database_url = require_database_url()
+        else:
+            from config import require_database_url
+
+            database_url = require_database_url(database_url)
         connect_factory = self._connect_factory
         if connect_factory is None:
             from psycopg import connect

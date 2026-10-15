@@ -159,7 +159,9 @@ def apply_migrations(connection) -> list[str]:
 
 
 def migrate(database_url: str) -> list[str]:
-    with psycopg.connect(database_url) as connection:
+    from config import require_database_url
+
+    with psycopg.connect(require_database_url(database_url)) as connection:
         return apply_migrations(connection)
 
 

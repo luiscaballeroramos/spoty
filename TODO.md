@@ -249,14 +249,29 @@ errores. Suites ejecutadas localmente sin credenciales de Spotify ni Neon.
 
 ## Fase 5 - Estructura y configuracion
 
-- [ ] **17. Reorganizar y corregir el empaquetado.** Agrupar codigo por responsabilidad,
+- [x] **17. Reorganizar y corregir el empaquetado.** Agrupar codigo por responsabilidad,
 	separar componentes visuales de la demo, validar configuracion al usarla y alinear
-	modulos publicados, dependencias y minimo Python. Consolidar el diagrama de
-	arquitectura en un documento canonico (resolver la duplicidad entre
-	ARCHITECTURE.md y ARQUITECTURA.md), distinguir estado actual de propuestas y
+	modulos publicados, dependencias y minimo Python. Mantener `ARCHITECTURE.md`
+	como documento canonico de arquitectura, distinguir estado actual de propuestas y
 	mantener los flujos actualizados. Cierre: instalacion limpia, imports sin
 	HTTP/escrituras, analisis DB sin credenciales Spotify y comandos disponibles;
 	actualizar enlaces, workflows y documentacion tras mover archivos.
+
+Implementacion del paso 17, 2026-10-15: `pyproject.toml` declara Python `>=3.10`,
+publica los modulos y paquetes reales, y ofrece Streamlit mediante el extra `ui`.
+`requirements.txt` instala el proyecto editable con ese extra. Se normalizaron
+los nombres de cuatro modulos CLI para que coincidan con sus entrypoints.
+
+La validacion Neon ocurre al abrir conexiones, no al importar configuracion; las
+credenciales Spotify se validan al crear el cliente. La demo de `streamlit_lab`
+vive en `examples/` y sus pruebas en `tests/`. `ARCHITECTURE.md` distingue flujos
+actuales de propuestas futuras y se actualizaron README, workflow CI y enlaces.
+
+Cierre verificado: instalacion desde `requirements.txt`, wheel aislada con imports
+bloqueando HTTP/DB, minimo Python y cinco entrypoints; analisis importable sin
+credenciales Spotify; 137 pruebas, compilacion y diagnosticos sin errores. El
+workflow conserva una linea vacia al final que `git diff --check` señala, sin
+errores de YAML ni impacto funcional.
 
 ## Fase 6 - Enriquecimiento opcional
 

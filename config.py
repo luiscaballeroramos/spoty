@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 
 
 def _load_env_file() -> None:
@@ -48,18 +49,33 @@ CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI", "http://127.0.0.1:8888/")
 
-if not CLIENT_ID or not CLIENT_SECRET:
-    raise ValueError(
-        "Missing Spotify credentials. Set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET as environment variables."
-    )
-
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 
-if not DATABASE_URL:
-    raise ValueError("Missing DATABASE_URL.")
 
-if ".neon.tech" not in DATABASE_URL:
-    raise ValueError("DATABASE_URL must be a Neon URL.")
+def require_database_url(database_url: str | None = None) -> str:
+    """Return a configured Neon PostgreSQL URL or fail at the point of use."""
+    value = (
+        database_url
+        if database_url is not None
+        else os.getenv("DATABASE_URL", DATABASE_URL)
+    ).strip()
+    if not value:
+        raise ValueError("Missing DATABASE_URL.")
+
+    try:
+        parsed_url = urlparse(value)
+        hostname = parsed_url.hostname or ""
+    except ValueError:
+        hostname = ""
+        parsed_url = None
+
+    if (
+        parsed_url is None
+        or parsed_url.scheme not in {"postgres", "postgresql"}
+        or not hostname.lower().endswith(".neon.tech")
+    ):
+        raise ValueError("DATABASE_URL must be a Neon PostgreSQL URL.")
+    return value
 
 # Backward-compatible alias used by existing scripts.
 DBNAME = DATABASE_URL

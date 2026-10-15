@@ -12,6 +12,7 @@ class SimpleDBLifecycleTest(unittest.TestCase):
         config = ModuleType("config")
         config.DBSCHEMA = {}
         config.VERBOSE = False
+        config.require_database_url = lambda database_url=None: database_url
         module_name = "_spoty_test_register_db"
         path = Path(__file__).resolve().parents[1] / "register" / "db.py"
         spec = importlib.util.spec_from_file_location(module_name, path)

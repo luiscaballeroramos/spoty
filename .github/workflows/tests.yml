@@ -32,7 +32,7 @@ jobs:
           cache: pip
           cache-dependency-path: |
             requirements.txt
-            streamlit_lab/requirements.txt
+            pyproject.toml
 
       - name: Install dependencies
         run: python -m pip install -r requirements.txt
@@ -40,13 +40,54 @@ jobs:
       - name: Check Python syntax
         run: >-
           python -m compileall -q
-          app_views services register spotifyapi streamlit_lab tests
+            app_views services register spotifyapi streamlit_lab tests examples
           streamlit_app.py config.py
 
+          - name: Build and smoke-test installed wheel
+          env:
+            SPOTY_WHEEL_DIR: ${{ runner.temp }}/spoty-wheel
+            SPOTY_INSTALL_DIR: ${{ runner.temp }}/spoty-install
+          run: |
+            python -m pip wheel . --no-deps --wheel-dir "$SPOTY_WHEEL_DIR"
+            python -m pip install --no-deps --target "$SPOTY_INSTALL_DIR" "$SPOTY_WHEEL_DIR"/spoty-*.whl
+            cd "$RUNNER_TEMP"
+            PYTHONPATH="$SPOTY_INSTALL_DIR" python - <<'PY'
+            import importlib.metadata
+            import psycopg
+            import requests
+            from unittest.mock import patch
+
+            with (
+              patch.object(psycopg, "connect", side_effect=AssertionError("import opened a DB connection")),
+              patch.object(requests.sessions.Session, "request", side_effect=AssertionError("import made an HTTP request")),
+            ):
+              import _currently_playing
+              import _liked_tracks
+              import _print
+              import _print_summary
+              import _registration
+              import app_views.reproduction
+              import app_views.summary
+              import services.summary_queries
+              import spotifyapi.spotifyclient
+              import streamlit_lab.renderer
+
+            distribution = importlib.metadata.distribution("spoty")
+            commands = {
+              entry_point.name
+              for entry_point in distribution.entry_points
+              if entry_point.group == "console_scripts"
+            }
+            expected = {
+              "spoty-register",
+              "spoty-currently-playing",
+              "spoty-sync-liked",
+              "spoty-print-summary",
+              "spoty-print-liked",
+            }
+            assert expected <= commands, f"Missing console commands: {expected - commands}"
+            PY
       - name: Test product services and UI
         if: ${{ !cancelled() }}
         run: python -m unittest discover -s tests -p 'test_*.py' -v
 
-      - name: Test layout and demo
-        if: ${{ !cancelled() }}
-        run: python -m unittest streamlit_lab.test_blocks -v

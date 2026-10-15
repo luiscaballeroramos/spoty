@@ -382,6 +382,18 @@ class ReproductionTest(unittest.TestCase):
         self.assertEqual(len(captured.records), 1)
         self.assertEqual(captured.records[0].operation, "initialize Spotify client")
 
+    def test_missing_spotify_credentials_fail_before_http_request(self):
+        """Verify Spotify credentials are required at client use and before any token request."""
+        with (
+            patch.object(spotifyclient, "CLIENT_ID", None),
+            patch.object(spotifyclient, "CLIENT_SECRET", None),
+            patch.object(spotifyclient.requests, "post") as post,
+            patch.dict(spotifyclient.os.environ, {"SPOTIFY_REFRESH_TOKEN": "test-refresh-token"}),
+        ):
+            with self.assertRaisesRegex(ValueError, "Missing Spotify credentials"):
+                SpotifyClient()
+        post.assert_not_called()
+
     def test_malformed_token_response_logs_without_leaking_token_values(self):
         """Verify invalid token payloads are logged before recovery without exposing refresh tokens or response contents."""
         response = Mock()

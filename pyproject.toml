@@ -7,7 +7,7 @@ name = "spoty"
 version = "0.1.0"
 description = "Spotify tracker that stores listening data in PostgreSQL."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "spotipy",
     "psycopg[binary]",
@@ -15,6 +15,9 @@ dependencies = [
     "matplotlib",
     "tzdata",
 ]
+
+[project.optional-dependencies]
+ui = ["streamlit==1.63.0"]
 
 [project.scripts]
 spoty-register = "_registration:main"
@@ -32,9 +35,10 @@ py-modules = [
     "_missing_data",
     "_print",
     "_print_summary",
+    "streamlit_app",
 ]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["register*", "services*", "spotifyapi*"]
+include = ["app_views*", "register*", "services*", "spotifyapi*", "streamlit_lab*"]
 namespaces = true

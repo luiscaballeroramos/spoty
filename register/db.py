@@ -4,12 +4,14 @@ import psycopg
 from psycopg import sql
 from psycopg.rows import dict_row
 
-from config import VERBOSE
+from config import VERBOSE, require_database_url
 
 
 class SimpleDB:
     def __init__(self, db_path: str):
-        self.conn = psycopg.connect(db_path, row_factory=dict_row, autocommit=True)
+        self.conn = psycopg.connect(
+            require_database_url(db_path), row_factory=dict_row, autocommit=True
+        )
         self.cursor = self.conn.cursor()
 
     def __enter__(self):

@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from services.summary_queries import SummaryQueryService
 
@@ -13,7 +13,11 @@ class SummaryQueryServiceTest(unittest.TestCase):
         cursor.fetchall.return_value = rows
         connection.cursor.return_value = cursor
         connect = MagicMock(return_value=connection)
-        return SummaryQueryService("unused", connect), connect, cursor
+        return (
+            SummaryQueryService("postgresql://test.neon.tech/spoty", connect),
+            connect,
+            cursor,
+        )
 
     def test_dashboard_signature_maps_one_query_result(self):
         """Verify Dashboard signature maps one query result."""
@@ -52,3 +56,24 @@ class SummaryQueryServiceTest(unittest.TestCase):
         cursor.reset_mock()
         self.assertEqual(service.artist_names([]), {})
         cursor.execute.assert_not_called()
+
+    def test_non_neon_database_url_fails_before_connecting(self):
+        """Reject an unsafe database URL at query time without opening a connection."""
+        service, connect, _ = self._service([])
+        service._database_url = "postgresql://localhost/spoty"
+
+        with self.assertRaisesRegex(ValueError, "Neon PostgreSQL URL"):
+            service.library_counts()
+
+        connect.assert_not_called()
+
+    def test_missing_database_url_is_rejected_when_query_runs(self):
+        """Defer missing database configuration errors until the first query."""
+        connect = MagicMock()
+        service = SummaryQueryService(connect_factory=connect)
+
+        with patch.dict("os.environ", {"DATABASE_URL": ""}):
+            with self.assertRaisesRegex(ValueError, "Missing DATABASE_URL"):
+                service.library_counts()
+
+        connect.assert_not_called()

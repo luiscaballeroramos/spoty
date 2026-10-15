@@ -1,31 +1,64 @@
-# Arquitectura propuesta
+# Arquitectura
 
-Este diagrama describe una arquitectura objetivo, no el estado completo actual
-del sistema. El motor de recomendaciones y el workflow de tests y calidad están
-pendientes de implementación. La sincronización puede iniciarse desde Streamlit
-o ejecutarse desde un job de GitHub Actions.
+Documento canonico de la arquitectura implementada y de las propuestas aun no
+integradas. La aplicacion es un monolito modular: Streamlit, CLI y GitHub Actions
+comparten servicios y persistencia, sin un worker permanente.
+
+## Estado actual
 
 ```mermaid
-flowchart TD
-    SP[Spotify API] --> SY[Servicio de sincronizacion]
-    SY --> DB[(PostgreSQL / Neon)]
+flowchart LR
+        USER[Usuario] --> UI[streamlit_app.py]
+        UI --> VIEWS[app_views]
+        VIEWS --> PC[PlaybackController]
+        VIEWS --> RS[ReproductionService]
+        VIEWS --> QS[SummaryQueryService]
+        VIEWS --> SY[SynchronizationService]
+        VIEWS --> LAB[streamlit_lab: modelos y renderer]
+        PC --> SC[SpotifyClient]
+        RS --> SC
+        SY --> SC
+        SC --> SP[Spotify API]
+        RS --> DBL[register.db / SimpleDB]
+        SY --> DBL
+        QS --> DB[(PostgreSQL / Neon)]
+        DBL --> DB
+        MIG[register.migrations] --> DB
 
-    UI[Aplicacion Streamlit] --> DB
-    UI -. accion de sincronizacion .-> SY
-
-    DB --> EN[Servicio de enriquecimiento]
-    EN -->|consulta| LF[Last.fm]
-    LF -->|respuesta| EN
-    EN -->|consulta| MB[MusicBrainz]
-    MB -->|respuesta| EN
-    EN -->|consulta, si disponible| AB[AcousticBrainz]
-    AB -->|respuesta| EN
-    EN --> DB
-
-    DB --> REC[Motor de recomendaciones, futuro]
-    REC --> UI
-
-    GH[GitHub Actions] -. dispara job .-> RUN[Runner]
-    RUN -. ejecuta .-> SY
-    GH -. workflow de CI, por configurar .-> Q[Tests y calidad]
+    SYCLI[CLI: registro y sincronizacion de favoritos] --> SY
+    DBCLI[CLI: resumen y consultas locales] --> DBL
+    PLAYCLI[CLI: reproduccion actual] --> SC
+    GHJ[GitHub Actions: jobs de registro y favoritos] --> SYCLI
+        ANALYSIS[Scripts de analisis] --> DB
+        CI[GitHub Actions: pruebas] --> TESTS[Tests y smoke test de wheel]
+        DEMO[examples/streamlit_lab_demo.py] --> LAB
 ```
+
+- `streamlit_app.py` carga secretos de Streamlit antes de enrutar a las vistas.
+- `app_views` presenta resultados y coordina servicios; no contiene SQL de
+  resumen. `SummaryQueryService` consulta PostgreSQL directamente mediante
+  consultas parametrizadas.
+- `PlaybackController` coordina estado, polling y snapshots con un cliente
+  Spotify inyectado. `ReproductionService` coordina cambios de favoritos entre
+  Spotify y la replica local.
+- `SynchronizationService` comparte registro y reconciliacion de favoritos
+  entre Streamlit, CLI y los jobs de Actions. `SimpleDB` gestiona conexiones y
+  transacciones; las migraciones solo se ejecutan de forma explicita.
+- Los scripts de analisis consultan PostgreSQL sin requerir credenciales de
+  Spotify. Los graficos se escriben en `outputs/chart/`.
+- `streamlit_lab` contiene modelos, controles y renderizado reutilizables. La
+  demo independiente esta en `examples/`; las pruebas viven en `tests/`.
+- La configuracion Neon se valida al abrir una conexion. Las credenciales de
+  Spotify se validan al crear el cliente, no al importar los modulos.
+- `pyproject.toml` publica los modulos, paquetes, entrypoints y el extra `ui`;
+  `requirements.txt` instala el proyecto con la interfaz incluida.
+
+## Propuestas
+
+- Enriquecimiento opcional mediante adaptadores Last.fm, MusicBrainz y, solo si
+    sigue disponible, AcousticBrainz. Los scripts existentes aun no forman un
+    servicio de enriquecimiento integrado.
+- Motor de recomendaciones explicables, tras acordar un caso de uso y un
+    criterio de utilidad verificable.
+- Optimizaciones de consultas, conexiones o cache solo despues de medir un
+    cuello de botella.

@@ -3,15 +3,14 @@
 ## Propósito y estado
 
 `streamlit_lab` es un conjunto de primitivas reutilizables para describir y
-renderizar interfaces de Streamlit mediante configuración declarativa. Incluye
-una aplicación de laboratorio independiente para probar layouts y apariencia,
-pero sus módulos ya se reutilizan en la aplicación principal: la reproducción y
-la navegación superior importan modelos y renderizadores del laboratorio.
+renderizar interfaces de Streamlit mediante configuración declarativa. La demo
+independiente para probar layouts y apariencia vive en
+`examples/streamlit_lab_demo.py`; sus módulos se reutilizan en la aplicación
+principal, donde reproducción y navegación importan modelos y renderizadores.
 
-El laboratorio se puede ejecutar sin Spotify ni base de datos con
-`streamlit run app.py` desde esta carpeta (por defecto, se documenta el puerto
-8502). La aplicación principal, en cambio, lo importa como paquete
-`streamlit_lab`.
+El laboratorio se puede ejecutar desde la raiz sin Spotify ni base de datos con
+`streamlit run examples/streamlit_lab_demo.py` (puerto 8502). La aplicación
+principal lo importa como paquete `streamlit_lab`.
 
 ## Elementos y responsabilidades
 
@@ -22,15 +21,15 @@ El laboratorio se puede ejecutar sin Spotify ni base de datos con
 | `styles.py` | Modelos inmutables de apariencia y validadores: `BlockStyle`, `ButtonStyle`, `PageStyle`, `Border`, `Shadow`, `Insets`, `Corners`. | Los estilos son datos separados del renderizado; `BlockStyle` pertenece a bloques, `ButtonStyle` a botones y `PageStyle` a la página. |
 | `controls.py` | Controles de Streamlit para editar layout, bloque, dimensiones y apariencia desde la barra lateral. | Devuelve nuevas configuraciones; no renderiza los bloques de contenido. |
 | `renderer.py` | Convierte la configuración a CSS acotado por claves y crea contenedores/botones de Streamlit. | `render_group` resuelve grupos, llama a `render_layout` y `render_block`, y delega el contenido en una función. |
-| `app.py` | Demo interactiva: estado de sesión, ejemplo inicial, selección de bloque, edición y exportación JSON. | Conecta los controles con los modelos y pasa el resultado a `render_group`. |
-| `test_blocks.py` | Pruebas de modelos, validación, CSS y flujos de la demo. | Comprueba tanto reglas puras como interacciones mediante `streamlit.testing.AppTest`. |
+| `examples/streamlit_lab_demo.py` | Demo interactiva: estado de sesión, ejemplo inicial, selección de bloque, edición y exportación JSON. | Conecta los controles con los modelos y pasa el resultado a `render_group`. |
+ | `tests/test_streamlit_lab.py` | Pruebas de modelos, validación, CSS y flujos de la demo. | Comprueba tanto reglas puras como interacciones mediante `streamlit.testing.AppTest`. |
 
 ## Relación entre los conceptos
 
 ```mermaid
 flowchart TD
     C[controls.py: editores Streamlit] -->|proponen configuración| M[Modelos inmutables]
-    A[app.py: estado de sesión y ejemplo] --> C
+    A[examples/streamlit_lab_demo.py: estado de sesión y ejemplo] --> C
     M --> B[Block: contenido, tamaño, posición, span, estado]
     M --> L[Layout: flujo, cuadrícula, espacios, alineación]
     M --> S[BlockStyle / ButtonStyle / PageStyle]
@@ -41,7 +40,7 @@ flowchart TD
     L --> R
     S --> R
     R -->|CSS + contenedores/botones| ST[Interfaz Streamlit]
-    T[test_blocks.py] -. valida .-> M
+    T[tests/test_streamlit_lab.py] -. valida .-> M
     T -. valida .-> R
     T -. ejercita .-> A
 ```
@@ -131,13 +130,13 @@ exportada.
 
 ## Pruebas y límites actuales
 
-`test_blocks.py` cubre reglas de tamaños, posiciones y spans, layouts anidados,
+`tests/test_streamlit_lab.py` cubre reglas de tamaños, posiciones y spans, layouts anidados,
 estilos, sanitización básica de URLs, CSS generado, controles de la demo y
 conservación de la configuración válida ante errores. La suite usa
 `unittest` y `AppTest`; puede ejecutarse desde esta carpeta con:
 
 ```powershell
-python -m unittest test_blocks.py
+.\venv\Scripts\python.exe -m unittest discover -s tests -p "test_streamlit_lab.py"
 ```
 
 El CSS depende de detalles del DOM de Streamlit, así que las pruebas unitarias
