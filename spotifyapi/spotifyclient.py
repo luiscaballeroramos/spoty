@@ -33,12 +33,21 @@ DEFAULT_CACHE_PATH = Path(__file__).resolve().parents[1] / ".cache"
 _SPOTIFY_RATE_LIMITED_UNTIL = 0.0
 
 
+def _require_spotify_credentials() -> tuple[str, str]:
+    if not CLIENT_ID or not CLIENT_SECRET:
+        raise ValueError(
+            "Missing Spotify credentials. Set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET as environment variables."
+        )
+    return CLIENT_ID, CLIENT_SECRET
+
+
 def _create_oauth_manager() -> SpotifyOAuth:
     """Create an OAuth manager with configured scopes and token cache without opening a browser."""
+    client_id, client_secret = _require_spotify_credentials()
     cache_path = os.getenv("SPOTIPY_CACHE_PATH", "").strip() or str(DEFAULT_CACHE_PATH)
     return SpotifyOAuth(
-        client_id=CLIENT_ID,
-        client_secret=CLIENT_SECRET,
+        client_id=client_id,
+        client_secret=client_secret,
         redirect_uri=REDIRECT_URI,
         scope=SPOTIFY_SCOPE,
         cache_path=cache_path,
@@ -93,6 +102,8 @@ class SpotifyClient:
 
     def _create_client_from_refresh_token(self, refresh_token: str):
         """Exchange a refresh token for a validated access token and create a non-retrying transport."""
+        client_id, client_secret = _require_spotify_credentials()
+
         def refresh_access_token():
             """Request a new access token and return its JSON payload after checking the HTTP response."""
             response = requests.post(
@@ -101,7 +112,7 @@ class SpotifyClient:
                     "grant_type": "refresh_token",
                     "refresh_token": refresh_token,
                 },
-                auth=(CLIENT_ID, CLIENT_SECRET),
+                auth=(client_id, client_secret),
                 timeout=20,
             )
             response.raise_for_status()

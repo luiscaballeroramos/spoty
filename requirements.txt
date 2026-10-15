@@ -1,6 +1,1 @@
-spotipy
-psycopg[binary]
-pandas
-matplotlib
-tzdata
--r streamlit_lab/requirements.txt
+-e .[ui]

@@ -7,7 +7,7 @@ import pandas as pd
 import psycopg
 from matplotlib.patches import Patch
 
-from config import DATABASE_URL
+from config import DATABASE_URL, require_database_url
 
 
 TOP_LIMIT = 200
@@ -128,7 +128,7 @@ def load_top_plays(
 		ORDER BY reproducciones DESC, nombre ASC, entity_id ASC
 		LIMIT %s
 	"""
-	with psycopg.connect(database_url) as connection:
+	with psycopg.connect(require_database_url(database_url)) as connection:
 		return pd.read_sql_query(query, connection, params=(entity_type, limit))
 
 

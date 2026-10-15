@@ -217,7 +217,8 @@ class BlockTests(unittest.TestCase):
         from pathlib import Path
         from streamlit.testing.v1 import AppTest
 
-        app = AppTest.from_file(str(Path(__file__).with_name("app.py"))).run()
+        demo_path = Path(__file__).resolve().parents[1] / "examples" / "streamlit_lab_demo.py"
+        app = AppTest.from_file(str(demo_path)).run()
         self.assertFalse(app.exception)
         initial_height = app.session_state.blocks[0].height
         app.number_input(key="principal_width_value").set_value(75).run()
@@ -343,7 +344,8 @@ class LayoutTests(unittest.TestCase):
         from pathlib import Path
         from streamlit.testing.v1 import AppTest
 
-        app = AppTest.from_file(str(Path(__file__).with_name("app.py"))).run()
+        demo_path = Path(__file__).resolve().parents[1] / "examples" / "streamlit_lab_demo.py"
+        app = AppTest.from_file(str(demo_path)).run()
         initial_layout = app.session_state.group.layout
         app.number_input(key="layout_columns").set_value(6).run()
         app.selectbox(key="layout_flow").select("row").run()
@@ -402,7 +404,8 @@ class LayoutTests(unittest.TestCase):
         from pathlib import Path
         from streamlit.testing.v1 import AppTest
 
-        app = AppTest.from_file(str(Path(__file__).with_name("app.py"))).run()
+        demo_path = Path(__file__).resolve().parents[1] / "examples" / "streamlit_lab_demo.py"
+        app = AppTest.from_file(str(demo_path)).run()
         self.assertFalse(app.exception)
         self.assertEqual(len(app.session_state.blocks), 5)
         root = app.session_state.group
@@ -424,7 +427,8 @@ class LayoutTests(unittest.TestCase):
         from pathlib import Path
         from streamlit.testing.v1 import AppTest
 
-        app = AppTest.from_file(str(Path(__file__).with_name("app.py"))).run()
+        demo_path = Path(__file__).resolve().parents[1] / "examples" / "streamlit_lab_demo.py"
+        app = AppTest.from_file(str(demo_path)).run()
         initial = app.session_state.blocks[0]
         app.number_input(key="principal_style_radius_all").set_value(8).run()
         app.number_input(key="principal_style_border_width_all").set_value(2).run()
@@ -448,7 +452,8 @@ class LayoutTests(unittest.TestCase):
         from pathlib import Path
         from streamlit.testing.v1 import AppTest
 
-        app = AppTest.from_file(str(Path(__file__).with_name("app.py"))).run()
+        demo_path = Path(__file__).resolve().parents[1] / "examples" / "streamlit_lab_demo.py"
+        app = AppTest.from_file(str(demo_path)).run()
         initial_style = app.session_state.blocks[0].style
 
         app.selectbox(key="principal_style_variant").select("hover").run()

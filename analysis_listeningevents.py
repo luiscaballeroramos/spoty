@@ -8,7 +8,7 @@ import psycopg
 from psycopg import sql
 from psycopg.connection import Connection
 
-from config import DATABASE_URL, DBSCHEMA
+from config import DATABASE_URL, DBSCHEMA, require_database_url
 
 ANALYSIS_TIMEZONE = "Europe/Madrid"
 
@@ -37,7 +37,7 @@ def load_database_dataframes(
 	"""Load database tables into a dictionary keyed by table name."""
 	selected_tables = list(tables) if tables is not None else list(DBSCHEMA)
 
-	with psycopg.connect(database_url) as conn:
+	with psycopg.connect(require_database_url(database_url)) as conn:
 		return {
 			table: load_table_dataframe(conn, table)
 			for table in selected_tables

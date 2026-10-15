@@ -1,15 +1,14 @@
 # Streamlit Lab
 
-Subproyecto independiente para experimentar con interfaces definidas mediante
+Paquete reutilizable para describir y renderizar interfaces de Streamlit mediante
 reglas. No importa codigo de Spotify ni necesita sus credenciales o base de datos.
-Requiere Python 3.10 o posterior. Los comandos de abajo parten de la raiz del repositorio.
+Requiere Python 3.10 o posterior. Los comandos parten de la raiz del repositorio.
 
 ## Ejecutar en PowerShell
 
 ```powershell
-python -m venv streamlit_lab/.venv
-.\streamlit_lab\.venv\Scripts\python.exe -m pip install -r streamlit_lab/requirements.txt
-.\streamlit_lab\.venv\Scripts\python.exe -m streamlit run streamlit_lab/app.py --server.port 8502
+.\venv\Scripts\python.exe -m pip install -e ".[ui]"
+.\venv\Scripts\python.exe -m streamlit run examples/streamlit_lab_demo.py --server.port 8502
 ```
 
 ## Estructura
@@ -19,8 +18,8 @@ python -m venv streamlit_lab/.venv
 - `styles.py`: apariencia, espacios, esquinas, bordes y sombras; sin Streamlit.
 - `controls.py`: editores de cada configuracion en la barra lateral.
 - `renderer.py`: traduce las reglas a CSS y devuelve un contenedor Streamlit.
-- `app.py`: ejemplos y controles para experimentar.
-- `test_blocks.py`: pruebas de reglas y de la aplicacion.
+- `examples/streamlit_lab_demo.py`: ejemplos y controles para experimentar.
+- `tests/test_streamlit_lab.py`: pruebas de reglas y de la aplicacion.
 
 ## API interna
 
@@ -197,7 +196,7 @@ se previsualiza se cambia aparte en `Comportamiento del bloque`. `Restablecer
 ejemplo` recupera los cinco bloques y sus grupos. Los cambios duran durante la
 sesión. El JSON incluye la jerarquía de grupos y la configuración de los bloques;
 todavía no se puede importar. La estructura inicial está en `DEFAULT_GROUP`
-dentro de `app.py`.
+dentro de `examples/streamlit_lab_demo.py`.
 
 El renderizador usa la clase `st-key-...` del contenedor y CSS: hay que comprobar
 la vista al actualizar Streamlit. La dependencia queda fijada a la version probada.

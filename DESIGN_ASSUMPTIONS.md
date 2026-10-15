@@ -155,7 +155,7 @@ ser una accion de entrada explicita con su estado y politica de repeticion.
 ### Problema observado
 
 [Track](register/track.py#L131) conoce tablas y serializacion SQL. El registro y
-[la recuperacion de metadatos](__missing_data.py#L9) repiten conversiones Spotify.
+[la recuperacion de metadatos](_missing_data.py#L9) repiten conversiones Spotify.
 [Resumen](app_views/summary.py#L41) y analisis abren conexiones y transforman
 datos por caminos diferentes. No todo SQL distinto es duplicacion: una consulta
 de ranking y la carga para analisis pueden requerir implementaciones diferentes.

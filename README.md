@@ -1,25 +1,38 @@
 # spoty
-<!-- create env -->
+## Installation
+
+From the repository root, install the project and its Streamlit UI extra:
+
+```powershell
 python -m venv venv
+.\venv\Scripts\python.exe -m pip install -r requirements.txt
+```
 
-<!-- activate env -->
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-venv\Scripts\activate
+This editable installation includes the five `spoty-*` console commands listed
+below. Start the web app with:
 
-<!-- deactivate env -->
-deactivate
+```powershell
+.\venv\Scripts\python.exe -m streamlit run streamlit_app.py
+```
 
-<!-- install requirements -->
-pip install -r requirements.txt
+## Configuration
 
-<!-- config environmental variables -->
-Create a .env file in the project root with:
+Create a `.env` file in the project root with:
 
+```dotenv
 SPOTIFY_CLIENT_ID=tu_client_id
 SPOTIFY_CLIENT_SECRET=tu_client_secret
 SPOTIFY_REDIRECT_URI=http://127.0.0.1:8888/
-DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/spoty
+DATABASE_URL=postgresql://user:password@ep-example.us-east-2.aws.neon.tech/spoty?sslmode=require
 SPOTY_DISPLAY_TIMEZONE=Europe/Rome
+```
+
+`DATABASE_URL` must point to a Neon PostgreSQL host. Spotify credentials are
+required only by operations that use Spotify; database analysis can run without
+them.
+
+The installed commands are `spoty-register`, `spoty-currently-playing`,
+`spoty-sync-liked`, `spoty-print-summary`, and `spoty-print-liked`.
 
 ## Database schema
 
@@ -41,12 +54,6 @@ existing table whose schema does not match.
 `SPOTY_DISPLAY_TIMEZONE` accepts an IANA timezone name and defaults to
 `Europe/Rome`, which follows Italy's daylight-saving rules. Set it to
 `Europe/Madrid` to use Spain's local time instead.
-
-<!-- config streamlit iphone visualization -->
-streamlit
-F12
-Toogle device toolba (ctrl+shift+M)
-375x765(812-47-34) there is a white band on top of 47 pixels, and a space lost on the bottom of 34 pixels
 
 ## Operation logging
 
