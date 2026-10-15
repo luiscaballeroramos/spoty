@@ -257,7 +257,11 @@ class MigrationRunnerTest(unittest.TestCase):
 
         connection = FakeConnection()
 
-        self.assertEqual(apply_migrations(connection), ["0001_initial_schema"])
+        self.assertEqual(
+            apply_migrations(connection),
+            ["0001_initial_schema", "0002_metadata_enrichment", "0003_smarterplaylists_metadata",
+             "0004_smarterplaylists_refresh_state"],
+        )
         creates_before_second_run = sum(
             "CREATE TABLE IF NOT EXISTS listening_events" in statement
             for statement in connection.fake_cursor.statements
@@ -271,4 +275,4 @@ class MigrationRunnerTest(unittest.TestCase):
         self.assertEqual(creates_before_second_run, 1)
         self.assertEqual(creates_after_second_run, 1)
         self.assertEqual(connection.transaction_count, 2)
-        self.assertEqual(len(MIGRATIONS), 1)
+        self.assertEqual(len(MIGRATIONS), 4)

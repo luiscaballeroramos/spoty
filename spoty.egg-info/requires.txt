@@ -1,0 +1,12 @@
+spotipy
+requests
+psycopg[binary]
+pandas
+matplotlib
+tzdata
+
+[test]
+PyYAML<7,>=6
+
+[ui]
+streamlit==1.63.0

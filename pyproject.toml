@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "spotipy",
+    "requests",
     "psycopg[binary]",
     "pandas",
     "matplotlib",
@@ -18,11 +19,15 @@ dependencies = [
 
 [project.optional-dependencies]
 ui = ["streamlit==1.63.0"]
+test = ["PyYAML>=6,<7"]
 
 [project.scripts]
 spoty-register = "_registration:main"
 spoty-currently-playing = "_currently_playing:main"
 spoty-sync-liked = "_liked_tracks:main"
+spoty-enrich = "_enrichment:main"
+spoty-import-smarterplaylists = "_smarterplaylists:main"
+spoty-refresh-smarterplaylists = "_smarterplaylists_refresh:main"
 spoty-print-summary = "_print_summary:print_database_summary"
 spoty-print-liked = "_print:print_liked_tracks"
 
@@ -32,6 +37,9 @@ py-modules = [
     "_registration",
     "_currently_playing",
     "_liked_tracks",
+    "_enrichment",
+    "_smarterplaylists",
+    "_smarterplaylists_refresh",
     "_missing_data",
     "_print",
     "_print_summary",
@@ -40,5 +48,5 @@ py-modules = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["app_views*", "register*", "services*", "spotifyapi*", "streamlit_lab*"]
+include = ["app_views*", "metadata_sources*", "register*", "services*", "spotifyapi*", "streamlit_lab*"]
 namespaces = true

@@ -1,0 +1,15 @@
+{
+  "local_source": "outputs/The Killers/Hot Fuss/spotify_track.json",
+  "track": {
+    "name": "Mr. Brightside",
+    "uri": "spotify:track:3n3Ppam7vgaVa1iaRUc9Lp"
+  },
+  "artist": {
+    "name": "The Killers",
+    "uri": "spotify:artist:0C0XlULifJtAgn6ZNCW2eu"
+  },
+  "album": {
+    "name": "Hot Fuss",
+    "uri": "spotify:album:4OHNH3sDzIxnmUADXzv2kT"
+  }
+}
