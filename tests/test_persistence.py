@@ -32,6 +32,7 @@ class SimpleDBLifecycleTest(unittest.TestCase):
         return database
 
     def test_context_closes_cursor_and_connection_after_success(self):
+        """Verify Context closes cursor and connection after success."""
         db_module = self._load_simple_db()
         connection = Mock()
         cursor = Mock()
@@ -45,6 +46,7 @@ class SimpleDBLifecycleTest(unittest.TestCase):
         connection.close.assert_called_once_with()
 
     def test_constructor_does_not_create_or_modify_schema(self):
+        """Verify Constructor does not create or modify schema."""
         db_module = self._load_simple_db()
         db_module.DBSCHEMA = {"example": {"id": "TEXT PRIMARY KEY"}}
         connection = Mock()
@@ -64,6 +66,7 @@ class SimpleDBLifecycleTest(unittest.TestCase):
         database.close()
 
     def test_related_writes_use_one_explicit_transaction_without_inner_commits(self):
+        """Verify Related writes use one explicit transaction without inner commits."""
         db_module = self._load_simple_db()
         connection = Mock()
         cursor = Mock()
@@ -81,6 +84,7 @@ class SimpleDBLifecycleTest(unittest.TestCase):
         connection.commit.assert_not_called()
 
     def test_transaction_context_rolls_back_on_exception(self):
+        """Verify Transaction context rolls back on exception."""
         db_module = self._load_simple_db()
 
         class Transaction:
@@ -108,6 +112,7 @@ class SimpleDBLifecycleTest(unittest.TestCase):
         self.assertTrue(transaction.rolled_back)
 
     def test_reserve_liked_sync_returns_generation_and_local_revision(self):
+        """Verify Reserve liked sync returns generation and local revision."""
         database = self._database_with_cursor()
         database.cursor.fetchone.return_value = (4, 7)
 
@@ -119,6 +124,7 @@ class SimpleDBLifecycleTest(unittest.TestCase):
         database.conn.transaction.assert_called_once_with()
 
     def test_stale_liked_snapshot_is_not_applied(self):
+        """Verify Stale liked snapshot is not applied."""
         database = self._database_with_cursor()
         database.cursor.fetchone.return_value = (5, 8)
 
@@ -130,6 +136,7 @@ class SimpleDBLifecycleTest(unittest.TestCase):
         database.delete_ids.assert_not_called()
 
     def test_current_liked_snapshot_applies_within_one_transaction(self):
+        """Verify Current liked snapshot applies within one transaction."""
         database = self._database_with_cursor()
         database.cursor.fetchone.return_value = (5, 8, 0)
         database.insert.return_value = True
@@ -145,6 +152,7 @@ class SimpleDBLifecycleTest(unittest.TestCase):
         database.conn.transaction.assert_called_once_with()
 
     def test_liked_snapshot_is_rejected_after_local_revision_changes(self):
+        """Verify Liked snapshot is rejected after local revision changes."""
         database = self._database_with_cursor()
         database.cursor.fetchone.return_value = (5, 9, 0)
 
@@ -155,6 +163,7 @@ class SimpleDBLifecycleTest(unittest.TestCase):
         database.delete_ids.assert_not_called()
 
     def test_liked_snapshot_cannot_be_applied_twice(self):
+        """Verify Liked snapshot cannot be applied twice."""
         database = self._database_with_cursor()
         database.cursor.fetchone.return_value = (5, 8, 5)
 
@@ -165,6 +174,7 @@ class SimpleDBLifecycleTest(unittest.TestCase):
         database.delete_ids.assert_not_called()
 
     def test_local_liked_change_advances_revision_in_same_transaction(self):
+        """Verify Local liked change advances revision in same transaction."""
         database = self._database_with_cursor()
 
         database.set_liked_track("track-id", True)
@@ -177,6 +187,7 @@ class SimpleDBLifecycleTest(unittest.TestCase):
         database.conn.transaction.assert_called_once_with()
 
     def test_context_closes_cursor_and_connection_after_exception(self):
+        """Verify Context closes cursor and connection after exception."""
         db_module = self._load_simple_db()
         connection = Mock()
         cursor = Mock()
@@ -193,6 +204,7 @@ class SimpleDBLifecycleTest(unittest.TestCase):
 
 class MigrationRunnerTest(unittest.TestCase):
     def test_initial_schema_migration_is_versioned_and_idempotent(self):
+        """Verify Initial schema migration is versioned and idempotent."""
         from register.migrations import EXPECTED_COLUMNS, MIGRATIONS, apply_migrations
 
         class FakeCursor:

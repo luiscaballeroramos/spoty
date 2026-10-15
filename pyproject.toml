@@ -17,9 +17,9 @@ dependencies = [
 ]
 
 [project.scripts]
-spoty-register = "_registration:register_listeningevents"
+spoty-register = "_registration:main"
 spoty-currently-playing = "_currently_playing:main"
-spoty-sync-liked = "_liked_tracks:save_liked_track_ids"
+spoty-sync-liked = "_liked_tracks:main"
 spoty-print-summary = "_print_summary:print_database_summary"
 spoty-print-liked = "_print:print_liked_tracks"
 
