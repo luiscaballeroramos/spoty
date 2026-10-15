@@ -1,5 +1,6 @@
 from config import DBNAME, VERBOSE
 from register.db import SimpleDB
+from services.errors import LikedTrackReplicaPendingError
 from spotifyapi.spotifyclient import SpotifyClient
 from spotifyapi.errors import SpotifyError
 from spotifyapi.diagnostics import OPERATIONS
@@ -21,11 +22,18 @@ class ReproductionService:
         try:
             if not self._client.like_track(track_id):
                 return False
-            with OPERATIONS.observe("save liked track", "postgresql"):
-                database = SimpleDB(DBNAME)
-                database.insert("liked_tracks", {"id": track_id}, print_only_insert=True)
+            try:
+                with OPERATIONS.observe("save liked track", "postgresql"):
+                    with SimpleDB(DBNAME) as database:
+                        database.set_liked_track(track_id, True)
+            except SpotifyError:
+                raise
+            except Exception as exc:
+                raise LikedTrackReplicaPendingError("like") from exc
             return True
         except SpotifyError:
+            raise
+        except LikedTrackReplicaPendingError:
             raise
         except Exception:
             return False
@@ -40,11 +48,18 @@ class ReproductionService:
         try:
             if not self._client.unlike_track(track_id):
                 return False
-            with OPERATIONS.observe("remove liked track", "postgresql"):
-                database = SimpleDB(DBNAME)
-                database.delete_ids("liked_tracks", [track_id])
+            try:
+                with OPERATIONS.observe("remove liked track", "postgresql"):
+                    with SimpleDB(DBNAME) as database:
+                        database.set_liked_track(track_id, False)
+            except SpotifyError:
+                raise
+            except Exception as exc:
+                raise LikedTrackReplicaPendingError("unlike") from exc
             return True
         except SpotifyError:
+            raise
+        except LikedTrackReplicaPendingError:
             raise
         except Exception:
             return False

@@ -9,6 +9,7 @@ from streamlit_lab import renderer
 from streamlit_lab import Position
 import requests
 from spotifyapi.diagnostics import OPERATIONS, OperationFormatter, OperationLog
+from services.errors import LikedTrackReplicaPendingError
 from spotifyapi.errors import (
     SpotifyAuthorizationError,
     SpotifyInvalidResponseError,
@@ -339,11 +340,17 @@ class ReproductionTest(unittest.TestCase):
 
     def test_database_failure_logs_safe_metadata_once(self):
         """Verify a local liked-track failure logs one database event without leaking its exception message."""
-        database = Mock()
-        database.insert.side_effect = RuntimeError("postgresql://user:secret-password@host/db")
+        database = MagicMock()
+        database.__enter__.return_value = database
+        database.set_liked_track.side_effect = RuntimeError("postgresql://user:secret-password@host/db")
         service = self._create_liked_service(Mock(return_value=database))
-        with self.assertLogs("spoty.operations", level="ERROR") as captured:
-            self.assertFalse(service.save_liked_track("track-id"))
+        with (
+            patch.object(spotifyclient, "_SPOTIFY_RATE_LIMITED_UNTIL", 0.0),
+            self.assertLogs("spoty.operations", level="ERROR") as captured,
+        ):
+            with self.assertRaises(LikedTrackReplicaPendingError):
+                service.save_liked_track("track-id")
+        self.spotify.current_user_saved_tracks_add.assert_called_once_with(["track-id"])
         self.assertEqual(len(captured.records), 1)
         self.assertEqual(captured.records[0].provider, "postgresql")
         self.assertEqual(captured.records[0].operation, "save liked track")
@@ -547,7 +554,9 @@ class ReproductionTest(unittest.TestCase):
             "spotifyapi.spotifyclient": SimpleNamespace(SpotifyClient=SpotifyClient),
         }):
             import _liked_tracks as liked_tracks
-        database = Mock()
+        database = MagicMock()
+        database.__enter__.return_value = database
+        database.reserve_liked_track_sync.return_value = (1, 0)
         database.get_all_ids.return_value = ["stale"]
         self.spotify.current_user_saved_tracks.return_value = {
             "items": [{"track": {"id": "current"}}]
@@ -569,7 +578,9 @@ class ReproductionTest(unittest.TestCase):
             "spotifyapi.spotifyclient": SimpleNamespace(SpotifyClient=SpotifyClient),
         }):
             import _liked_tracks as liked_tracks
-        database = Mock()
+        database = MagicMock()
+        database.__enter__.return_value = database
+        database.reserve_liked_track_sync.return_value = (1, 0)
         self.spotify.current_user_saved_tracks.return_value = {
             "items": [{"track": {}}],
             "offset": 0,
@@ -595,7 +606,9 @@ class ReproductionTest(unittest.TestCase):
             "spotifyapi.spotifyclient": SimpleNamespace(SpotifyClient=SpotifyClient),
         }):
             import _liked_tracks as liked_tracks
-        database = Mock()
+        database = MagicMock()
+        database.__enter__.return_value = database
+        database.reserve_liked_track_sync.return_value = (1, 0)
         self.spotify.current_user_saved_tracks.return_value = {
             "items": [
                 {"track": {"id": "first"}},
@@ -624,9 +637,10 @@ class ReproductionTest(unittest.TestCase):
             "spotifyapi.spotifyclient": SimpleNamespace(SpotifyClient=SpotifyClient),
         }):
             import _liked_tracks as liked_tracks
-        database = Mock()
-        database.insert.return_value = True
-        database.get_all_ids.return_value = ["first", "second", "third"]
+        database = MagicMock()
+        database.__enter__.return_value = database
+        database.reserve_liked_track_sync.return_value = (1, 0)
+        database.apply_liked_track_snapshot.return_value = (True, 3, [])
         pages = {
             0: {
                 "items": [{"track": {"id": "first"}}, {"track": {"id": "second"}}],
@@ -646,7 +660,7 @@ class ReproductionTest(unittest.TestCase):
 
         def fetch_page(limit, offset):
             if offset == 2:
-                self.assertEqual(database.insert.call_count, 0)
+                database.apply_liked_track_snapshot.assert_not_called()
             return pages[offset]
 
         self.spotify.current_user_saved_tracks.side_effect = fetch_page
@@ -657,8 +671,9 @@ class ReproductionTest(unittest.TestCase):
         ):
             result = liked_tracks.save_liked_track_ids(limit=2)
         self.assertEqual(result["saved_count"], 3)
-        self.assertEqual(database.insert.call_count, 3)
-        database.delete_ids.assert_not_called()
+        database.apply_liked_track_snapshot.assert_called_once_with(
+            1, 0, ["first", "second", "third"]
+        )
 
     def test_liked_sync_accepts_complete_empty_library(self):
         """Treat a verified empty Spotify library as valid and reconcile stale IDs."""
@@ -668,9 +683,10 @@ class ReproductionTest(unittest.TestCase):
             "spotifyapi.spotifyclient": SimpleNamespace(SpotifyClient=SpotifyClient),
         }):
             import _liked_tracks as liked_tracks
-        database = Mock()
-        database.get_all_ids.return_value = ["stale"]
-        database.delete_ids.return_value = 1
+        database = MagicMock()
+        database.__enter__.return_value = database
+        database.reserve_liked_track_sync.return_value = (1, 0)
+        database.apply_liked_track_snapshot.return_value = (True, 0, ["stale"])
         self.spotify.current_user_saved_tracks.return_value = {
             "items": [], "offset": 0, "limit": 2, "total": 0, "next": None
         }
@@ -679,9 +695,34 @@ class ReproductionTest(unittest.TestCase):
             patch.object(liked_tracks, "SimpleDB", return_value=database),
         ):
             result = liked_tracks.save_liked_track_ids(limit=2)
-        self.assertEqual(result, {"saved_count": 0, "stale_ids": ["stale"]})
-        database.insert.assert_not_called()
-        database.delete_ids.assert_called_once_with("liked_tracks", ["stale"])
+        self.assertEqual(
+            result, {"saved_count": 0, "stale_ids": ["stale"], "applied": True}
+        )
+        database.apply_liked_track_snapshot.assert_called_once_with(1, 0, [])
+
+    def test_liked_sync_skips_snapshot_when_local_favorite_changes_mid_fetch(self):
+        """Do not apply a Spotify snapshot if a local like/unlike advanced its revision during download."""
+        with patch.dict(sys.modules, {
+            "config": SimpleNamespace(DBNAME="unused", VERBOSE=False),
+            "register.db": MagicMock(),
+            "spotifyapi.spotifyclient": SimpleNamespace(SpotifyClient=SpotifyClient),
+        }):
+            import _liked_tracks as liked_tracks
+        database = MagicMock()
+        database.__enter__.return_value = database
+        database.reserve_liked_track_sync.return_value = (3, 8)
+        database.apply_liked_track_snapshot.return_value = (False, 0, [])
+        self.spotify.current_user_saved_tracks.return_value = {
+            "items": [], "offset": 0, "limit": 2, "total": 0, "next": None
+        }
+        with (
+            patch.object(liked_tracks, "SpotifyClient", return_value=self.client),
+            patch.object(liked_tracks, "SimpleDB", return_value=database),
+        ):
+            result = liked_tracks.save_liked_track_ids(limit=2)
+
+        self.assertEqual(result, {"saved_count": 0, "stale_ids": [], "applied": False})
+        database.apply_liked_track_snapshot.assert_called_once_with(3, 8, [])
 
     def test_liked_sync_failure_never_reaches_deletions(self):
         """Verify a liked-page timeout aborts synchronization before reading local IDs or deleting favorites."""
@@ -698,6 +739,8 @@ class ReproductionTest(unittest.TestCase):
         }):
             import _liked_tracks as liked_tracks
         database = MagicMock()
+        database.__enter__.return_value = database
+        database.reserve_liked_track_sync.return_value = (1, 0)
         self.spotify.current_user_saved_tracks.side_effect = [
             {
                 "items": [{"track": {"id": "first"}}],
@@ -716,8 +759,7 @@ class ReproductionTest(unittest.TestCase):
             with self.assertRaises(SpotifyTimeoutError):
                 liked_tracks.save_liked_track_ids(limit=1)
         database.insert.assert_not_called()
-        database.delete_ids.assert_not_called()
-        database.get_all_ids.assert_not_called()
+        database.apply_liked_track_snapshot.assert_not_called()
 
     def test_liked_sync_rate_limit_never_reaches_database_writes(self):
         """Keep the database unchanged when Spotify rate limits the first page."""
@@ -727,7 +769,9 @@ class ReproductionTest(unittest.TestCase):
             "spotifyapi.spotifyclient": SimpleNamespace(SpotifyClient=SpotifyClient),
         }):
             import _liked_tracks as liked_tracks
-        database = Mock()
+        database = MagicMock()
+        database.__enter__.return_value = database
+        database.reserve_liked_track_sync.return_value = (1, 0)
         self.spotify.current_user_saved_tracks.side_effect = SpotifyRateLimitError(
             "get liked songs", 30
         )
@@ -739,8 +783,7 @@ class ReproductionTest(unittest.TestCase):
             with self.assertRaises(SpotifyRateLimitError):
                 liked_tracks.save_liked_track_ids(limit=1)
         database.insert.assert_not_called()
-        database.get_all_ids.assert_not_called()
-        database.delete_ids.assert_not_called()
+        database.apply_liked_track_snapshot.assert_not_called()
 
     def test_like_buttons_are_disabled_without_track_id(self):
         """Disable liked buttons without track IDs and prevent pending actions or reruns."""

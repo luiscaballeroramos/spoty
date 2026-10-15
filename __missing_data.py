@@ -28,11 +28,11 @@ def get_missing_track_metadata(db: SimpleDB, spotify: SpotifyClient, limit=1):
         track_data = spotify.get_track_byid(track_id)
         if track_data:
             _track, _album, artists = models_from_spotify_track(track_data)
-            _track.save(db, print_only_insert=True)
-
-            _album.save(db, print_only_insert=True)
-            for artist in artists:
-                artist.save(db, print_only_insert=True)
+            with db.transaction():
+                _track.save(db, print_only_insert=True)
+                _album.save(db, print_only_insert=True)
+                for artist in artists:
+                    artist.save(db, print_only_insert=True)
 
             saved_count += 1
 
@@ -40,6 +40,6 @@ def get_missing_track_metadata(db: SimpleDB, spotify: SpotifyClient, limit=1):
 
 
 if __name__ == "__main__":
-    db = SimpleDB(DBNAME)
     spotify = SpotifyClient()
-    get_missing_track_metadata(db, spotify, limit=1)
+    with SimpleDB(DBNAME) as db:
+        get_missing_track_metadata(db, spotify, limit=1)

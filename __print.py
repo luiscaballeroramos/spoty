@@ -38,61 +38,61 @@ def _get_output_prefix() -> str:
 
 def print_listening_events(limit: int = None):
     output_file = f"{_get_output_prefix()}_listening_events.txt"
-    db_ = SimpleDB(DBNAME)
-    db_.print_table(
-        "listening_events", order_desc="played_at", output_file=output_file, limit=limit
-    )
+    with SimpleDB(DBNAME) as db_:
+        db_.print_table(
+            "listening_events", order_desc="played_at", output_file=output_file, limit=limit
+        )
 
 
 def print_liked_tracks(limit: int = None):
     output_file = f"{_get_output_prefix()}_liked_tracks.txt"
-    db_ = SimpleDB(DBNAME)
-    db_.print_table(
-        "liked_tracks", order_desc="id", output_file=output_file, limit=limit
-    )
+    with SimpleDB(DBNAME) as db_:
+        db_.print_table(
+            "liked_tracks", order_desc="id", output_file=output_file, limit=limit
+        )
 
 
 def print_tracks(limit: int = None):
     output_file = f"{_get_output_prefix()}_tracks.txt"
-    db_ = SimpleDB(DBNAME)
-    db_.print_table(
-        "tracks",
-        order_desc="popularity",
-        output_file=output_file,
-        limit=limit,
-        print_columns=[
-            "id",
-            "name",
-            "duration_ms",
-            "album_id",
-            "album_track",
-            "artists_ids",
-        ],
-    )
+    with SimpleDB(DBNAME) as db_:
+        db_.print_table(
+            "tracks",
+            order_desc="popularity",
+            output_file=output_file,
+            limit=limit,
+            print_columns=[
+                "id",
+                "name",
+                "duration_ms",
+                "album_id",
+                "album_track",
+                "artists_ids",
+            ],
+        )
 
 
 def print_albums(limit: int = None):
     output_file = f"{_get_output_prefix()}_albums.txt"
-    db_ = SimpleDB(DBNAME)
-    db_.print_table(
-        "albums",
-        order_desc="release_year",
-        output_file=output_file,
-        limit=limit,
-        print_columns=["id", "name", "artists", "release_year", "popularity"],
-    )
+    with SimpleDB(DBNAME) as db_:
+        db_.print_table(
+            "albums",
+            order_desc="release_year",
+            output_file=output_file,
+            limit=limit,
+            print_columns=["id", "name", "artists", "release_year", "popularity"],
+        )
 
 
 def print_artists(limit: int = None):
     output_file = f"{_get_output_prefix()}_artists.txt"
-    db_ = SimpleDB(DBNAME)
-    db_.print_table(
-        "artists",
-        order_desc="followers",
-        output_file=output_file,
-        limit=limit,
-        print_columns=["id", "name"],
-    )
+    with SimpleDB(DBNAME) as db_:
+        db_.print_table(
+            "artists",
+            order_desc="followers",
+            output_file=output_file,
+            limit=limit,
+            print_columns=["id", "name"],
+        )
 
 
 def print_tops_spotify(limit: int = 10, time_range: str = "medium_term") -> None:

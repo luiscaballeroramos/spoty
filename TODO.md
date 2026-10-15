@@ -178,21 +178,40 @@ SHA-256: `87a10b0126047eb55cc31dc44ebd043308a678acbc12e17090f52e99112435ee`.
 
 ## Fase 3 - Persistencia y transacciones
 
-- [ ] **8. Acotar la vida de las conexiones.** Introducir apertura/cierre explicitos
+- [x] **8. Acotar la vida de las conexiones.** Introducir apertura/cierre explicitos
 	y permitir que operaciones relacionadas compartan una conexion. Cierre:
 	conexiones y cursores se cierran tanto con exito como ante una excepcion.
-- [ ] **9. Separar esquema y funcionamiento.** Sustituir DDL del constructor por
+- [x] **9. Separar esquema y funcionamiento.** Sustituir DDL del constructor por
 	preparacion y migraciones versionadas; comprobar el esquema existente antes
 	de establecer la base inicial. Cierre: una lectura no crea tablas y se prueban
 	tanto una DB nueva como la actualizacion de una DB de prueba existente.
-- [ ] **10. Aplicar transacciones cortas.** Guardar catalogo y evento por unidad
+- [x] **10. Aplicar transacciones cortas.** Guardar catalogo y evento por unidad
 	atomica y aplicar altas/bajas de favoritos juntas tras completar la descarga.
 	Cierre: un fallo intermedio hace rollback; no hay transacciones abiertas durante
 	HTTP ni esperas, y se mantienen las restricciones contra duplicados.
-- [ ] **11. Controlar sincronizaciones simultaneas.** Coordinar reconciliaciones
+- [x] **11. Controlar sincronizaciones simultaneas.** Coordinar reconciliaciones
 	y acciones locales de favoritos entre UI, CLI y jobs. Distinguir exito Spotify
 	de replica DB pendiente. Cierre: una prueba de solapamiento no pierde favoritos
 	y un fallo local no se comunica como fracaso remoto ni exito completo.
+
+Implementacion de Fase 3, 2026-10-15: `SimpleDB` cierra recursos con context
+manager, usa autocommit para operaciones simples y expone transacciones explicitas.
+El runner `python -m register.migrations` versiona y valida el esquema inicial;
+registro, metadata y reconciliacion agrupan escrituras relacionadas. La coordinacion
+de favoritos usa generaciones y revisiones locales para descartar snapshots viejos,
+evitando mantener conexiones, transacciones o locks durante llamadas HTTP. La UI
+diferencia un cambio Spotify exitoso con replica Neon pendiente.
+
+La migracion `0001_initial_schema` se aplico en Neon tras validar el esquema previo.
+La misma migracion se probo en un esquema vacio temporal dentro de una transaccion
+revertida. Verificacion posterior de solo lectura: 10.666 eventos unicos, 2.863
+favoritos y estado singleton inicializado; el preflight previo habia observado
+10.606 eventos, asi que los 60 eventos adicionales aparecieron durante el intervalo
+y no se atribuyen a la migracion.
+
+Validacion local: 83 pruebas de producto, 32 de laboratorio, compilacion y Pylance
+sin errores. Los tests cubren rollback, transacciones por evento, reconciliacion
+atomica, snapshots obsoletos, cambios locales durante la descarga y replica pendiente.
 
 ## Fase 4 - Servicios e interfaz
 

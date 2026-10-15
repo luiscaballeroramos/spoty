@@ -1,6 +1,7 @@
 import io
 import sys
 import unittest
+from contextlib import nullcontext
 from contextlib import redirect_stdout
 from datetime import datetime, timezone
 from types import ModuleType
@@ -39,6 +40,17 @@ class SpotifyDataMappingTest(unittest.TestCase):
         class MemoryDatabase:
             def __init__(self, _database_url):
                 self.events = set()
+                self.transaction_count = 0
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc_value, traceback):
+                return False
+
+            def transaction(self):
+                self.transaction_count += 1
+                return nullcontext()
 
             def get_listening_event_keys(self, track_ids, min_played_at, max_played_at):
                 return {
@@ -104,6 +116,7 @@ class SpotifyDataMappingTest(unittest.TestCase):
         self.assertEqual(second["inserted_listening_events"], 0)
         self.assertEqual(second["skipped_existing_listening_events"], 1)
         self.assertEqual(database.events, {("track-id", 1735732800)})
+        self.assertEqual(database.transaction_count, 1)
 
     def test_shared_mapper_handles_optional_fields_without_update_operations(self):
         """Map optional track data and insert related models without updates."""

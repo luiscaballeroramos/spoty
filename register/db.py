@@ -4,36 +4,103 @@ import psycopg
 from psycopg import sql
 from psycopg.rows import dict_row
 
-from config import VERBOSE, DBSCHEMA
+from config import VERBOSE
 
 
 class SimpleDB:
     def __init__(self, db_path: str):
-        self.conn = psycopg.connect(db_path, row_factory=dict_row)
+        self.conn = psycopg.connect(db_path, row_factory=dict_row, autocommit=True)
         self.cursor = self.conn.cursor()
-        self.schema = DBSCHEMA
-        self.create_tables()
 
-    def create_tables(self):
-        for table, cols in self.schema.items():
-            parts = []
-            for col, typ in cols.items():
-                if col.startswith("UNIQUE"):
-                    parts.append(sql.SQL(col))
-                else:
-                    parts.append(
-                        sql.SQL("{} {}").format(sql.Identifier(col), sql.SQL(typ))
-                    )
-            query = sql.SQL("CREATE TABLE IF NOT EXISTS {} ({})").format(
-                sql.Identifier(table), sql.SQL(", ").join(parts)
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        try:
+            if exc_type is not None:
+                self.conn.rollback()
+        finally:
+            self.close()
+        return False
+
+    def close(self):
+        try:
+            self.cursor.close()
+        finally:
+            self.conn.close()
+
+    def transaction(self):
+        return self.conn.transaction()
+
+    def reserve_liked_track_sync(self) -> tuple[int, int]:
+        with self.transaction():
+            self.cursor.execute("""
+                UPDATE liked_sync_state
+                SET generation = generation + 1
+                WHERE singleton_id = 1
+                RETURNING generation, local_revision
+            """)
+            row = self.cursor.fetchone()
+            if row is None:
+                raise RuntimeError(
+                    "Liked-track sync state is missing; run register.migrations first."
+                )
+            return int(row[0]), int(row[1])
+
+    def apply_liked_track_snapshot(
+        self,
+        generation: int,
+        local_revision: int,
+        current_ids: list[str],
+    ) -> tuple[bool, int, list[str]]:
+        with self.transaction():
+            self.cursor.execute("""
+                SELECT generation, local_revision, applied_generation
+                FROM liked_sync_state
+                WHERE singleton_id = 1
+                FOR UPDATE
+            """)
+            row = self.cursor.fetchone()
+            if row is None:
+                raise RuntimeError(
+                    "Liked-track sync state is missing; run register.migrations first."
+                )
+            if (
+                int(row[0]) != generation
+                or int(row[1]) != local_revision
+                or int(row[2]) >= generation
+            ):
+                return False, 0, []
+
+            saved_count = 0
+            for track_id in dict.fromkeys(current_ids):
+                if self.insert(
+                    "liked_tracks", {"id": track_id}, print_only_insert=True
+                ):
+                    saved_count += 1
+
+            stale_ids = sorted(
+                set(self.get_all_ids("liked_tracks")) - set(current_ids)
             )
-            self.cursor.execute(query)
-        self.conn.commit()
-        (
-            print("Database initialized with tables: " + ", ".join(self.schema.keys()))
-            if VERBOSE
-            else None
-        )
+            self.delete_ids("liked_tracks", stale_ids)
+            self.cursor.execute("""
+                UPDATE liked_sync_state
+                SET applied_generation = %s
+                WHERE singleton_id = 1
+            """, (generation,))
+        return True, saved_count, stale_ids
+
+    def set_liked_track(self, track_id: str, liked: bool) -> None:
+        with self.transaction():
+            if liked:
+                self.insert("liked_tracks", {"id": track_id}, print_only_insert=True)
+            else:
+                self.delete_ids("liked_tracks", [track_id])
+            self.cursor.execute("""
+                UPDATE liked_sync_state
+                SET local_revision = local_revision + 1
+                WHERE singleton_id = 1
+            """)
 
     def count_rows(self, table: str) -> int:
         query = sql.SQL("SELECT COUNT(*) AS total FROM {}").format(
@@ -46,7 +113,6 @@ class SimpleDB:
     def delete_table(self, table: str):
         query = sql.SQL("DELETE FROM {}").format(sql.Identifier(table))
         self.cursor.execute(query)
-        self.conn.commit()
         print(f"Table '{table}' cleared") if VERBOSE else None
 
     def exists(self, table: str, id: str) -> bool:
@@ -92,7 +158,6 @@ class SimpleDB:
             sql.Identifier(table), placeholders
         )
         self.cursor.execute(query, ids)
-        self.conn.commit()
         return self.cursor.rowcount
 
     def edit(
@@ -131,7 +196,6 @@ class SimpleDB:
             sql.Identifier(table), set_clause
         )
         self.cursor.execute(query, values)
-        self.conn.commit()
         if VERBOSE:
             if print_only_updated:
                 if print_columns:
@@ -158,7 +222,6 @@ class SimpleDB:
         ).format(sql.Identifier(table), cols, placeholders)
         self.cursor.execute(query, values)
         inserted = self.cursor.fetchone() is not None
-        self.conn.commit()
 
         if VERBOSE:
             if inserted:
