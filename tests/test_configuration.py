@@ -95,3 +95,15 @@ class WorkflowConfigurationTests(unittest.TestCase):
         steps = {step.get("name"): step for step in workflow["jobs"]["tests"]["steps"]}
         self.assertIn("Build and smoke-test installed wheel", steps)
         self.assertNotIn("- name:", steps["Check Python syntax"]["run"])
+
+    def test_smarterplaylists_workflow_scans_all_due_entities(self):
+        """Use bulk mode instead of imposing a ten-entity total limit on daily refresh."""
+        path = Path(__file__).resolve().parents[1] / ".github/workflows/smarterplaylists.yml"
+        workflow = yaml.load(path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+        job = workflow["jobs"]["smarterplaylists"]
+        step = job["steps"][-1]
+        self.assertIn("--all", step["run"])
+        self.assertNotIn("--limit", step["run"])
+        self.assertIn("--max-minutes 300", step["run"])
+        self.assertGreater(int(job["timeout-minutes"]), 300)
+        self.assertIn("batch_size", workflow["on"]["workflow_dispatch"]["inputs"])

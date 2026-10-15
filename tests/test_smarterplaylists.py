@@ -260,6 +260,57 @@ class CaptureAdapterTest(unittest.TestCase):
 
 
 class CaptureRefreshTest(unittest.TestCase):
+    def test_bulk_refresh_visits_every_snapshot_candidate_once(self):
+        """Process all due rows in bounded batches rather than stopping at the batch size."""
+        repository = Mock()
+        repository.get_refresh_candidates.return_value = {
+            "track": [{"id": str(index)} for index in range(125)],
+            "artist": [{"id": "artist"}], "album": [],
+        }
+        service = SmarterPlaylistsRefreshService("unused", Mock(), repository)
+        visited = []
+
+        def refresh(rows, _hours, _dry_run):
+            visited.extend(row["id"] for row in rows["track"])
+            self.assertTrue(all(len(batch) <= 50 for batch in rows.values()))
+            return {"status": "completed", "records_saved": sum(map(len, rows.values())), "errors": {}}
+
+        service._refresh_candidates = refresh
+        progress = Mock()
+        result = service.refresh_all(progress=progress)
+        self.assertEqual(visited, [str(index) for index in range(125)])
+        self.assertEqual(result["records_saved"], 126)
+        self.assertEqual(result["batches"], 3)
+        self.assertFalse(any(result["remaining"].values()))
+        repository.get_refresh_candidates.assert_called_once_with("unused", None, 20)
+        self.assertEqual(progress.call_count, 3)
+
+    def test_bulk_preview_and_time_budget_do_not_start_requests(self):
+        """Preview all pending counts and report interruption without pretending completion."""
+        repository = Mock()
+        repository.get_refresh_candidates.return_value = {"track": [{"id": TRACK_ID}]}
+        factory = Mock(side_effect=AssertionError("Unexpected HTTP"))
+        service = SmarterPlaylistsRefreshService("unused", factory, repository)
+        self.assertEqual(service.refresh_all(dry_run=True)["candidates"]["track"], 1)
+        ticks = iter([0, 10])
+        result = service.refresh_all(max_seconds=1, clock=lambda: next(ticks))
+        self.assertEqual(result["status"], "incomplete")
+        self.assertEqual(result["remaining"]["track"], 1)
+        factory.assert_not_called()
+
+    def test_bulk_refresh_stops_after_global_session_failure(self):
+        """Do not keep sending subsequent batches when authentication is denied."""
+        repository = Mock()
+        repository.get_refresh_candidates.return_value = {"track": [{"id": str(index)} for index in range(120)]}
+        adapter = Mock()
+        adapter.authenticate.side_effect = SmarterPlaylistsError("session_expired")
+        service = SmarterPlaylistsRefreshService("unused", lambda: adapter, repository)
+        result = service.refresh_all()
+        self.assertEqual(result["batches"], 1)
+        self.assertEqual(result["remaining"]["track"], 70)
+        self.assertEqual(result["status"], "deferred")
+        adapter.authenticate.assert_called_once()
+
     def test_refresh_closes_adapter_and_persists_success(self):
         """Refresh due entities through the normalizer and short repository operations."""
         repository = Mock()
@@ -305,6 +356,24 @@ class CaptureRefreshTest(unittest.TestCase):
 
 
 class CaptureImportTest(unittest.TestCase):
+    def test_refresh_cli_selects_bulk_mode_and_returns_incomplete_failure(self):
+        """Forward bulk options and report time-budget stops as incomplete, not success."""
+        from _smarterplaylists_refresh import main
+
+        service = Mock()
+        service.refresh_all.return_value = {"status": "incomplete", "records_saved": 5}
+        output = StringIO()
+        with patch("config.require_database_url", return_value="unused"), patch(
+            "_smarterplaylists_refresh.SmarterPlaylistsRefreshService", return_value=service
+        ):
+            with redirect_stdout(output), self.assertRaises(SystemExit) as raised:
+                main(["--all", "--batch-size", "25", "--max-minutes", "10"])
+        self.assertEqual(raised.exception.code, 1)
+        self.assertEqual(json.loads(output.getvalue())["status"], "incomplete")
+        self.assertEqual(service.refresh_all.call_args.args, (25, 20, False))
+        self.assertEqual(service.refresh_all.call_args.kwargs["max_seconds"], 600)
+        service.refresh.assert_not_called()
+
     def test_dry_run_and_cli_defaults_never_connect_or_request_network(self):
         """Validate files and default CLI invocation without config, DB or HTTP calls."""
         from _smarterplaylists import main
