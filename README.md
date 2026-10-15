@@ -21,6 +21,20 @@ SPOTIFY_REDIRECT_URI=http://127.0.0.1:8888/
 DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/spoty
 SPOTY_DISPLAY_TIMEZONE=Europe/Rome
 
+## Database schema
+
+Schema changes are versioned and are not run by normal application startup. For
+a new database, or to register the existing schema before upgrading the app,
+run the migration command explicitly:
+
+```powershell
+.\venv\Scripts\python.exe -m register.migrations
+```
+
+The runner verifies required columns and the unique listening-event key before
+recording a migration version. It stops rather than silently altering an
+existing table whose schema does not match.
+
 `SPOTY_DISPLAY_TIMEZONE` accepts an IANA timezone name and defaults to
 `Europe/Rome`, which follows Italy's daylight-saving rules. Set it to
 `Europe/Madrid` to use Spain's local time instead.

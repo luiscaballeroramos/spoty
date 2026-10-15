@@ -10,7 +10,6 @@ from spotifyapi.spotifyclient import SpotifyClient
 
 def register_listeningevents():
     spotify = SpotifyClient()
-    db = SimpleDB(DBNAME)
     inserted_tracks = 0
     inserted_albums = 0
     inserted_artists = 0
@@ -46,42 +45,41 @@ def register_listeningevents():
             played_at_ts = int(date.timestamp())
             candidate_events.append((item, track_id, date, played_at_ts))
 
-        existing_event_keys = set()
         if candidate_events:
-            track_ids = list({track_id for _, track_id, _, _ in candidate_events})
-            played_at_values = [played_at_ts for _, _, _, played_at_ts in candidate_events]
-            existing_event_keys = db.get_listening_event_keys(
-                track_ids=track_ids,
-                min_played_at=min(played_at_values),
-                max_played_at=max(played_at_values),
-            )
+            with SimpleDB(DBNAME) as db:
+                track_ids = list({track_id for _, track_id, _, _ in candidate_events})
+                played_at_values = [played_at_ts for _, _, _, played_at_ts in candidate_events]
+                existing_event_keys = db.get_listening_event_keys(
+                    track_ids=track_ids,
+                    min_played_at=min(played_at_values),
+                    max_played_at=max(played_at_values),
+                )
 
-        for item, track_id, date, played_at_ts in candidate_events:
-            event_key = (track_id, played_at_ts)
+                for item, track_id, date, played_at_ts in candidate_events:
+                    event_key = (track_id, played_at_ts)
 
-            if event_key in existing_event_keys:
-                skipped_existing_listening_events += 1
-                continue
+                    if event_key in existing_event_keys:
+                        skipped_existing_listening_events += 1
+                        continue
 
-            track = item["track"]
-            _track, _album, artists = models_from_spotify_track(track)
-            if _track.save(db, print_only_insert=True):
-                inserted_tracks += 1
-            if _album.save(db, print_only_insert=True):
-                inserted_albums += 1
-            for artist in artists:
-                if artist.save(db, print_only_insert=True):
-                    inserted_artists += 1
-            # event
-            context = item.get("context") or {}
-            context_uri = context.get("uri")
-            event = ListeningEvent(
-                track_id=track_id, played_at=date, context_uri=context_uri
-            )
-            # print(f'Save LISTENING EVENT: {track_name} at {date}') if VERBOSE else None
-            if event.save(db, print_only_insert=True):
-                inserted_listening_events += 1
-            existing_event_keys.add(event_key)
+                    track = item["track"]
+                    _track, _album, artists = models_from_spotify_track(track)
+                    context = item.get("context") or {}
+                    context_uri = context.get("uri")
+                    event = ListeningEvent(
+                        track_id=track_id, played_at=date, context_uri=context_uri
+                    )
+                    with db.transaction():
+                        if _track.save(db, print_only_insert=True):
+                            inserted_tracks += 1
+                        if _album.save(db, print_only_insert=True):
+                            inserted_albums += 1
+                        for artist in artists:
+                            if artist.save(db, print_only_insert=True):
+                                inserted_artists += 1
+                        if event.save(db, print_only_insert=True):
+                            inserted_listening_events += 1
+                    existing_event_keys.add(event_key)
 
         (
             print(

@@ -22,7 +22,8 @@ def save_liked_track_ids(limit=50, offset=0):
         raise ValueError("Liked-track reconciliation must start at offset 0.")
 
     spotify = SpotifyClient()
-    db = SimpleDB(DBNAME)
+    with SimpleDB(DBNAME) as db:
+        generation, local_revision = db.reserve_liked_track_sync()
 
     page_size = max(1, limit)
     current_offset = offset
@@ -87,29 +88,24 @@ def save_liked_track_ids(limit=50, offset=0):
         delay = random.uniform(10, 15)
         time.sleep(delay)
 
-    for track_id in current_liked_ids:
-        inserted = db.insert(
-            "liked_tracks", {"id": track_id}, print_only_insert=True
+    with SimpleDB(DBNAME) as db:
+        applied, saved_count, stale_ids = db.apply_liked_track_snapshot(
+            generation, local_revision, current_liked_ids
         )
-        if inserted:
-            saved_count += 1
+    if not applied:
+        print(
+            "Skipped stale liked-track snapshot; a newer sync or local change won."
+        ) if VERBOSE else None
+        return {"saved_count": 0, "stale_ids": [], "applied": False}
 
-    stale_ids = find_stale_liked_track_ids(
-        current_liked_ids, db.get_all_ids("liked_tracks")
-    )
     if stale_ids:
-        deleted_count = db.delete_ids("liked_tracks", stale_ids)
-        (
-            print(
-                f"Removed {deleted_count} stale liked track IDs that are no longer in Spotify."
-            )
-            if VERBOSE
-            else None
-        )
+        print(
+            f"Removed {len(stale_ids)} stale liked track IDs that are no longer in Spotify."
+        ) if VERBOSE else None
     else:
         print("No stale liked track IDs found.") if VERBOSE else None
 
-    return {"saved_count": saved_count, "stale_ids": stale_ids}
+    return {"saved_count": saved_count, "stale_ids": stale_ids, "applied": True}
 
 
 if __name__ == "__main__":

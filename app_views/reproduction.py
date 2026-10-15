@@ -17,6 +17,7 @@ from streamlit_lab import (
     Size,
 )
 from streamlit_lab.renderer import render_button, render_group, render_page_style
+from services.errors import LikedTrackReplicaPendingError
 from services.reproduction import ReproductionService
 from spotifyapi.spotifyclient import SpotifyClient
 from spotifyapi.errors import SpotifyError, SpotifyRequestError
@@ -1294,6 +1295,9 @@ def _render_reproduction_controls():
                 else reproduction_service.remove_liked_track(pending_track_id)
             )
         except SpotifyError as exc:
+            st.warning(str(exc))
+            return
+        except LikedTrackReplicaPendingError as exc:
             st.warning(str(exc))
             return
         liked_cache = st.session_state.setdefault(LIKED_CACHE_KEY, {})
