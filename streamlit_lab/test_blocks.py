@@ -19,6 +19,7 @@ from streamlit_lab import (
 )
 class StyleTests(unittest.TestCase):
     def test_style_css(self):
+        """Render block style properties as CSS declarations."""
         from streamlit_lab.renderer import style_css
 
         css = style_css(BlockStyle(
@@ -30,6 +31,7 @@ class StyleTests(unittest.TestCase):
             self.assertIn(expected, css)
 
     def test_style_values(self):
+        """Format style values and select the active block style."""
         self.assertEqual(Insets(1, 2, 3, 4).css(), "1px 2px 3px 4px")
         self.assertEqual(Corners(1, 2, 3, 4).css(), "1px 2px 3px 4px")
         self.assertIn("rgba(0, 0, 0, 0.15)", Shadow().css())
@@ -43,6 +45,7 @@ class StyleTests(unittest.TestCase):
         self.assertEqual(Block("selected", selected_style=style, state="selected").active_style(), style)
 
     def test_invalid_styles(self):
+        """Reject invalid style values and unsafe CSS inputs."""
         factories = [
             lambda: Insets(top=-1), lambda: Corners(top_left=float("nan")),
             lambda: Border(style="invalid"), lambda: Border(color="red"),
@@ -76,6 +79,7 @@ class StyleTests(unittest.TestCase):
                 factory()
 
     def test_page_style_renders_shared_streamlit_page_rules(self):
+        """Render shared Streamlit page settings as CSS rules."""
         from unittest.mock import patch
 
         from streamlit_lab.renderer import render_page_style
@@ -101,6 +105,7 @@ class StyleTests(unittest.TestCase):
         self.assertIn("margin: 0px 0px 2px 0px !important", css)
 
     def test_render_button_applies_style_and_background_image(self):
+        """Apply button styling and background imagery when rendering."""
         from unittest.mock import patch
 
         from streamlit_lab.renderer import render_button
@@ -143,6 +148,7 @@ class StyleTests(unittest.TestCase):
             ButtonStyle(background_image="javascript:alert(1)")
 
     def test_layout_overrides_and_declared_order(self):
+        """Resolve layout overrides and place visible blocks in declared order."""
         layout = Layout(rows=1, columns=2, gap_px=16, row_gap_px=0, column_gap_px=24, column_weights=(2, 1))
         self.assertEqual((layout.row_gap, layout.column_gap), (0, 24))
         blocks = [Block("last"), Block("hidden", visible=False), Block("first")]
@@ -151,22 +157,26 @@ class StyleTests(unittest.TestCase):
 
 class BlockTests(unittest.TestCase):
     def test_size_rules(self):
+        """Format sizes with units, bounds, and offsets."""
         self.assertEqual(Size(65, "%", 280, 900).css(), "clamp(280px, 65%, 900px)")
         self.assertEqual(Size(24, "vh", 160).css(), "max(160px, 24vh)")
         self.assertEqual(Size(180).css(), "max(0px, 180px)")
         self.assertEqual(Size(30, "dvh", offset_px=20).css(), "max(0px, calc(30dvh - 20px))")
 
     def test_invalid_sizes(self):
+        """Reject invalid size values and unit combinations."""
         for arguments in ((-1,), (float("nan"),), (float("inf"),), (1, "rem"), (10, "px", 20, 10), (10, "px", 0, None, -1)):
             with self.subTest(arguments=arguments), self.assertRaises(ValueError):
                 Size(*arguments)
 
     def test_invalid_blocks(self):
+        """Reject invalid block keys, properties, and dimensions."""
         for arguments in ({"key": "bad key"}, {"key": "ok", "color": "red"}, {"key": "ok", "height": Size(50, "%")}):
             with self.subTest(arguments=arguments), self.assertRaises(ValueError):
                 Block(**arguments)
 
     def test_render_block_emits_custom_hover_style(self):
+        """Render custom hover styles for a block."""
         from contextlib import nullcontext
         from unittest.mock import patch
 
@@ -189,6 +199,7 @@ class BlockTests(unittest.TestCase):
         self.assertIn("border-color: #123456", css)
 
     def test_portrait_height_is_rendered_only_when_configured(self):
+        """Render portrait height rules only when a height is configured."""
         from unittest.mock import patch
         from streamlit_lab.renderer import render_block
 
@@ -202,6 +213,7 @@ class BlockTests(unittest.TestCase):
                     self.assertIn("height: max(0px, calc(30dvh - 20px)) !important", css)
 
     def test_app_and_size_edit(self):
+        """Update block dimensions in the app and reject invalid bounds."""
         from pathlib import Path
         from streamlit.testing.v1 import AppTest
 
@@ -221,17 +233,20 @@ class BlockTests(unittest.TestCase):
 
 class LayoutTests(unittest.TestCase):
     def test_auto_placement_reserves_fixed_cells(self):
+        """Place automatic blocks around cells reserved by fixed blocks."""
         blocks = [Block("first"), Block("fixed", position=Position(1, 1)), Block("last")]
         self.assertEqual(Layout(rows=2, columns=2).place(blocks), {
             "fixed": Position(1, 1), "first": Position(1, 2), "last": Position(2, 1),
         })
 
     def test_row_and_column(self):
+        """Place blocks across rows and columns according to layout dimensions."""
         blocks = [Block("first"), Block("last")]
         self.assertEqual(Layout(rows=1, columns=2).place(blocks)["last"], Position(1, 2))
         self.assertEqual(Layout(rows=2, columns=1).place(blocks)["last"], Position(2, 1))
 
     def test_flow_grows_along_selected_axis(self):
+        """Grow automatic placement along the configured flow axis."""
         blocks = [Block("first", height=None), Block("second", height=None), Block("third", height=None)]
         self.assertEqual(Layout(rows=1, columns=2, flow="row").place(blocks), {
             "first": Position(1, 1), "second": Position(1, 2), "third": Position(2, 1),
@@ -241,6 +256,7 @@ class LayoutTests(unittest.TestCase):
         })
 
     def test_invalid_layouts(self):
+        """Reject invalid layout options and grid coordinates."""
         for arguments in ({"rows": 0}, {"columns": 1.5}, {"columns": True}, {"flow": "invalid"}, {"horizontal": "invalid"}, {"vertical": "invalid"}, {"gap_px": -1}, {"gap_px": float("nan")}):
             with self.subTest(arguments=arguments), self.assertRaises(ValueError):
                 Layout(**arguments)
@@ -249,6 +265,7 @@ class LayoutTests(unittest.TestCase):
                 Position(*coordinates)
 
     def test_parent_gap_is_rendered_by_the_lab(self):
+        """Render the configured parent gap for a layout."""
         from contextlib import nullcontext
         from unittest.mock import patch
 
@@ -266,6 +283,7 @@ class LayoutTests(unittest.TestCase):
         self.assertIn("gap: 0px !important", css)
 
     def test_invalid_placements(self):
+        """Reject duplicate, out-of-bounds, and overflowing block placements."""
         cases = [
             [Block("same"), Block("same")],
             [Block("outside", position=Position(3, 1))],
@@ -277,6 +295,7 @@ class LayoutTests(unittest.TestCase):
                 Layout(rows=2, columns=1).place(blocks)
 
     def test_portrait_collapse_is_opt_in_and_independent_of_breakpoint(self):
+        """Collapse a layout in portrait orientation only when enabled."""
         from unittest.mock import patch
         from streamlit_lab.renderer import render_layout
 
@@ -296,6 +315,7 @@ class LayoutTests(unittest.TestCase):
                     self.assertIn("grid-row: auto !important", css)
 
     def test_portrait_collapse_uses_explicit_row_weights(self):
+        """Apply configured row weights when collapsing a layout in portrait."""
         from unittest.mock import patch
         from streamlit_lab.renderer import render_layout
 
@@ -319,6 +339,7 @@ class LayoutTests(unittest.TestCase):
         )
 
     def test_app_layout_controls(self):
+        """Edit layout controls in the app and preserve valid state after errors."""
         from pathlib import Path
         from streamlit.testing.v1 import AppTest
 
@@ -339,6 +360,7 @@ class LayoutTests(unittest.TestCase):
         self.assertEqual(app.session_state.group.layout.columns, 6)
 
     def test_span_validation_and_cells(self):
+        """Validate spans and enumerate their occupied grid cells."""
         for arguments in ((0, 1), (1, -1), (1.5, 1), (True, 1)):
             with self.subTest(arguments=arguments), self.assertRaises(ValueError):
                 Span(*arguments)
@@ -347,6 +369,7 @@ class LayoutTests(unittest.TestCase):
         })
 
     def test_spans_reserve_all_cells(self):
+        """Reserve every cell covered by fixed and automatic spans."""
         blocks = [
             Block("auto", span=Span(2, 1)),
             Block("fixed", position=Position(1, 1), span=Span(2, 2)),
@@ -357,6 +380,7 @@ class LayoutTests(unittest.TestCase):
         })
 
     def test_spans_overlap_and_bounds(self):
+        """Reject spans that overlap or extend beyond the grid."""
         cases = [
             [Block("wide", position=Position(1, 1), span=Span(2, 2)), Block("overlap", position=Position(2, 2))],
             [Block("wide", position=Position(1, 3), span=Span(1, 2))],
@@ -368,11 +392,13 @@ class LayoutTests(unittest.TestCase):
                 Layout(3, 3).place(blocks)
 
     def test_fragmented_space_is_rejected(self):
+        """Reject automatic placement when only fragmented space remains."""
         blocks = [Block("middle", position=Position(1, 2), span=Span(2, 1)), Block("wide", span=Span(1, 2))]
         with self.assertRaisesRegex(ValueError, "rectangular"):
             Layout(2, 3).place(blocks)
 
     def test_nested_group_example(self):
+        """Load the nested group example and verify its layout and reset behavior."""
         from pathlib import Path
         from streamlit.testing.v1 import AppTest
 
@@ -394,6 +420,7 @@ class LayoutTests(unittest.TestCase):
         self.assertEqual(app.session_state.group.children[0].children, ("principal", "resumen"))
 
     def test_style_controls_preserve_other_properties(self):
+        """Update style and layout controls without losing unrelated settings."""
         from pathlib import Path
         from streamlit.testing.v1 import AppTest
 
@@ -417,6 +444,7 @@ class LayoutTests(unittest.TestCase):
         self.assertEqual(app.session_state.blocks[0].aspect_ratio, 2)
 
     def test_state_style_variants_are_edited_independently_and_resettable(self):
+        """Edit hover and selected styles independently and reset custom styles."""
         from pathlib import Path
         from streamlit.testing.v1 import AppTest
 
@@ -454,6 +482,7 @@ class LayoutTests(unittest.TestCase):
 
 class GroupTests(unittest.TestCase):
     def test_groups_use_layout_vertical_alignment_in_available_height(self):
+        """Apply vertical alignment within the available group height."""
         from unittest.mock import patch
         from streamlit_lab.renderer import render_layout
 
@@ -470,6 +499,7 @@ class GroupTests(unittest.TestCase):
         self.assertIn(f"height: {layout.height.css()} !important", css)
 
     def test_nested_groups_have_independent_layouts(self):
+        """Resolve nested groups using their independent layouts."""
         blocks = {
             "principal": Block("principal", position=Position(1, 1), span=Span(2, 2)),
             "resumen": Block("resumen", position=Position(3, 1), span=Span(1, 2)),
@@ -495,6 +525,7 @@ class GroupTests(unittest.TestCase):
         self.assertFalse(hasattr(dashboard, "order"))
 
     def test_parent_mobile_breakpoint_does_not_collapse_child_layouts(self):
+        """Keep child layouts expanded when only the parent has a mobile breakpoint."""
         from contextlib import nullcontext
         from unittest.mock import patch
 
@@ -518,6 +549,7 @@ class GroupTests(unittest.TestCase):
         })
 
     def test_groups_reject_duplicate_or_missing_children(self):
+        """Reject duplicate group keys and references to missing children."""
         with self.assertRaisesRegex(ValueError, "repetir"):
             Group("duplicate", ("principal", "principal"), Layout())
         with self.assertRaisesRegex(ValueError, "claves de grupo"):

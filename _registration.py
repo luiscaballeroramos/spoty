@@ -1,12 +1,10 @@
 from datetime import datetime
 import time
 
-from config import DBNAME, UTC_OFFSET, VERBOSE
-from register.album import Album
-from register.artist import Artist
+from config import DBNAME, VERBOSE
 from register.db import SimpleDB
-from register.track import Track
 from register.listeningevent import ListeningEvent
+from register.spotify_data import models_from_spotify_track, parse_spotify_timestamp
 from spotifyapi.spotifyclient import SpotifyClient
 
 
@@ -44,7 +42,7 @@ def register_listeningevents():
             if not track_id or not played_at:
                 continue
 
-            date = datetime.fromisoformat(played_at.replace("Z", UTC_OFFSET))
+            date = parse_spotify_timestamp(played_at)
             played_at_ts = int(date.timestamp())
             candidate_events.append((item, track_id, date, played_at_ts))
 
@@ -65,57 +63,14 @@ def register_listeningevents():
                 skipped_existing_listening_events += 1
                 continue
 
-            # track
             track = item["track"]
-            track_name = track["name"]
-            track_duration_ms = track["duration_ms"]
-            track_album_id = track["album"]["id"]
-            track_album_track = track["track_number"]
-            track_artists_ids = [artist["id"] for artist in track["artists"]]
-            track_explicit = track["explicit"]
-            _track = Track(
-                id=track_id,
-                name=track_name,
-                duration_ms=track_duration_ms,
-                album_id=track_album_id,
-                album_track=track_album_track,
-                artists_ids=track_artists_ids,
-                explicit=track_explicit,
-            )
-            # print(f'Save TRACK: {track_name} ({track_id})') if VERBOSE else None
+            _track, _album, artists = models_from_spotify_track(track)
             if _track.save(db, print_only_insert=True):
                 inserted_tracks += 1
-            # album
-            album = track["album"]
-            album_id = album["id"]
-            album_name = album["name"]
-            album_artists_ids = [artist["id"] for artist in album["artists"]]
-            album_total_tracks = album["total_tracks"]
-            album_images = (
-                [img["url"] for img in album["images"]] if "images" in album else []
-            )
-            album_release_date = album["release_date"]
-            album_release_date_precision = album["release_date_precision"]
-            _album = Album(
-                id=album_id,
-                name=album_name,
-                artists=album_artists_ids,
-                tracks=[track_id],  # only save the current track, update later
-                total_tracks=album_total_tracks,
-                images=album_images,
-                release_date=album_release_date,
-                release_date_precision=album_release_date_precision,
-            )
-            # print(f'Save ALBUM: {album_name} ({album_id}) of year {_album.release_year}') if VERBOSE else None
             if _album.save(db, print_only_insert=True):
                 inserted_albums += 1
-            # artists
-            for artist in track["artists"] + album["artists"]:
-                artist_id = artist["id"]
-                artist_name = artist["name"]
-                _artist = Artist(id=artist_id, name=artist_name)
-                # print(f'Save ARTIST: {artist_name} ({artist_id})') if VERBOSE else None
-                if _artist.save(db, print_only_insert=True):
+            for artist in artists:
+                if artist.save(db, print_only_insert=True):
                     inserted_artists += 1
             # event
             context = item.get("context") or {}

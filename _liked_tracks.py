@@ -3,6 +3,7 @@ import time
 
 from config import DBNAME, VERBOSE
 from register.db import SimpleDB
+from spotifyapi.errors import SpotifyInvalidResponseError
 from spotifyapi.spotifyclient import SpotifyClient
 
 
@@ -17,6 +18,9 @@ def save_liked_track_ids(limit=50, offset=0):
     After syncing, remove any database IDs that are no longer present in the
     current Spotify liked tracks list.
     """
+    if offset != 0:
+        raise ValueError("Liked-track reconciliation must start at offset 0.")
+
     spotify = SpotifyClient()
     db = SimpleDB(DBNAME)
 
@@ -25,41 +29,70 @@ def save_liked_track_ids(limit=50, offset=0):
     saved_count = 0
     total_count = 0
     current_liked_ids = []
+    expected_total = None
 
     while True:
         liked_response = spotify.get_liked_songs(limit=page_size, offset=current_offset)
-        if not liked_response or "items" not in liked_response:
-            break
-
         items = liked_response["items"]
-        if not items:
-            break
+        response_offset = liked_response.get("offset")
+        response_limit = liked_response.get("limit")
+        response_total = liked_response.get("total")
+        next_page = liked_response.get("next")
+
+        if (
+            type(response_offset) is not int
+            or response_offset != current_offset
+            or type(response_limit) is not int
+            or response_limit <= 0
+            or type(response_total) is not int
+            or response_total < 0
+            or len(items) > response_limit
+            or response_offset + len(items) > response_total
+        ):
+            raise SpotifyInvalidResponseError("validate liked tracks pagination")
+
+        if expected_total is None:
+            expected_total = response_total
+        elif response_total != expected_total:
+            raise SpotifyInvalidResponseError("validate liked tracks pagination")
+
+        next_offset = current_offset + len(items)
+        has_more = next_offset < response_total
+        if has_more:
+            if not isinstance(next_page, str) or not next_page:
+                raise SpotifyInvalidResponseError("validate liked tracks pagination")
+        elif next_page is not None:
+            raise SpotifyInvalidResponseError("validate liked tracks pagination")
+        if has_more and not items:
+            raise SpotifyInvalidResponseError("validate liked tracks pagination")
 
         total_count += len(items)
         for item in items:
             track = item.get("track")
-            track_id = track.get("id") if track else None
-            if track_id:
-                current_liked_ids.append(track_id)
-                inserted = db.insert(
-                    "liked_tracks", {"id": track_id}, print_only_insert=True
-                )
-                if inserted:
-                    saved_count += 1
-
-        if len(items) < page_size:
+            track_id = track.get("id") if isinstance(track, dict) else None
+            if not isinstance(track_id, str) or not track_id:
+                raise SpotifyInvalidResponseError("validate liked track item")
+            current_liked_ids.append(track_id)
+        if not has_more:
             break
 
-        current_offset += len(items)
+        current_offset = next_offset
 
         (
-            print(f"Saved {saved_count}/{total_count} liked track IDs so far.")
+            print(f"Downloaded {total_count} liked track IDs so far.")
             if VERBOSE
             else None
         )
 
         delay = random.uniform(10, 15)
         time.sleep(delay)
+
+    for track_id in current_liked_ids:
+        inserted = db.insert(
+            "liked_tracks", {"id": track_id}, print_only_insert=True
+        )
+        if inserted:
+            saved_count += 1
 
     stale_ids = find_stale_liked_track_ids(
         current_liked_ids, db.get_all_ids("liked_tracks")
