@@ -165,7 +165,7 @@ credenciales, con red bloqueada y sin modificar datos reales.
 
 Verificacion del paso 7, 2026-10-15: los timestamps Spotify ahora se parsean
 como instantes aware y se almacenan como epoch UTC; la zona de presentacion se
-configura con `SPOTY_DISPLAY_TIMEZONE` (por defecto `Etc/GMT-4`). Una muestra de
+configura con `SPOTY_DISPLAY_TIMEZONE` (por defecto `Europe/Rome`). Una muestra de
 solo lectura comparo los 50 eventos mas recientes de Neon con Spotify: 43 IDs
 coincidieron y los 43 timestamps almacenados estaban 7200 segundos antes. El
 historial confirma que el registro aplicaba `+02:00` desde la primera version.
