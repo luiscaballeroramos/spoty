@@ -1,0 +1,141 @@
+{
+  "captured_at": "2026-10-15T14:24:31.211Z",
+  "entities": {
+    "track": {
+      "values": {
+        "id": "3n3Ppam7vgaVa1iaRUc9Lp",
+        "name": "Mr. Brightside",
+        "artist": "The Killers",
+        "artist_id": "0C0XlULifJtAgn6ZNCW2eu",
+        "artists": [
+          "The Killers"
+        ],
+        "album": "Hot Fuss",
+        "album_id": "4OHNH3sDzIxnmUADXzv2kT",
+        "release_date": "2004-06-15",
+        "duration_ms": 222200,
+        "explicit": false,
+        "uri": "spotify:track:3n3Ppam7vgaVa1iaRUc9Lp",
+        "popularity": 66,
+        "isrc": "GBFFP0300052",
+        "dedup_key": "mr. brightside:the killers",
+        "source": "Mr. Brightside",
+        "release_year": 2004,
+        "release_decade": 2000,
+        "speechiness": 0.0746,
+        "loudness": -4.36,
+        "liveness": 0.0971,
+        "acousticness": 0.00119,
+        "key": 1,
+        "energy": 0.918,
+        "mode": 1,
+        "tempo": 148.114,
+        "danceability": 0.355,
+        "valence": 0.24,
+        "time_signature": 4,
+        "instrumentalness": 0,
+        "camelot": "12B",
+        "camelot_num": 24,
+        "disc_number": 1,
+        "track_number": 2,
+        "is_playable": true,
+        "album_popularity": 65,
+        "album_release_date": "2004-06-15",
+        "label": "EMI",
+        "artist_popularity": 81,
+        "artist_followers": 8869133,
+        "mb_genres": [
+          "alternative rock",
+          "indie rock",
+          "pop rock",
+          "heartland rock",
+          "post-punk revival",
+          "new wave",
+          "christmas music",
+          "rock"
+        ],
+        "artist_type": "group",
+        "artist_area": "United States",
+        "artist_start_year": 2001,
+        "artist_country": "US",
+        "artist_gender": "male"
+      },
+      "missing_requested": [
+        "album_type",
+        "artist_end_year",
+        "followers",
+        "mo_score",
+        "relinked_id",
+        "total_tracks"
+      ],
+      "conflicts": {}
+    },
+    "artist": {
+      "values": {
+        "id": "0C0XlULifJtAgn6ZNCW2eu",
+        "name": "The Killers",
+        "uri": "spotify:artist:0C0XlULifJtAgn6ZNCW2eu",
+        "popularity": 81,
+        "followers": 8869133,
+        "genres": [
+          "alternative rock"
+        ],
+        "images": [
+          {
+            "url": "https://i.scdn.co/image/ab6761610000e5eb207b21f3ed0ee96adce3166a",
+            "height": 640,
+            "width": 640
+          }
+        ],
+        "_entity_type": "artist",
+        "source": "The Killers",
+        "artist_type": "group",
+        "artist_area": "United States",
+        "artist_start_year": 2001,
+        "artist_country": "US",
+        "artist_gender": "male",
+        "mb_genres": [
+          "alternative rock",
+          "indie rock",
+          "pop rock",
+          "heartland rock",
+          "post-punk revival",
+          "new wave",
+          "christmas music",
+          "rock"
+        ],
+        "source_count": 1
+      },
+      "missing_requested": [
+        "artist_end_year"
+      ],
+      "conflicts": {}
+    },
+    "album": {
+      "values": {
+        "id": "4OHNH3sDzIxnmUADXzv2kT",
+        "name": "Hot Fuss",
+        "uri": "spotify:album:4OHNH3sDzIxnmUADXzv2kT",
+        "popularity": 65,
+        "release_date": "2004-06-15",
+        "label": "EMI",
+        "total_tracks": 14,
+        "album_type": "album",
+        "artist": "The Killers",
+        "artist_id": "0C0XlULifJtAgn6ZNCW2eu",
+        "images": [
+          {
+            "url": "https://i.scdn.co/image/ab67616d0000b2739c284a6855f4945dc5a3cd73",
+            "height": 640,
+            "width": 640
+          }
+        ],
+        "_entity_type": "album",
+        "source": "Hot Fuss",
+        "source_count": 1
+      },
+      "missing_requested": [],
+      "conflicts": {}
+    }
+  }
+}

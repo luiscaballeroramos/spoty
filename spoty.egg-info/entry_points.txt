@@ -1,0 +1,9 @@
+[console_scripts]
+spoty-currently-playing = _currently_playing:main
+spoty-enrich = _enrichment:main
+spoty-import-smarterplaylists = _smarterplaylists:main
+spoty-print-liked = _print:print_liked_tracks
+spoty-print-summary = _print_summary:print_database_summary
+spoty-refresh-smarterplaylists = _smarterplaylists_refresh:main
+spoty-register = _registration:main
+spoty-sync-liked = _liked_tracks:main

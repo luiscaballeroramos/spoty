@@ -275,20 +275,89 @@ errores de YAML ni impacto funcional.
 
 ## Fase 6 - Enriquecimiento opcional
 
-- [ ] **18. Convertir scripts de metadata en adaptadores.** Encapsular Last.fm,
+- [x] **18. Convertir scripts de metadata en adaptadores.** Encapsular Last.fm,
 	MusicBrainz y AcousticBrainz sin llamadas al importar ni tracks fijos. Cierre:
 	aceptan identificadores, validan respuestas y se prueban con mocks; confirmar
 	disponibilidad de AcousticBrainz y omitirlo si no es utilizable.
-- [ ] **19. Crear el servicio de enriquecimiento.** Leer candidatos de PostgreSQL,
+- [x] **19. Crear el servicio de enriquecimiento.** Leer candidatos de PostgreSQL,
 	consultar proveedores fuera de transacciones y persistir datos normalizados
 	con origen y fecha, conservando respuestas originales cuando sea util.
 	Priorizar generos, imagenes y fechas de lanzamiento; incluir popularidad,
 	seguidores o audio features solo si se confirma una fuente fiable y accesible.
 	Cierre: una prueba cubre DB -> proveedor -> DB sin sobrescribir datos fiables
 	con vacios, y repetir el proceso no duplica resultados.
-- [ ] **20. Habilitar enriquecimiento bajo demanda.** Ofrecer un comando y, si
-	procede, una accion Streamlit; definir limites, reintentos y candidatos pendientes.
+- [x] **20. Habilitar enriquecimiento bajo demanda y diario.** Ofrecer un comando
+	y una accion Streamlit; definir limites, reintentos y candidatos pendientes.
 	Cierre: un proveedor caido no bloquea reproduccion ni registro de escuchas.
+
+Implementacion del paso 18, 2026-10-15: `metadata_sources` contiene adaptadores
+sin llamadas al importar para Last.fm, MusicBrainz y AcousticBrainz. Reciben las
+identidades explicitamente, validan entradas y respuestas, devuelven el JSON del
+proveedor sin persistirlo y permiten inyectar HTTP para pruebas. MusicBrainz
+respeta su limite de solicitudes; un ISRC sin resultados y un MBID sin analisis
+AcousticBrainz se representan como ausencia de datos. Los antiguos
+`__metadata_lastfm.py` y `__metadata_brainz.py` solo reexportan los adaptadores.
+
+La API de AcousticBrainz se comprobo en vivo para un MBID local: devolvio ambos
+niveles (`low-level` y `high-level`). Esto confirma disponibilidad del servicio,
+no cobertura de toda la biblioteca. Validacion: 11 pruebas de adaptadores,
+148 pruebas de producto y 32 de laboratorio; los adaptadores y sus imports
+heredados se probaron sin llamadas externas, salvo la comprobacion de lectura
+de AcousticBrainz. Last.fm no se consulto en vivo porque requiere una API key.
+
+Implementacion del paso 19, 2026-10-15: `EnrichmentService` lee tracks y su
+artista principal desde PostgreSQL. Last.fm se busca por titulo/artista;
+MusicBrainz se busca por titulo/artista y solo se acepta una unica coincidencia
+con titulo y artista normalizados, ademas de duracion dentro de 5 segundos cuando
+esta disponible. Tras ese match se obtiene el recording completo por MBID y se
+consulta AcousticBrainz `high-level`. Se normalizan tags e imagenes de album de
+Last.fm, generos y fechas de lanzamiento de MusicBrainz, y predicciones de
+genero de AcousticBrainz. Popularidad, seguidores y audio low-level quedan fuera
+de la proyeccion por ahora, aunque sus respuestas originales se conservan en
+JSONB para revisarlas. Los estados `not_found` y `ambiguous` evitan repetir
+busquedas conocidas; errores de proveedor no se guardan como ausencia y pueden
+reintentarse. Las llamadas HTTP se hacen tras cerrar la conexion de lectura y
+las inserciones idempotentes usan una transaccion corta. La migracion
+`0002_metadata_enrichment` se aplico a Neon el 2026-10-15 antes de las pruebas
+controladas descritas mas abajo.
+Validacion final: 155 pruebas de producto, 32 de laboratorio, compilacion,
+diagnosticos sin errores, 187 funciones de prueba con docstrings y
+`git diff --check` correcto. No se consulto Last.fm en vivo ni se escribio en DB.
+
+Implementacion del paso 20, 2026-10-15: `spoty-enrich --limit N` ejecuta un
+lote acotado y emite JSON; errores de proveedor devuelven codigo no cero y una
+migracion pendiente se informa como `deferred` sin modificar el esquema. El
+workflow de favoritos se dispara diariamente a las 04:00 UTC, manualmente o por
+`repository_dispatch`; tras sincronizar favoritos, un job separado ejecuta el
+enriquecimiento. Si falta la migracion o el enriquecimiento falla, no se altera
+el resultado de la sincronizacion de favoritos. La pagina Summary incluye un
+formulario manual de 1 a 100 tracks. Last.fm sigue siendo opcional mediante
+`LASTFM_API_KEY` en `.env`, Streamlit Secrets o GitHub Secrets.
+
+La migracion `0002_metadata_enrichment` ya esta aplicada a Neon. El job de
+GitHub Actions no se ha ejecutado remotamente ni estos cambios se han publicado.
+Validacion local: 159 pruebas de producto y 32 de laboratorio, AppTest del
+formulario manual, compilacion, diagnosticos sin errores y auditoria de 191
+funciones de prueba con docstrings. El parser YAML no esta instalado localmente;
+VS Code no reporta errores en el workflow.
+
+Prueba real controlada, 2026-10-15: `Umbra Drift` de Novah Scotia quedo como
+`not_found` en MusicBrainz. `LA GRACIOSA` de Quevedo se vinculo al recording
+MBID `d5e92412-4d16-4090-aa8b-6395205087d8`; MusicBrainz devolvio creditos para
+Quevedo y Elvis Crespo y dos releases con fechas 2026-04-23 y 2026-04-24.
+AcousticBrainz no tenia analisis `high-level` para ese MBID. Tras configurar
+`LASTFM_API_KEY` en `.env`, Last.fm encontro `LA GRACIOSA`, album `EL BAIFO`,
+imagenes y sin tags. Se guardaron cuatro registros en total entre las dos
+muestras (dos MusicBrainz, uno AcousticBrainz y uno Last.fm). Antes de iniciar
+el backfill quedaban 7.119 tracks pendientes de MusicBrainz.
+
+Ampliacion a ambos niveles AcousticBrainz, 2026-10-15: se modifico el servicio
+para guardar las respuestas completas `low-level` y `high-level` en registros
+separados e idempotentes; la prueba cubre reanudacion de un nivel faltante. El
+primer backfill se pauso tras 13 lotes (650 tracks; 1.358 registros guardados)
+para incluir tambien `low-level`. Hubo 130 tracks con errores temporales,
+apartados para reintento. Los datos de los lotes confirmados permanecen en Neon;
+la reanudacion evitara repetirlos y consultara cualquier nivel que falte.
 
 ## Fase 7 - Futuro, tras validar las anteriores
 

@@ -4,6 +4,7 @@ __pycache__/
 .playback_state.json
 .playback_state.tmp
 .env
+.secrets/
 .env.*
 .venv
 .venv.*

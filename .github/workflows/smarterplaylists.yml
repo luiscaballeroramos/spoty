@@ -1,0 +1,45 @@
+name: Smarter Playlists Metadata
+
+on:
+  schedule:
+    - cron: "40 4 * * *"
+  workflow_dispatch:
+  repository_dispatch:
+    types: [run-smarterplaylists]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smarterplaylists-metadata
+  cancel-in-progress: false
+
+jobs:
+  smarterplaylists:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Check required secrets
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SMARTERPLAYLISTS_SESSION_COOKIE: ${{ secrets.SMARTERPLAYLISTS_SESSION_COOKIE }}
+        run: |
+          test -n "$DATABASE_URL"
+          test -n "$SMARTERPLAYLISTS_SESSION_COOKIE"
+
+      - name: Refresh metadata
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SMARTERPLAYLISTS_SESSION_COOKIE: ${{ secrets.SMARTERPLAYLISTS_SESSION_COOKIE }}
+        run: python -m _smarterplaylists_refresh --limit 10 --refresh-hours 20

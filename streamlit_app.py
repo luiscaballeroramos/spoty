@@ -19,6 +19,7 @@ def load_streamlit_secrets_to_env():
         "SPOTIFY_CLIENT_SECRET",
         "SPOTIFY_REDIRECT_URI",
         "SPOTIFY_REFRESH_TOKEN",
+        "LASTFM_API_KEY",
     ):
         try:
             value = secrets[name]

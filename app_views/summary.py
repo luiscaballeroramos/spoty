@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -65,6 +66,72 @@ def run_registration_with_feedback():
         render_incident_notice(
             "summary_registration_error", error,
             f"Sincronización {result.status.value}: los datos locales pueden estar incompletos.",
+        )
+
+
+def run_metadata_enrichment(limit: int = 50):
+    """Enrich one bounded batch using the shared optional metadata service."""
+    from config import DATABASE_URL
+    from services.enrichment import EnrichmentService
+
+    service = EnrichmentService(
+        DATABASE_URL,
+        lastfm_api_key=os.getenv("LASTFM_API_KEY"),
+        musicbrainz_user_agent=os.getenv(
+            "MUSICBRAINZ_USER_AGENT", "Spoty/0.1.0 (metadata enrichment via Streamlit)"
+        ),
+    )
+    return service.enrich_pending(limit=limit)
+
+
+def _render_metadata_enrichment_control():
+    st.subheader("Metadatos externos")
+    with st.form("metadata_enrichment_form"):
+        limit = st.number_input(
+            "Tracks por lote",
+            min_value=1,
+            max_value=100,
+            value=50,
+            step=10,
+        )
+        submitted = st.form_submit_button("Enriquecer tracks pendientes")
+
+    if not submitted:
+        return
+
+    try:
+        with st.spinner("Buscando metadata en fuentes externas..."):
+            result = run_metadata_enrichment(limit=int(limit))
+    except Exception as exc:
+        if getattr(exc, "sqlstate", None) == "42P01":
+            st.warning(
+                "La migración de enriquecimiento aún no está aplicada. "
+                "Ejecuta `python -m register.migrations` antes de usar esta opción."
+            )
+        else:
+            render_incident_notice(
+                "summary_metadata_enrichment_error",
+                exc,
+                "No se pudo iniciar el enriquecimiento.",
+            )
+        return
+
+    if result.exit_code:
+        failed_providers = ", ".join(
+            f"{provider}: {count}"
+            for provider, count in result.provider_errors.items()
+            if count
+        )
+        st.warning(f"El lote terminó con errores de proveedor ({failed_providers}).")
+        return
+
+    clear_incident(st.session_state, "summary_metadata_enrichment_error")
+    if result.candidate_tracks == 0:
+        st.info("No hay tracks pendientes de enriquecimiento.")
+    else:
+        st.success(
+            f"Lote revisado: {result.candidate_tracks} tracks; "
+            f"{result.records_saved} registros nuevos guardados."
         )
 
 
@@ -149,6 +216,8 @@ def _render_spotify_dashboard():
             st.caption(f"Detalle de importación: {register_import_error}")
     elif not auth_available:
         render_spotify_authorization_section()
+
+    _render_metadata_enrichment_control()
 
     queries = SummaryQueryService()
     cached_data = st.session_state.get(SUMMARY_DATA_CACHE_KEY)
