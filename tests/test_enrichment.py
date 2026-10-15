@@ -346,6 +346,55 @@ class EnrichmentServiceTest(unittest.TestCase):
         self.assertEqual(result.records_saved, 0)
         acousticbrainz.get_analysis.assert_not_called()
 
+    def test_single_provider_never_constructs_other_adapters(self):
+        """Isolate provider calls and writes, including AcousticBrainz using a stored MBID."""
+        for provider in ("lastfm", "musicbrainz", "acousticbrainz"):
+            with self.subTest(provider=provider):
+                repository = MemoryMetadataRepository(self.candidate)
+                if provider == "acousticbrainz":
+                    repository.records[("musicbrainz", "spotify-track")] = {
+                        "match_status": "matched", "recording_mbid": "recording-id",
+                    }
+                recording = {"id": "recording-id", "title": "Cafe del Mar", "length": 100000,
+                             "artist-credit": [{"name": "Artist", "artist": {"name": "Artist"}}]}
+                lastfm = Mock()
+                lastfm.get_track.return_value = {"track": {"name": "Cafe del Mar", "artist": "Artist"}}
+                musicbrainz = Mock()
+                musicbrainz.search_recordings.return_value = {"recordings": [recording]}
+                musicbrainz.get_entity.return_value = recording
+                acousticbrainz = Mock()
+                acousticbrainz.get_analysis.side_effect = lambda _mbid, level: {
+                    "lowlevel" if level == "low-level" else "highlevel": {"value": 1}}
+                factories = {"lastfm": Mock(return_value=lastfm),
+                             "musicbrainz": Mock(return_value=musicbrainz),
+                             "acousticbrainz": Mock(return_value=acousticbrainz)}
+                service = EnrichmentService("unused", lastfm_api_key="test-key", repository=repository,
+                    lastfm_factory=factories["lastfm"], musicbrainz_factory=factories["musicbrainz"],
+                    acousticbrainz_factory=factories["acousticbrainz"])
+                result = service.enrich_pending(provider=provider)
+                self.assertEqual(result.provider, provider)
+                self.assertGreater(result.matched[provider], 0)
+                for name, factory in factories.items():
+                    self.assertEqual(factory.call_count, 1 if name == provider else 0)
+                    if name != provider:
+                        self.assertEqual(result.matched[name], 0)
+
+    def test_provider_selection_filters_candidates_and_requires_lastfm_key(self):
+        """Avoid selecting other providers' pending rows and fail explicit Last.fm without a key."""
+        repository = Mock()
+        repository.get_candidates.return_value = []
+        service = EnrichmentService("unused", lastfm_api_key="key", repository=repository)
+        for provider in ("lastfm", "musicbrainz", "acousticbrainz"):
+            with self.subTest(provider=provider):
+                service.enrich_pending(limit=7, provider=provider)
+                repository.get_candidates.assert_called_with("unused", 7,
+                    include_lastfm=provider == "lastfm", include_musicbrainz=provider == "musicbrainz",
+                    include_acousticbrainz=provider == "acousticbrainz")
+        with self.assertRaises(ValueError):
+            EnrichmentService("unused", repository=repository).enrich_pending(provider="lastfm")
+        with self.assertRaises(ValueError):
+            service.enrich_pending(provider="unknown")
+
     def test_fetches_only_the_acousticbrainz_level_missing_from_storage(self):
         """Resume a partial analysis by fetching only its missing low-level response."""
         repository = MemoryMetadataRepository(self.candidate)
@@ -421,6 +470,19 @@ class EnrichmentServiceAndCliTest(unittest.TestCase):
         self.assertEqual(raised.exception.code, 2)
         run.assert_not_called()
 
+    def test_cli_forwards_the_explicit_provider(self):
+        """Send source selection through the CLI without invoking the combined mode."""
+        from _enrichment import main
+
+        result = EnrichmentResult(0, 0, provider="musicbrainz")
+        output = StringIO()
+        with patch("_enrichment.run_enrichment", return_value=result) as run:
+            with redirect_stdout(output), self.assertRaises(SystemExit) as raised:
+                main(["--provider", "musicbrainz", "--limit", "5"])
+        self.assertEqual(raised.exception.code, 0)
+        run.assert_called_once_with(limit=5, provider="musicbrainz")
+        self.assertEqual(json.loads(output.getvalue())["provider"], "musicbrainz")
+
     def test_cli_defers_cleanly_when_metadata_migration_is_missing(self):
         """Report missing enrichment tables as deferred without failing liked sync."""
         from _enrichment import main
@@ -487,6 +549,48 @@ class EnrichmentServiceAndCliTest(unittest.TestCase):
         self.assertEqual(result.provider_errors["lastfm"], 1)
         self.assertEqual(result.not_found["musicbrainz"], 1)
         self.assertIn(("musicbrainz", "spotify-track"), repository.records)
+
+    def test_musicbrainz_failures_are_diagnosed_without_marking_tracks_not_found(self):
+        """Keep failed lookups pending and report categories without response or exception text."""
+        import requests
+
+        repository = MemoryMetadataRepository(self.candidate)
+        musicbrainz = Mock()
+        response = Mock(status_code=503)
+        error = requests.HTTPError("private-response-do-not-log", response=response)
+        musicbrainz.search_recordings.side_effect = [error, {"recordings": []}]
+        service = EnrichmentService(
+            "unused", repository=repository,
+            musicbrainz_factory=lambda _agent: musicbrainz,
+            acousticbrainz_factory=lambda: Mock(),
+        )
+        first = service.enrich_pending()
+        self.assertEqual(first.exit_code, 1)
+        self.assertEqual(first.provider_error_details, {"musicbrainz": {"http_503": 1}})
+        self.assertEqual(first.not_found["musicbrainz"], 0)
+        self.assertNotIn(("musicbrainz", "spotify-track"), repository.records)
+        self.assertNotIn("private-response", first.to_json())
+        second = service.enrich_pending()
+        self.assertEqual(second.exit_code, 0)
+        self.assertEqual(second.not_found["musicbrainz"], 1)
+
+    def test_invalid_musicbrainz_lookup_is_a_provider_error_not_a_batch_crash(self):
+        """Reject malformed lookup details inside the provider error boundary."""
+        repository = MemoryMetadataRepository(self.candidate)
+        musicbrainz = Mock()
+        musicbrainz.search_recordings.return_value = {"recordings": [{
+            "id": "recording-id", "title": "Cafe del Mar", "length": 100000,
+            "artist-credit": [{"name": "Artist", "artist": {"name": "Artist"}}],
+        }]}
+        musicbrainz.get_entity.return_value = {"id": "recording-id"}
+        service = EnrichmentService(
+            "unused", repository=repository,
+            musicbrainz_factory=lambda _agent: musicbrainz,
+            acousticbrainz_factory=lambda: Mock(),
+        )
+        result = service.enrich_pending()
+        self.assertEqual(result.provider_error_details, {"musicbrainz": {"invalid_response": 1}})
+        self.assertEqual(result.records_saved, 0)
 
     def test_ambiguous_musicbrainz_results_are_not_linked_or_sent_to_acousticbrainz(self):
         """Do not associate or analyze recordings when exact matches are ambiguous."""
