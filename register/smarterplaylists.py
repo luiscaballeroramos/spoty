@@ -85,7 +85,7 @@ class SmarterPlaylistsRepository:
         return dict(row) if row is not None else None
 
     def get_refresh_candidates(self, database_url, limit=10, refresh_hours=20):
-        if not 1 <= limit <= 100 or not 1 <= refresh_hours <= 168:
+        if (limit is not None and not 1 <= limit <= 100) or not 1 <= refresh_hours <= 168:
             raise ValueError("Invalid refresh batch size or interval.")
         candidates = {}
         with self._factory()(database_url) as database:

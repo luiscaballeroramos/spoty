@@ -115,17 +115,33 @@ each field. Popularity and followers from different sources remain separate.
 ## Daily Smarter Playlists Refresh
 
 `0004_smarterplaylists_refresh_state` adds per-entity retry state. With an
-authorized private session file, run a bounded refresh:
+authorized private session file, scan all due entities in bounded batches:
 
 ```powershell
-.\venv\Scripts\python.exe -m _smarterplaylists_refresh --limit 10 --session-file .secrets/smarterplaylists-session.json
+.\venv\Scripts\python.exe -m _smarterplaylists_refresh --all --batch-size 50 --session-file .secrets/smarterplaylists-session.json
 ```
 
-`--limit` applies separately to tracks, artists and albums (default: 10 each).
-`--refresh-hours` defaults to 20 to tolerate daily schedule jitter; it accepts
-1 to 168 hours. New entities precede expired ones, so initial backfill of a large
-library takes multiple batches. `--dry-run` inspects due counts with database
-read access, without HTTP or writes.
+The daily Action uses `--all`: no total entity cap. It snapshots all due IDs,
+then processes at most 50 entities of each type per batch without repeating IDs
+within that execution. The snapshot is read before HTTP, not inside a long DB
+transaction. Manual Actions runs expose batch size (1..100) and refresh age.
+Batch size is not the total number of entities checked.
+
+`--refresh-hours` defaults to 20 to tolerate daily schedule jitter (1..168 hours).
+New entities precede expired ones. Already-fresh metadata and retry-backoff IDs
+are skipped, so this is a complete scan of eligible pending/expired entities,
+not a forced refetch of every row regardless of age. `--all --dry-run` reports
+the full eligible counts without HTTP or writes.
+
+Each batch emits progress JSON. The default `--max-minutes 300` gives the bulk
+process a five-hour budget; Actions has a 330-minute timeout. Budget exhaustion
+reports `incomplete` and remaining unattempted counts with a nonzero exit. Saved
+results are retained and another execution resumes from due database state.
+Expired authentication or global rate limits stop subsequent batches. There is
+no guarantee that a large library will finish within one provider/time budget.
+
+For a deliberately small test, the original `--limit 10` mode remains available
+(10 per type by default when `--all` is absent). It cannot be combined with `--all`.
 
 The process closes database connections before HTTP, uses three marked programs
 named `Spoty Daily Metadata track/artist/album`, requests `save=false`, and refuses
