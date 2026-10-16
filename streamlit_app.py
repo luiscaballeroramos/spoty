@@ -52,6 +52,7 @@ st.set_page_config(
 
 
 try:
+    from app_views.metadata import render_metadata_page
     from app_views.reproduction import (
         refresh_playback_on_page_entry,
         render_reproduction_page,
@@ -113,7 +114,8 @@ st.markdown(
 
 PAGE_SUMMARY = "summary"
 PAGE_REPRODUCTION = "reproduction"
-PAGE_OPTIONS = {PAGE_SUMMARY, PAGE_REPRODUCTION}
+PAGE_METADATA = "metadata"
+PAGE_OPTIONS = {PAGE_SUMMARY, PAGE_REPRODUCTION, PAGE_METADATA}
 PAGE_STATE_KEY = "spoty_page"
 PREVIOUS_PAGE_STATE_KEY = "spoty_previous_page"
 
@@ -134,6 +136,10 @@ def go_to_reproduction_page():
     go_to_page(PAGE_REPRODUCTION)
 
 
+def go_to_metadata_page():
+    go_to_page(PAGE_METADATA)
+
+
 def get_current_page() -> str:
     page_name = st.session_state.get(PAGE_STATE_KEY, PAGE_REPRODUCTION)
     return page_name
@@ -147,6 +153,7 @@ def render_current_page():
         current_page=current_page,
         on_summary_click=go_to_summary_page,
         on_reproduction_click=go_to_reproduction_page,
+        on_metadata_click=go_to_metadata_page,
     )
 
     if current_page == PAGE_REPRODUCTION:
@@ -155,6 +162,8 @@ def render_current_page():
         render_reproduction_page()
     elif current_page == PAGE_SUMMARY:
         render_summary_page()
+    elif current_page == PAGE_METADATA:
+        render_metadata_page()
     else:
         raise ValueError(f"Unknown page: {current_page}")
 

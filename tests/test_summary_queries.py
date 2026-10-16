@@ -73,6 +73,49 @@ class SummaryQueryServiceTest(unittest.TestCase):
         self.assertNotIn("et.plays / gc.genre_count", query)
         self.assertEqual(parameters, (10,))
 
+    def test_metadata_overview_maps_sources_and_fields(self):
+        """Keep source coverage separate and preserve zero-valued field counts."""
+        service, connect, cursor = self._service([
+            {"total": 10, "enriched": 4, "source": "SmarterPlaylists", "source_available": 4,
+             "field": "danceability", "field_available": 3},
+            {"total": 10, "enriched": 4, "source": "Spotify", "source_available": 10,
+             "field": "popularity", "field_available": 10},
+        ])
+
+        result = service.metadata_overview("tracks")
+
+        self.assertEqual(result["total"], 10)
+        self.assertEqual(result["enriched"], 4)
+        sources = {source["source"]: source for source in result["sources"]}
+        self.assertEqual(sources["SmarterPlaylists"]["fields"], [{"field": "danceability", "available": 3}])
+        self.assertEqual(sources["Last.fm"]["available"], 0)
+        query = cursor.execute.call_args.args[0].as_string()
+        self.assertIn('SELECT * FROM "tracks"', query)
+        self.assertIn("COUNT(DISTINCT id)", query)
+        self.assertIn("'[]'::jsonb", query)
+        self.assertIn("metadata.match_status = 'found'", query)
+        connect.assert_called_once()
+
+    def test_metadata_overview_supports_artists_albums_and_empty_catalogs(self):
+        """Select the matching provider table without querying track-only providers."""
+        for entity in ("artists", "albums"):
+            with self.subTest(entity=entity):
+                service, _, cursor = self._service([])
+                result = service.metadata_overview(entity)
+                self.assertEqual(result["total"], 0)
+                self.assertEqual(result["enriched"], 0)
+                self.assertEqual(len(result["sources"]), 2)
+                query = cursor.execute.call_args.args[0].as_string()
+                self.assertIn(f'SELECT * FROM "{entity}"', query)
+                self.assertNotIn("lastfm_track_metadata", query)
+
+    def test_metadata_overview_rejects_unknown_entities_before_querying(self):
+        """Reject arbitrary identifiers without opening a database connection."""
+        service, connect, _ = self._service([])
+        with self.assertRaises(ValueError):
+            service.metadata_overview("tracks; DROP TABLE tracks")
+        connect.assert_not_called()
+
     def test_recent_history_uses_parameterized_limit(self):
         """Verify Recent history uses parameterized limit."""
         service, _, cursor = self._service([])

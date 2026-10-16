@@ -1,5 +1,6 @@
 from typing import Any, Callable
 
+from psycopg import sql
 from psycopg.rows import dict_row
 
 
@@ -171,6 +172,93 @@ class SummaryQueryService:
             "listened_tracks": int(first_row["listened_tracks"] or 0),
             "classified_tracks": int(first_row["classified_tracks"] or 0),
             "genres": genres,
+        }
+
+    def metadata_overview(self, entity_type: str) -> dict[str, Any]:
+        """Summarize nonempty metadata by source and field for local entities only."""
+        entities = {
+            "tracks": ("tracks", "track"),
+            "artists": ("artists", "artist"),
+            "albums": ("albums", "album"),
+        }
+        if entity_type not in entities:
+            raise ValueError("Expected tracks, artists or albums.")
+        table, entity = entities[entity_type]
+        providers = ["Spotify", "SmarterPlaylists"]
+        metadata_queries = [sql.SQL("""
+            SELECT catalog.id, 'Spotify' AS source, to_jsonb(catalog) - 'id' AS data
+            FROM catalog
+            UNION ALL
+            SELECT catalog.id, 'SmarterPlaylists', metadata.normalized_data
+            FROM catalog JOIN {metadata_table} metadata ON catalog.id = metadata.{id_column}
+        """).format(
+            metadata_table=sql.Identifier(f"smarterplaylists_{entity}_metadata"),
+            id_column=sql.Identifier(f"spotify_{entity}_id"),
+        )]
+        if entity_type == "tracks":
+            for provider, metadata_table in (
+                ("Last.fm", "lastfm_track_metadata"),
+                ("MusicBrainz", "musicbrainz_recording_metadata"),
+            ):
+                providers.append(provider)
+                metadata_queries.append(sql.SQL("""
+                    SELECT catalog.id, {provider}, metadata.normalized_data
+                    FROM catalog JOIN {metadata_table} metadata
+                        ON catalog.id = metadata.spotify_track_id
+                    WHERE metadata.match_status = 'matched'
+                """).format(provider=sql.Literal(provider), metadata_table=sql.Identifier(metadata_table)))
+            for level in ("low-level", "high-level"):
+                provider = f"AcousticBrainz ({level})"
+                providers.append(provider)
+                metadata_queries.append(sql.SQL("""
+                    SELECT catalog.id, {provider}, metadata.normalized_data
+                    FROM catalog JOIN acousticbrainz_analysis_metadata metadata
+                        ON catalog.id = metadata.spotify_track_id
+                    WHERE metadata.match_status = 'found' AND metadata.analysis_level = {level}
+                """).format(provider=sql.Literal(provider), level=sql.Literal(level)))
+
+        query = sql.SQL("""
+            WITH catalog AS (SELECT * FROM {table}), metadata AS ({metadata}),
+            valid_fields AS (
+                SELECT DISTINCT metadata.id, metadata.source, field.key AS field
+                FROM metadata
+                CROSS JOIN LATERAL jsonb_each(
+                    CASE WHEN jsonb_typeof(metadata.data) = 'object'
+                         THEN metadata.data ELSE '{{}}'::jsonb END
+                ) AS field
+                WHERE field.value NOT IN ('null'::jsonb, '\"\"'::jsonb, '[]'::jsonb, '{{}}'::jsonb)
+                    AND btrim(field.value #>> '{{}}') <> ''
+            ), source_counts AS (
+                SELECT source, COUNT(DISTINCT id) AS available
+                FROM valid_fields GROUP BY source
+            ), field_counts AS (
+                SELECT source, field, COUNT(DISTINCT id) AS available
+                FROM valid_fields GROUP BY source, field
+            )
+            SELECT (SELECT COUNT(*) FROM catalog) AS total,
+                (SELECT COUNT(DISTINCT id) FROM valid_fields WHERE source <> 'Spotify') AS enriched,
+                sources.source, COALESCE(source_counts.available, 0) AS source_available,
+                field_counts.field, COALESCE(field_counts.available, 0) AS field_available
+            FROM (VALUES {sources}) AS sources(source)
+            LEFT JOIN source_counts USING (source)
+            LEFT JOIN field_counts USING (source)
+            ORDER BY sources.source, field_counts.available DESC, field_counts.field
+        """).format(
+            table=sql.Identifier(table),
+            metadata=sql.SQL(" UNION ALL ").join(metadata_queries),
+            sources=sql.SQL(", ").join(sql.SQL("({})").format(sql.Literal(provider)) for provider in providers),
+        )
+        rows = self._query(query)
+        sources = {provider: {"source": provider, "available": 0, "fields": []} for provider in providers}
+        for row in rows:
+            source = sources[row["source"]]
+            source["available"] = int(row["source_available"] or 0)
+            if row["field"] is not None:
+                source["fields"].append({"field": row["field"], "available": int(row["field_available"] or 0)})
+        return {
+            "total": int(rows[0]["total"] or 0) if rows else 0,
+            "enriched": int(rows[0]["enriched"] or 0) if rows else 0,
+            "sources": list(sources.values()),
         }
 
     def recent_listening_events(self, limit: int = 100) -> list[dict[str, Any]]:

@@ -95,15 +95,8 @@ def _render_genre_infographic(analysis: dict):
             padding-top: 20px;
             border-top: 1px solid #d8d8d8;
         }
-        .genre-heading {
-            margin: 0;
-            color: #171a17;
-            font-family: Georgia, "Times New Roman", serif;
-            font-size: 24px;
-            font-weight: 400;
-        }
         .genre-coverage {
-            margin: 5px 0 20px;
+            margin: 0 0 16px;
             color: #626262;
             font-size: 13px;
         }
@@ -145,14 +138,11 @@ def _render_genre_infographic(analysis: dict):
         .genre-row:nth-child(5n + 5) .genre-fill { background: #9a607e; }
         @media (max-width: 600px) {
             .genre-infographic { margin-top: 20px; padding-top: 16px; }
-            .genre-heading { font-size: 21px; }
         }
         </style>
         """ + '<section class="genre-infographic">'
-        '<h2 class="genre-heading">Géneros más escuchados</h2>'
-        f'<p class="genre-coverage">{_format_count(classified_listens)} de '
-        f'{_format_count(total_listens)} escuchas con género identificado · '
-        f'{_format_percent(coverage)}% de cobertura</p>'
+        f'<p class="genre-coverage">{_format_count(classified_listens)} / '
+        f'{_format_count(total_listens)} ({_format_percent(coverage)}%)</p>'
         f'<div class="genre-list">{"".join(rows)}</div>'
         '</section>',
         unsafe_allow_html=True,
@@ -171,18 +161,24 @@ def render_summary_page():
         )
         return
 
-    metrics = (
-        ("♫", counts["total_tracks"]),
-        ("👤", counts["total_artists"]),
-        ("💿", counts["total_albums"]),
-        ("🎧", counts["total_listening_events"]),
+    icons = (
+        '<svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
+        '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
+        '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/></svg>',
+        '<svg viewBox="0 0 24 24"><path d="M3 14v-2a9 9 0 0 1 18 0v2"/><rect x="3" y="12" width="4" height="8" rx="2"/><rect x="17" y="12" width="4" height="8" rx="2"/></svg>',
+    )
+    values = (
+        counts["total_tracks"],
+        counts["total_artists"],
+        counts["total_albums"],
+        counts["total_listening_events"],
     )
     items = "".join(
         '<article class="library-stat">'
-        f'<span class="library-stat-icon" aria-hidden="true">{symbol}</span>'
-        f'<strong class="library-stat-value">{_format_count(value)}</strong>'
+        f'<span class="library-stat-icon" aria-hidden="true">{icon}</span>'
+        f'<strong class="library-stat-value">{int(value)}</strong>'
         "</article>"
-        for symbol, value in metrics
+        for icon, value in zip(icons, values)
     )
 
     st.markdown(
@@ -204,21 +200,32 @@ def render_summary_page():
         }
         .library-stat-value {
             display: block;
-            font-family: Georgia, "Times New Roman", serif;
             color: #171a17;
-            font-size: 32px;
-            font-weight: 400;
+            font-size: 24px;
+            font-weight: 500;
             line-height: 1;
             overflow-wrap: anywhere;
             font-variant-numeric: tabular-nums;
         }
         .library-stat-icon {
-            font-size: 24px;
-            line-height: 1;
+            display: flex;
+            width: 22px;
+            height: 22px;
+            flex: 0 0 22px;
+            color: #171a17;
+        }
+        .library-stat-icon svg {
+            width: 100%;
+            height: 100%;
+            fill: none;
+            stroke: currentColor;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-width: 1.7;
         }
         @media (max-width: 680px) {
             .library-infographic { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-            .library-stat-value { font-size: 30px; }
+            .library-stat-value { font-size: 22px; }
         }
         </style>
         """ + f'<section class="library-infographic">{items}</section>',
