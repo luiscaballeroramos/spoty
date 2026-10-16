@@ -1,11 +1,8 @@
 name: Liked Tracks
 
 on:
-  schedule:
-    - cron: "0 4 * * *"
+  workflow_call:
   workflow_dispatch:
-  repository_dispatch:
-    types: [run-liked-tracks]
 
 permissions:
   contents: read

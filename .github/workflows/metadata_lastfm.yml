@@ -1,8 +1,7 @@
 name: Last.fm Metadata
 
 on:
-  schedule:
-    - cron: "10 4 * * *"
+  workflow_call:
   workflow_dispatch:
   repository_dispatch:
     types: [run-lastfm-enrichment]

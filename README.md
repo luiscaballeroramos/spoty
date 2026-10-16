@@ -50,24 +50,55 @@ Only the selected provider's adapter is constructed, pending rows are filtered
 for that source, and other providers are not called or written. Explicit Last.fm
 requires `LASTFM_API_KEY`. AcousticBrainz uses already-matched MusicBrainz IDs in
 the database; it does not call MusicBrainz or trigger its workflow. Tracks without
-a matched ID remain pending until a future run. Schedules do not guarantee order.
+a matched ID remain pending until a future run.
 The manual combined command `spoty-enrich --limit 50` remains available (equivalent
 to `--provider all`); Summary keeps its existing combined manual action.
 
-The repository defines five independent GitHub Actions workflows:
+### External cron coordinators
 
-| Workflow | Daily Schedule (UTC) | Manual Trigger |
+The external daily cron triggers the **Daily** workflow in
+`.github/workflows/daily.yml` through `repository_dispatch`:
+
+```json
+{"event_type": "run-daily"}
+```
+
+Send this body to `POST https://api.github.com/repos/luiscaballeroramos/spoty/dispatches`
+using the existing external cron's GitHub authentication. The old event
+`run-liked-tracks` is also accepted by Daily, so the current cron continues to work
+without changing its request. It now runs the entire daily sequence, not just
+liked tracks. Rename the external cron to `cronDaily` and optionally switch its
+body to `run-daily`; do not create a second daily cron alongside the existing one.
+Publish these workflow changes to the default branch before switching the event.
+
+Daily calls reusable workflows consecutively in this order:
+
+| Order | Workflow | Standalone Trigger |
 | --- | --- | --- |
-| Liked Tracks | 04:00 | `workflow_dispatch` / `run-liked-tracks` |
-| Last.fm Metadata | 04:10 | `workflow_dispatch` / `run-lastfm-enrichment` |
-| MusicBrainz Metadata | 04:20 | `workflow_dispatch` / `run-musicbrainz-enrichment` |
-| AcousticBrainz Metadata | 04:30 | `workflow_dispatch` / `run-acousticbrainz-enrichment` |
-| Smarter Playlists Metadata | 04:40 | `workflow_dispatch` / `run-smarterplaylists` |
+| 1 | Liked Tracks | `workflow_dispatch` |
+| 2 | Last.fm Metadata | `workflow_dispatch` / `run-lastfm-enrichment` |
+| 3 | MusicBrainz Metadata | `workflow_dispatch` / `run-musicbrainz-enrichment` |
+| 4 | AcousticBrainz Metadata | `workflow_dispatch` / `run-acousticbrainz-enrichment` |
+| 5 | Smarter Playlists Metadata | `workflow_dispatch` / `run-smarterplaylists` |
 
-Each has its own concurrency group, timeout and credentials, without `needs`
-dependencies. Schedules only become active after publishing the workflows to the
-default branch and configuring their secrets. Existing provider enrichment scans
-missing metadata; Smarter Playlists also revisits expired captures.
+Each task retains its own timeout, credentials and concurrency group, including
+standalone runs. A failed or timed-out task does not prevent subsequent tasks from
+running, but the daily run still reports failure. Cancelling Daily stops the chain.
+Daily also has its own concurrency group to prevent overlapping daily runs.
+GitHub concurrency keeps at most one running and one pending run per group; newer
+requests can replace pending requests, so this is not a durable cron backlog.
+Individual native GitHub schedules are removed to avoid duplicate daily runs.
+
+The separate external cron every 30 minutes still sends `run-registration` and
+runs Registration independently. It can overlap with Daily: the daily sequence
+is not a global Spotify API lock and does not replace rate-limit handling.
+To add a daily task, expose it with `workflow_call` and add a job to Daily using
+`needs`, `if: ${{ !cancelled() }}` and `secrets: inherit`, following its existing
+jobs. To change its frequency, move its call to the corresponding coordinator
+and reconnect the dependency chains; each coordinator needs its own external cron.
+
+Existing provider enrichment scans missing metadata; Smarter Playlists also
+revisits expired captures. Configure each task's required repository secrets.
 The Summary page also has a manual provider-enrichment action
 for batches of 1 to 100 tracks. Before using enrichment, apply the metadata schema
 migration explicitly with the command below. Until the migration exists, the

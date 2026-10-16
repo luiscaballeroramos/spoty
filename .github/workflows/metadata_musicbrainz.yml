@@ -1,8 +1,7 @@
 name: MusicBrainz Metadata
 
 on:
-  schedule:
-    - cron: "20 4 * * *"
+  workflow_call:
   workflow_dispatch:
   repository_dispatch:
     types: [run-musicbrainz-enrichment]
