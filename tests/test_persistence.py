@@ -115,7 +115,10 @@ class SimpleDBLifecycleTest(unittest.TestCase):
     def test_reserve_liked_sync_returns_generation_and_local_revision(self):
         """Verify Reserve liked sync returns generation and local revision."""
         database = self._database_with_cursor()
-        database.cursor.fetchone.return_value = (4, 7)
+        database.cursor.fetchone.return_value = {
+            "generation": 4,
+            "local_revision": 7,
+        }
 
         self.assertEqual(database.reserve_liked_track_sync(), (4, 7))
         self.assertIn(
@@ -127,7 +130,11 @@ class SimpleDBLifecycleTest(unittest.TestCase):
     def test_stale_liked_snapshot_is_not_applied(self):
         """Verify Stale liked snapshot is not applied."""
         database = self._database_with_cursor()
-        database.cursor.fetchone.return_value = (5, 8)
+        database.cursor.fetchone.return_value = {
+            "generation": 5,
+            "local_revision": 8,
+            "applied_generation": 0,
+        }
 
         applied = database.apply_liked_track_snapshot(4, 8, ["new-track"])
 
@@ -139,7 +146,11 @@ class SimpleDBLifecycleTest(unittest.TestCase):
     def test_current_liked_snapshot_applies_within_one_transaction(self):
         """Verify Current liked snapshot applies within one transaction."""
         database = self._database_with_cursor()
-        database.cursor.fetchone.return_value = (5, 8, 0)
+        database.cursor.fetchone.return_value = {
+            "generation": 5,
+            "local_revision": 8,
+            "applied_generation": 0,
+        }
         database.insert.return_value = True
         database.get_all_ids.return_value = ["current", "stale"]
 
@@ -155,7 +166,11 @@ class SimpleDBLifecycleTest(unittest.TestCase):
     def test_liked_snapshot_is_rejected_after_local_revision_changes(self):
         """Verify Liked snapshot is rejected after local revision changes."""
         database = self._database_with_cursor()
-        database.cursor.fetchone.return_value = (5, 9, 0)
+        database.cursor.fetchone.return_value = {
+            "generation": 5,
+            "local_revision": 9,
+            "applied_generation": 0,
+        }
 
         result = database.apply_liked_track_snapshot(5, 8, ["stale-view"])
 
@@ -166,7 +181,11 @@ class SimpleDBLifecycleTest(unittest.TestCase):
     def test_liked_snapshot_cannot_be_applied_twice(self):
         """Verify Liked snapshot cannot be applied twice."""
         database = self._database_with_cursor()
-        database.cursor.fetchone.return_value = (5, 8, 5)
+        database.cursor.fetchone.return_value = {
+            "generation": 5,
+            "local_revision": 8,
+            "applied_generation": 5,
+        }
 
         result = database.apply_liked_track_snapshot(5, 8, ["track-id"])
 
