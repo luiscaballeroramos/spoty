@@ -149,24 +149,24 @@ def render_pulse_page() -> None:
     .pulse-now small, .pulse-label small { display:block; font-size:12px; }
     .pulse-total { text-align:left; font-size:14px; white-space:nowrap; }
     .pulse-chart { width:100%; }
-    .pulse-row { display:grid; grid-template-columns:145px minmax(0,1fr) 90px; gap:20px; align-items:start; padding:14px 0 6px; border-top:1px solid #e4e8e6; }
+    .pulse-row { display:grid; grid-template-columns:145px minmax(0,1fr) 90px; gap:20px; align-items:start; padding:12px 0 4px; }
     .pulse-label strong { font-size:14px; font-weight:600; }
-    .pulse-label small { margin-top:5px; }
-    .pulse-lane { position:relative; height:40px; background:#eff4f3; }
+    .pulse-label small { margin-top:2px; }
+    .pulse-lane { position:relative; height:28px; background:#eff4f3; }
     .pulse-heat { display:grid; grid-template-columns:repeat(80,minmax(0,1fr)); height:100%; overflow:hidden; border-radius:3px; }
     .pulse-marker { position:absolute; top:-4px; bottom:-4px; width:4px; background:#111; border:1px solid #fff; transform:translateX(-50%); box-shadow:0 0 0 1px #111; border-radius:2px; }
     .pulse-marker::before { content:""; position:absolute; width:8px; height:8px; background:#111; border:2px solid white; border-radius:50%; top:-7px; left:50%; transform:translateX(-50%); }
     .pulse-ticks { position:relative; height:9px; margin-top:6px; }
     .pulse-tick { position:absolute; top:0; height:7px; width:2px; background:#283c34; transform:translateX(-50%); }
     .pulse-scale { display:flex; justify-content:space-between; font-size:11px; }
-    .pulse-value { text-align:right; font-size:16px; font-variant-numeric:tabular-nums; padding-top:8px; }
+    .pulse-value { text-align:right; font-size:16px; font-variant-numeric:tabular-nums; padding-top:2px; }
     @media(max-width:600px) {
         .st-key-pulse_hours button { padding:4px 6px !important; min-width:0; }
         .st-key-pulse_hours button p { font-size:12px; }
         .st-key-pulse_sync button { min-width:36px; padding:4px 6px; }
         .st-key-pulse_expanded label { gap:4px; }
         .st-key-pulse_expanded p { font-size:12px; }
-        .pulse-row { grid-template-columns:minmax(0,1fr) 85px; gap:10px; }
+        .pulse-row { grid-template-columns:minmax(0,1fr) 85px; gap:6px 10px; }
         .pulse-label { grid-column:1; display:flex; align-items:baseline; gap:10px; }
         .pulse-label small { margin:0; }
         .pulse-plot { grid-column:1 / -1; grid-row:2; }
