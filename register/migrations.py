@@ -248,6 +248,36 @@ MIGRATIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
         _smarterplaylists_track_features_view(),
         _smarterplaylists_artist_details_view(),
     )),
+    ("0007_genre_taxonomy", (
+        """CREATE TABLE genres (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL CHECK (btrim(name) <> ''),
+            introduced_by TEXT NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )""",
+        """CREATE TABLE genre_relations (
+            parent_id TEXT NOT NULL REFERENCES genres(id),
+            child_id TEXT NOT NULL REFERENCES genres(id),
+            introduced_by TEXT NOT NULL,
+            PRIMARY KEY (parent_id, child_id),
+            CHECK (parent_id <> child_id)
+        )""",
+        "CREATE INDEX genre_relations_child_idx ON genre_relations (child_id)",
+        """CREATE TABLE genre_label_mappings (
+            source TEXT NOT NULL,
+            field TEXT NOT NULL,
+            normalized_label TEXT NOT NULL CHECK (
+                normalized_label <> '' AND normalized_label = lower(btrim(normalized_label))
+            ),
+            genre_id TEXT REFERENCES genres(id),
+            status TEXT NOT NULL CHECK (status IN ('pending', 'approved', 'excluded')),
+            introduced_by TEXT NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            PRIMARY KEY (source, field, normalized_label),
+            CHECK ((status = 'approved' AND genre_id IS NOT NULL)
+                OR (status IN ('pending', 'excluded') AND genre_id IS NULL))
+        )""",
+    )),
 )
 
 EXPECTED_COLUMNS = {
@@ -288,6 +318,11 @@ EXPECTED_COLUMNS["smarterplaylists_import_runs"] = {
 EXPECTED_COLUMNS["smarterplaylists_refresh_state"] = {
     "entity_type", "spotify_id", "last_attempt_at", "last_status", "next_attempt_at",
     "consecutive_failures", "last_error_code",
+}
+EXPECTED_COLUMNS["genres"] = {"id", "name", "introduced_by", "created_at"}
+EXPECTED_COLUMNS["genre_relations"] = {"parent_id", "child_id", "introduced_by"}
+EXPECTED_COLUMNS["genre_label_mappings"] = {
+    "source", "field", "normalized_label", "genre_id", "status", "introduced_by", "created_at",
 }
 for _entity in ("track", "artist", "album"):
     EXPECTED_COLUMNS[f"smarterplaylists_{_entity}_metadata"] = (

@@ -280,7 +280,7 @@ class MigrationRunnerTest(unittest.TestCase):
             apply_migrations(connection),
             ["0001_initial_schema", "0002_metadata_enrichment", "0003_smarterplaylists_metadata",
                "0004_smarterplaylists_refresh_state", "0005_remove_non_spotify_core_columns",
-               "0006_prune_empty_catalog_columns"],
+               "0006_prune_empty_catalog_columns", "0007_genre_taxonomy"],
         )
         migration_sql = "\n".join(connection.fake_cursor.statements)
         for statement in (
@@ -322,4 +322,4 @@ class MigrationRunnerTest(unittest.TestCase):
         self.assertEqual(creates_before_second_run, 1)
         self.assertEqual(creates_after_second_run, 1)
         self.assertEqual(connection.transaction_count, 2)
-        self.assertEqual(len(MIGRATIONS), 6)
+        self.assertEqual(len(MIGRATIONS), 7)

@@ -223,6 +223,18 @@ def render_summary_page():
             stroke-linejoin: round;
             stroke-width: 1.7;
         }
+        .st-key-summary_genre_grouping [role="radio"] {
+            color: #111111 !important;
+            background: #ffffff !important;
+            border-color: #111111 !important;
+        }
+        .st-key-summary_genre_grouping [role="radio"][aria-checked="true"] {
+            color: #ffffff !important;
+            background: #111111 !important;
+        }
+        .st-key-summary_genre_grouping [role="radio"][aria-checked="true"] * {
+            color: #ffffff !important;
+        }
         @media (max-width: 680px) {
             .library-infographic { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .library-stat-value { font-size: 22px; }
@@ -232,8 +244,14 @@ def render_summary_page():
         unsafe_allow_html=True,
     )
 
+    genre_grouping = st.segmented_control(
+        "Agrupacion", ["Etiquetas", "Familias"], default="Etiquetas",
+        selection_mode="single", key="summary_genre_grouping",
+    )
     try:
-        genre_analysis = queries.top_listened_genres()
+        genre_analysis = queries.top_listened_genres(
+            grouping="families" if genre_grouping == "Familias" else "labels",
+        )
         clear_incident(st.session_state, "summary_genre_error")
     except Exception as exc:
         render_incident_notice(
