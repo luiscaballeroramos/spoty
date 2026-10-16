@@ -66,9 +66,6 @@ def _render_genre_infographic(analysis: dict):
         st.caption("Aún no hay géneros disponibles para analizar las escuchas.")
         return
 
-    total_listens = analysis["total_listens"]
-    classified_listens = analysis["classified_listens"]
-    coverage = 100 * classified_listens / total_listens if total_listens else 0
     max_share = max(genre["share_percent"] for genre in analysis["genres"])
     rows = []
     for genre in analysis["genres"]:
@@ -94,11 +91,6 @@ def _render_genre_infographic(analysis: dict):
             margin-top: 28px;
             padding-top: 20px;
             border-top: 1px solid #d8d8d8;
-        }
-        .genre-coverage {
-            margin: 0 0 16px;
-            color: #626262;
-            font-size: 13px;
         }
         .genre-list { display: grid; gap: 14px; }
         .genre-row-heading {
@@ -141,8 +133,6 @@ def _render_genre_infographic(analysis: dict):
         }
         </style>
         """ + '<section class="genre-infographic">'
-        f'<p class="genre-coverage">{_format_count(classified_listens)} / '
-        f'{_format_count(total_listens)} ({_format_percent(coverage)}%)</p>'
         f'<div class="genre-list">{"".join(rows)}</div>'
         '</section>',
         unsafe_allow_html=True,
@@ -223,16 +213,32 @@ def render_summary_page():
             stroke-linejoin: round;
             stroke-width: 1.7;
         }
-        .st-key-summary_genre_grouping [role="radio"] {
+        .st-key-summary_genre_toolbar {
+            max-width: 760px;
+            flex-wrap: nowrap;
+            margin-top: 24px;
+        }
+        .st-key-summary_genre_toolbar [data-testid="stMarkdownContainer"] {
+            margin-bottom: 0;
+        }
+        .genre-coverage {
+            margin: 0;
+            color: #626262;
+            font-size: 13px;
+            line-height: 1.2;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+        }
+        .st-key-summary_genre_mode [role="radio"] {
             color: #111111 !important;
             background: #ffffff !important;
             border-color: #111111 !important;
         }
-        .st-key-summary_genre_grouping [role="radio"][aria-checked="true"] {
+        .st-key-summary_genre_mode [role="radio"][aria-checked="true"] {
             color: #ffffff !important;
             background: #111111 !important;
         }
-        .st-key-summary_genre_grouping [role="radio"][aria-checked="true"] * {
+        .st-key-summary_genre_mode [role="radio"][aria-checked="true"] * {
             color: #ffffff !important;
         }
         @media (max-width: 680px) {
@@ -244,13 +250,17 @@ def render_summary_page():
         unsafe_allow_html=True,
     )
 
-    genre_grouping = st.segmented_control(
-        "Agrupacion", ["Etiquetas", "Familias"], default="Etiquetas",
-        selection_mode="single", key="summary_genre_grouping",
-    )
+    with st.container(horizontal=True, vertical_alignment="center", gap="medium", key="summary_genre_toolbar"):
+        genre_grouping = st.segmented_control(
+            "Géneros", ["Géneros", "Subgéneros"], default="Géneros",
+            selection_mode="single", key="summary_genre_mode",
+            label_visibility="collapsed", width="content",
+        )
+        with st.container(width="content"):
+            coverage_slot = st.empty()
     try:
         genre_analysis = queries.top_listened_genres(
-            grouping="families" if genre_grouping == "Familias" else "labels",
+            grouping="labels" if genre_grouping == "Subgéneros" else "families",
         )
         clear_incident(st.session_state, "summary_genre_error")
     except Exception as exc:
@@ -258,4 +268,12 @@ def render_summary_page():
             "summary_genre_error", exc, "No se pudo calcular el resumen de géneros."
         )
         return
+    total_listens = genre_analysis["total_listens"]
+    classified_listens = genre_analysis["classified_listens"]
+    coverage = 100 * classified_listens / total_listens if total_listens else 0
+    coverage_slot.markdown(
+        f'<p class="genre-coverage" title="{_format_count(classified_listens)} / '
+        f'{_format_count(total_listens)} escuchas incluidas">{_format_percent(coverage)}%</p>',
+        unsafe_allow_html=True,
+    )
     _render_genre_infographic(genre_analysis)

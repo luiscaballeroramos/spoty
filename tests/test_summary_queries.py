@@ -4,6 +4,50 @@ from unittest.mock import MagicMock, patch
 from services.summary_queries import SummaryQueryService
 
 
+class SummaryViewTest(unittest.TestCase):
+    def test_genre_toolbar_defaults_to_parent_genres_and_shows_coverage(self):
+        """Default to root genres, hide the widget label and keep coverage outside the chart."""
+        from streamlit.testing.v1 import AppTest
+
+        queries = MagicMock()
+        queries.library_counts.return_value = {
+            "total_tracks": 4, "total_artists": 3, "total_albums": 2, "total_listening_events": 10,
+        }
+        queries.top_listened_genres.return_value = {
+            "total_listens": 10, "classified_listens": 6,
+            "genres": [{"genre": "rock", "share_percent": 100}],
+        }
+        with patch("app_views.summary.SummaryQueryService", return_value=queries):
+            app = AppTest.from_string("from app_views.summary import render_summary_page\nrender_summary_page()")
+            app.run()
+            self.assertFalse(app.exception)
+            self.assertEqual(app.session_state["summary_genre_mode"], "Géneros")
+            queries.top_listened_genres.assert_called_with(grouping="families")
+            html = "\n".join(element.value for element in app.markdown)
+            self.assertIn('escuchas incluidas">60,0%</p>', html)
+            chart = next(element.value for element in app.markdown if '<section class="genre-infographic">' in element.value)
+            self.assertNotIn("genre-coverage", chart)
+            self.assertNotIn("Agrupacion", html)
+            app.session_state["summary_genre_mode"] = "Subgéneros"
+            app.run()
+            self.assertFalse(app.exception)
+            queries.top_listened_genres.assert_called_with(grouping="labels")
+
+    def test_genre_toolbar_reports_zero_coverage_without_listens(self):
+        """Keep zero coverage visible next to the selector for an empty history."""
+        from streamlit.testing.v1 import AppTest
+
+        queries = MagicMock()
+        queries.library_counts.return_value = {
+            "total_tracks": 0, "total_artists": 0, "total_albums": 0, "total_listening_events": 0,
+        }
+        queries.top_listened_genres.return_value = {"total_listens": 0, "classified_listens": 0, "genres": []}
+        with patch("app_views.summary.SummaryQueryService", return_value=queries):
+            app = AppTest.from_string("from app_views.summary import render_summary_page\nrender_summary_page()").run()
+        self.assertFalse(app.exception)
+        self.assertTrue(any('escuchas incluidas">0,0%</p>' in element.value for element in app.markdown))
+
+
 class SummaryQueryServiceTest(unittest.TestCase):
     def _service(self, rows):
         connection = MagicMock()

@@ -61,7 +61,7 @@ class MetadataViewTest(unittest.TestCase):
         """Keep metadata in the rightmost navigation column with its own callback."""
         from app_views.top_navigation import NAVIGATION_GROUP
 
-        self.assertEqual(NAVIGATION_GROUP.layout.columns, 3)
+        self.assertEqual(NAVIGATION_GROUP.layout.columns, 4)
         app = AppTest.from_string('''
 import streamlit as st
 from app_views.top_navigation import render_top_navigation
@@ -72,7 +72,7 @@ render_top_navigation("reproduction", lambda: None, lambda: None, choose_metadat
         self.assertFalse(app.exception)
         self.assertEqual(
             [button.key for button in app.button],
-            ["top_nav_summary", "top_nav_reproduction", "top_nav_metadata"],
+            ["top_nav_summary", "top_nav_reproduction", "top_nav_pulse", "top_nav_metadata"],
         )
         app.button(key="top_nav_metadata").click().run()
         self.assertEqual(app.session_state["selected_page"], "metadata")
