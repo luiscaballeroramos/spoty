@@ -279,8 +279,36 @@ class MigrationRunnerTest(unittest.TestCase):
         self.assertEqual(
             apply_migrations(connection),
             ["0001_initial_schema", "0002_metadata_enrichment", "0003_smarterplaylists_metadata",
-             "0004_smarterplaylists_refresh_state"],
+               "0004_smarterplaylists_refresh_state", "0005_remove_non_spotify_core_columns",
+               "0006_prune_empty_catalog_columns"],
         )
+        migration_sql = "\n".join(connection.fake_cursor.statements)
+        for statement in (
+            "ALTER TABLE artists DROP COLUMN IF EXISTS start_year",
+            "ALTER TABLE artists DROP COLUMN IF EXISTS end_year",
+            "ALTER TABLE albums DROP COLUMN IF EXISTS popularity",
+            "ALTER TABLE tracks DROP COLUMN IF EXISTS genres",
+            "ALTER TABLE tracks DROP COLUMN IF EXISTS images",
+            "ALTER TABLE artists DROP COLUMN IF EXISTS followers",
+            "ALTER TABLE artists DROP COLUMN IF EXISTS images",
+            "ALTER TABLE artists DROP COLUMN IF EXISTS popularity",
+            "ALTER TABLE albums DROP COLUMN IF EXISTS disc_number",
+            "ALTER TABLE tracks DROP COLUMN IF EXISTS acousticness",
+            "ALTER TABLE tracks DROP COLUMN IF EXISTS danceability",
+            "ALTER TABLE tracks DROP COLUMN IF EXISTS energy",
+            "ALTER TABLE tracks DROP COLUMN IF EXISTS instrumentalness",
+            "ALTER TABLE tracks DROP COLUMN IF EXISTS key",
+            "ALTER TABLE tracks DROP COLUMN IF EXISTS liveness",
+            "ALTER TABLE tracks DROP COLUMN IF EXISTS loudness",
+            "ALTER TABLE tracks DROP COLUMN IF EXISTS mode",
+            "ALTER TABLE tracks DROP COLUMN IF EXISTS speechiness",
+            "ALTER TABLE tracks DROP COLUMN IF EXISTS tempo",
+            "ALTER TABLE tracks DROP COLUMN IF EXISTS time_signature",
+            "ALTER TABLE tracks DROP COLUMN IF EXISTS valence",
+            "ALTER TABLE tracks ADD COLUMN IF NOT EXISTS disc_number INTEGER",
+        ):
+            self.assertIn(statement, migration_sql)
+        self.assertNotIn("a.popularity AS core_popularity", migration_sql)
         creates_before_second_run = sum(
             "CREATE TABLE IF NOT EXISTS listening_events" in statement
             for statement in connection.fake_cursor.statements
@@ -294,4 +322,4 @@ class MigrationRunnerTest(unittest.TestCase):
         self.assertEqual(creates_before_second_run, 1)
         self.assertEqual(creates_after_second_run, 1)
         self.assertEqual(connection.transaction_count, 2)
-        self.assertEqual(len(MIGRATIONS), 4)
+        self.assertEqual(len(MIGRATIONS), 6)

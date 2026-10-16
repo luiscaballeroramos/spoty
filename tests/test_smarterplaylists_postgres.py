@@ -34,6 +34,34 @@ class PostgreSQLCaptureTest(unittest.TestCase):
                 versions = apply_migrations(connection)
                 self.assertIn("0003_smarterplaylists_metadata", versions)
                 self.assertIn("0004_smarterplaylists_refresh_state", versions)
+                self.assertIn("0005_remove_non_spotify_core_columns", versions)
+                self.assertIn("0006_prune_empty_catalog_columns", versions)
+                removed_columns = connection.execute("""
+                    SELECT table_name, column_name FROM information_schema.columns
+                    WHERE table_schema = current_schema()
+                      AND (table_name, column_name) IN (
+                        ('artists', 'start_year'), ('artists', 'end_year'), ('artists', 'followers'),
+                        ('artists', 'images'), ('artists', 'popularity'),
+                        ('albums', 'disc_number'), ('albums', 'popularity'),
+                        ('tracks', 'genres'), ('tracks', 'images'),
+                        ('tracks', 'acousticness'), ('tracks', 'danceability'), ('tracks', 'energy'),
+                        ('tracks', 'instrumentalness'), ('tracks', 'key'), ('tracks', 'liveness'),
+                        ('tracks', 'loudness'), ('tracks', 'mode'), ('tracks', 'speechiness'),
+                        ('tracks', 'tempo'), ('tracks', 'time_signature'), ('tracks', 'valence')
+                      )
+                """).fetchall()
+                self.assertEqual(removed_columns, [])
+                self.assertIsNotNone(connection.execute("""
+                    SELECT column_name FROM information_schema.columns
+                    WHERE table_schema = current_schema()
+                      AND table_name = 'tracks' AND column_name = 'disc_number'
+                """).fetchone())
+                album_view_columns = connection.execute("""
+                    SELECT column_name FROM information_schema.columns
+                    WHERE table_schema = current_schema()
+                      AND table_name = 'smarterplaylists_album_details'
+                """).fetchall()
+                self.assertNotIn("core_popularity", [row[0] for row in album_view_columns])
                 self.assertEqual(apply_migrations(connection), [])
                 values = {record.entity: record.normalized_data for record in batch.records}
                 connection.execute("INSERT INTO artists (id, name) VALUES (%s, %s)",
@@ -42,10 +70,10 @@ class PostgreSQLCaptureTest(unittest.TestCase):
                                    (values["album"]["id"], values["album"]["name"],
                                     json.dumps([values["artist"]["id"]]), values["album"]["total_tracks"]))
                 connection.execute("""INSERT INTO tracks
-                    (id, name, duration_ms, album_id, artists_ids, energy)
-                    VALUES (%s,%s,%s,%s,%s,0.1)""",
+                    (id, name, duration_ms, album_id, disc_number, artists_ids)
+                    VALUES (%s,%s,%s,%s,%s,%s)""",
                     (values["track"]["id"], values["track"]["name"], values["track"]["duration_ms"],
-                     values["album"]["id"], json.dumps([values["artist"]["id"]])))
+                     values["album"]["id"], 1, json.dumps([values["artist"]["id"]])))
 
                 class Database:
                     def __enter__(self):

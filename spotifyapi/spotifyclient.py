@@ -224,29 +224,22 @@ class SpotifyClient:
         return self._run(action, operation, *args, validate=validate_response, **kwargs)
 
     def get_artist_byid(self, artist_id: str) -> Artist:
-        """Fetch an artist by Spotify ID and convert its name and image URLs into an Artist model."""
+        """Fetch an artist by Spotify ID and convert its name into an Artist model."""
         artist = self._read_object("get artist", self.sp.artist, artist_id)
-        images = [img["url"] for img in artist["images"]] if "images" in artist else []
-        return Artist(id=artist_id, name=artist["name"], images=images)
+        return Artist(id=artist_id, name=artist["name"])
 
     def get_artists_bytrackid(self, track_id: str):
-        """Fetch a track's artists individually and return Artist models with their names and image URLs."""
+        """Fetch a track's artists individually and return their IDs and names."""
         track = self._read_object("get track artists", self.sp.track, track_id)
         artists = []
 
         if "artists" in track:
             for artist in track["artists"]:
                 artist_info = self._read_object("get artist", self.sp.artist, artist["id"])
-                images = (
-                    [img["url"] for img in artist_info["images"]]
-                    if "images" in artist_info
-                    else []
-                )
                 artists.append(
                     Artist(
                         id=artist["id"],
                         name=artist_info["name"],
-                        images=images,
                     )
                 )
 

@@ -34,6 +34,15 @@ def _smarterplaylists_statements() -> tuple[str, ...]:
             last_error_code TEXT,
             last_success_run_id TEXT NOT NULL
         )""", f"CREATE INDEX IF NOT EXISTS {table}_next_attempt_idx ON {table} (next_attempt_at)"))
+    statements.extend((
+        _smarterplaylists_track_features_view(),
+        _smarterplaylists_artist_details_view(),
+        _smarterplaylists_album_details_view(),
+    ))
+    return tuple(statements)
+
+
+def _smarterplaylists_track_features_view() -> str:
     features = (
         "acousticness", "danceability", "energy", "instrumentalness", "liveness",
         "loudness", "speechiness", "tempo", "valence", "key", "mode", "time_signature",
@@ -42,36 +51,38 @@ def _smarterplaylists_statements() -> tuple[str, ...]:
     for field in features:
         kind = "INTEGER" if field in {"key", "mode", "time_signature"} else "DOUBLE PRECISION"
         projections.extend((
-            f'COALESCE((m.normalized_data ->> \'{field}\')::{kind}, t."{field}") AS "{field}"',
-            f"CASE WHEN m.normalized_data ->> '{field}' IS NOT NULL "
-            f"THEN m.field_metadata -> '{field}' ELSE "
-            f"'{{\"resource\":\"core\",\"captured_at\":null}}'::jsonb END AS {field}_provenance",
+            f'(m.normalized_data ->> \'{field}\')::{kind} AS "{field}"',
+            f"m.field_metadata -> '{field}' AS {field}_provenance",
         ))
-    statements.append(f"""CREATE OR REPLACE VIEW smarterplaylists_track_features AS
+    return f"""CREATE OR REPLACE VIEW smarterplaylists_track_features AS
         SELECT t.id AS spotify_track_id, t.name, {', '.join(projections)},
             t.popularity AS core_popularity,
             (m.normalized_data ->> 'popularity')::INTEGER AS resource_popularity,
             m.normalized_data, m.field_metadata, m.captured_at
         FROM tracks t LEFT JOIN smarterplaylists_track_metadata m
-            ON m.spotify_track_id = t.id""")
-    statements.append("""CREATE OR REPLACE VIEW smarterplaylists_artist_details AS
-        SELECT a.id AS spotify_artist_id, a.name, a.followers AS core_followers,
-            a.popularity AS core_popularity,
+            ON m.spotify_track_id = t.id"""
+
+
+def _smarterplaylists_artist_details_view() -> str:
+    return """CREATE OR REPLACE VIEW smarterplaylists_artist_details AS
+        SELECT a.id AS spotify_artist_id, a.name,
             (m.normalized_data ->> 'followers')::BIGINT AS resource_followers,
             (m.normalized_data ->> 'popularity')::INTEGER AS resource_popularity,
             m.normalized_data, m.field_metadata, m.captured_at
         FROM artists a LEFT JOIN smarterplaylists_artist_metadata m
-            ON m.spotify_artist_id = a.id""")
-    statements.append("""CREATE OR REPLACE VIEW smarterplaylists_album_details AS
-        SELECT a.id AS spotify_album_id, a.name, a.popularity AS core_popularity,
+            ON m.spotify_artist_id = a.id"""
+
+
+def _smarterplaylists_album_details_view() -> str:
+    return """CREATE OR REPLACE VIEW smarterplaylists_album_details AS
+        SELECT a.id AS spotify_album_id, a.name,
             (m.normalized_data ->> 'popularity')::INTEGER AS resource_popularity,
             m.normalized_data ->> 'release_date' AS release_date,
             m.normalized_data ->> 'label' AS label,
             (m.normalized_data ->> 'total_tracks')::INTEGER AS resource_total_tracks,
             m.normalized_data, m.field_metadata, m.captured_at
         FROM albums a LEFT JOIN smarterplaylists_album_metadata m
-            ON m.spotify_album_id = a.id""")
-    return tuple(statements)
+            ON m.spotify_album_id = a.id"""
 
 
 MIGRATIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
@@ -205,6 +216,38 @@ MIGRATIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
         """CREATE INDEX IF NOT EXISTS smarterplaylists_refresh_due_idx
             ON smarterplaylists_refresh_state (entity_type, next_attempt_at)""",
     )),
+    ("0005_remove_non_spotify_core_columns", (
+        "DROP VIEW IF EXISTS smarterplaylists_album_details",
+        "ALTER TABLE artists DROP COLUMN IF EXISTS start_year",
+        "ALTER TABLE artists DROP COLUMN IF EXISTS end_year",
+        "ALTER TABLE albums DROP COLUMN IF EXISTS popularity",
+        "ALTER TABLE tracks DROP COLUMN IF EXISTS genres",
+        "ALTER TABLE tracks DROP COLUMN IF EXISTS images",
+        _smarterplaylists_album_details_view(),
+    )),
+    ("0006_prune_empty_catalog_columns", (
+        "DROP VIEW IF EXISTS smarterplaylists_track_features",
+        "DROP VIEW IF EXISTS smarterplaylists_artist_details",
+        "ALTER TABLE artists DROP COLUMN IF EXISTS followers",
+        "ALTER TABLE artists DROP COLUMN IF EXISTS images",
+        "ALTER TABLE artists DROP COLUMN IF EXISTS popularity",
+        "ALTER TABLE albums DROP COLUMN IF EXISTS disc_number",
+        "ALTER TABLE tracks DROP COLUMN IF EXISTS acousticness",
+        "ALTER TABLE tracks DROP COLUMN IF EXISTS danceability",
+        "ALTER TABLE tracks DROP COLUMN IF EXISTS energy",
+        "ALTER TABLE tracks DROP COLUMN IF EXISTS instrumentalness",
+        "ALTER TABLE tracks DROP COLUMN IF EXISTS key",
+        "ALTER TABLE tracks DROP COLUMN IF EXISTS liveness",
+        "ALTER TABLE tracks DROP COLUMN IF EXISTS loudness",
+        "ALTER TABLE tracks DROP COLUMN IF EXISTS mode",
+        "ALTER TABLE tracks DROP COLUMN IF EXISTS speechiness",
+        "ALTER TABLE tracks DROP COLUMN IF EXISTS tempo",
+        "ALTER TABLE tracks DROP COLUMN IF EXISTS time_signature",
+        "ALTER TABLE tracks DROP COLUMN IF EXISTS valence",
+        "ALTER TABLE tracks ADD COLUMN IF NOT EXISTS disc_number INTEGER",
+        _smarterplaylists_track_features_view(),
+        _smarterplaylists_artist_details_view(),
+    )),
 )
 
 EXPECTED_COLUMNS = {
@@ -212,17 +255,14 @@ EXPECTED_COLUMNS = {
         "track_id", "played_at", "context_source", "context_type", "context_id"
     },
     "artists": {
-        "id", "name", "end_year", "followers", "images", "popularity", "start_year"
+        "id", "name"
     },
     "albums": {
-        "id", "name", "artists", "tracks", "total_tracks", "disc_number",
-        "images", "popularity", "release_year"
+        "id", "name", "artists", "tracks", "total_tracks", "images", "release_year"
     },
     "tracks": {
-        "id", "name", "duration_ms", "album_id", "album_track", "artists_ids",
-        "acousticness", "danceability", "energy", "explicit", "genres", "images",
-        "instrumentalness", "key", "liveness", "loudness", "mode", "popularity",
-        "speechiness", "tempo", "time_signature", "valence"
+        "id", "name", "duration_ms", "album_id", "album_track", "disc_number",
+        "artists_ids", "explicit", "popularity"
     },
     "liked_tracks": {"id"},
     "liked_sync_state": {
