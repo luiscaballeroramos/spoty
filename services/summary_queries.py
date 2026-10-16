@@ -87,6 +87,92 @@ class SummaryQueryService:
             }
         return {key: int(value or 0) for key, value in rows[0].items()}
 
+    def top_listened_genres(self, limit: int = 10) -> dict[str, Any]:
+        """Count each listen fully for every distinct track genre and report coverage."""
+        rows = self._query("""
+            WITH event_tracks AS (
+                SELECT track_id, COUNT(*)::numeric AS plays
+                FROM listening_events
+                GROUP BY track_id
+            ), track_artists AS (
+                SELECT et.track_id, et.plays, artist.artist_id
+                FROM event_tracks et
+                JOIN tracks t ON t.id = et.track_id
+                CROSS JOIN LATERAL jsonb_array_elements_text(
+                    CASE WHEN jsonb_typeof(t.artists_ids::jsonb) = 'array'
+                         THEN t.artists_ids::jsonb ELSE '[]'::jsonb END
+                ) AS artist(artist_id)
+            ), track_genres AS (
+                SELECT DISTINCT ta.track_id, lower(btrim(genre.value)) AS genre
+                FROM track_artists ta
+                JOIN smarterplaylists_artist_metadata m
+                    ON m.spotify_artist_id = ta.artist_id
+                CROSS JOIN LATERAL jsonb_array_elements_text(
+                    CASE WHEN jsonb_typeof(m.normalized_data->'genres') = 'array'
+                         THEN m.normalized_data->'genres' ELSE '[]'::jsonb END
+                ) AS genre(value)
+                WHERE btrim(genre.value) <> ''
+            ), track_genre_counts AS (
+                SELECT track_id, COUNT(*) AS genre_count
+                FROM track_genres
+                GROUP BY track_id
+            ), weighted_genres AS (
+                SELECT tg.genre, SUM(et.plays) AS weighted_plays
+                FROM track_genres tg
+                JOIN event_tracks et USING (track_id)
+                GROUP BY tg.genre
+            ), coverage AS (
+                SELECT COALESCE(SUM(et.plays), 0) AS total_listens,
+                    COALESCE(SUM(et.plays) FILTER (WHERE gc.track_id IS NOT NULL), 0)
+                        AS classified_listens,
+                    COUNT(*) AS listened_tracks,
+                    COUNT(gc.track_id) AS classified_tracks
+                FROM event_tracks et
+                LEFT JOIN track_genre_counts gc USING (track_id)
+            )
+            SELECT coverage.total_listens, coverage.classified_listens,
+                coverage.listened_tracks, coverage.classified_tracks,
+                top_genres.genre, top_genres.weighted_plays
+            FROM coverage
+            LEFT JOIN LATERAL (
+                SELECT genre, weighted_plays
+                FROM weighted_genres
+                ORDER BY weighted_plays DESC, genre
+                LIMIT %s
+            ) AS top_genres ON TRUE
+        """, (max(1, min(20, int(limit))),))
+
+        if not rows:
+            return {
+                "total_listens": 0,
+                "classified_listens": 0,
+                "listened_tracks": 0,
+                "classified_tracks": 0,
+                "genres": [],
+            }
+
+        first_row = rows[0]
+        classified_listens = int(first_row["classified_listens"] or 0)
+        genres = [
+            {
+                "genre": row["genre"],
+                "weighted_listens": float(row["weighted_plays"] or 0),
+                "share_percent": (
+                    100 * float(row["weighted_plays"] or 0) / classified_listens
+                    if classified_listens else 0.0
+                ),
+            }
+            for row in rows
+            if row["genre"] is not None
+        ]
+        return {
+            "total_listens": int(first_row["total_listens"] or 0),
+            "classified_listens": classified_listens,
+            "listened_tracks": int(first_row["listened_tracks"] or 0),
+            "classified_tracks": int(first_row["classified_tracks"] or 0),
+            "genres": genres,
+        }
+
     def recent_listening_events(self, limit: int = 100) -> list[dict[str, Any]]:
         rows = self._query("""
             WITH track_stats AS (

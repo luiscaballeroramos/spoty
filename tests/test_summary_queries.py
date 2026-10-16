@@ -37,6 +37,42 @@ class SummaryQueryServiceTest(unittest.TestCase):
         connect.assert_called_once()
         cursor.execute.assert_called_once()
 
+    def test_top_listened_genres_counts_full_listens_and_returns_ten(self):
+        """Count full listens per distinct genre with overlapping shares and ten results."""
+        service, _, cursor = self._service([
+            {
+                "total_listens": 100,
+                "classified_listens": 60,
+                "listened_tracks": 20,
+                "classified_tracks": 12,
+                "genre": "retro soul",
+                "weighted_plays": 60,
+            },
+            {
+                "total_listens": 100,
+                "classified_listens": 60,
+                "listened_tracks": 20,
+                "classified_tracks": 12,
+                "genre": "jazz",
+                "weighted_plays": 45,
+            },
+        ])
+
+        result = service.top_listened_genres()
+
+        self.assertEqual(result["classified_listens"], 60)
+        self.assertEqual(result["total_listens"], 100)
+        self.assertEqual(result["classified_tracks"], 12)
+        self.assertEqual(result["genres"][0]["genre"], "retro soul")
+        self.assertEqual(result["genres"][0]["weighted_listens"], 60)
+        self.assertEqual(result["genres"][0]["share_percent"], 100)
+        self.assertEqual(result["genres"][1]["share_percent"], 75)
+        query, parameters = cursor.execute.call_args.args
+        self.assertIn("SELECT DISTINCT ta.track_id, lower(btrim(genre.value))", query)
+        self.assertIn("SUM(et.plays) AS weighted_plays", query)
+        self.assertNotIn("et.plays / gc.genre_count", query)
+        self.assertEqual(parameters, (10,))
+
     def test_recent_history_uses_parameterized_limit(self):
         """Verify Recent history uses parameterized limit."""
         service, _, cursor = self._service([])
