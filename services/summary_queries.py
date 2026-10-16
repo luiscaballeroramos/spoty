@@ -88,10 +88,32 @@ class SummaryQueryService:
             }
         return {key: int(value or 0) for key, value in rows[0].items()}
 
-    def top_listened_genres(self, limit: int = 10) -> dict[str, Any]:
-        """Count each listen fully for every distinct track genre and report coverage."""
-        rows = self._query("""
-            WITH event_tracks AS (
+    def top_listened_genres(self, limit: int = 10, grouping: str = "labels") -> dict[str, Any]:
+        """Count distinct labels or taxonomy root families per track, allowing overlap."""
+        if grouping not in {"labels", "families"}:
+            raise ValueError("Expected labels or families grouping.")
+        taxonomy_cte = ""
+        resolved_genres = "SELECT track_id, genre AS genre_id, genre FROM source_genres"
+        if grouping == "families":
+            taxonomy_cte = """genre_ancestors AS (
+                SELECT id AS genre_id, id AS ancestor_id FROM genres
+                UNION
+                SELECT ancestor.genre_id, relation.parent_id
+                FROM genre_ancestors ancestor
+                JOIN genre_relations relation ON relation.child_id = ancestor.ancestor_id
+            ), """
+            resolved_genres = """SELECT DISTINCT original.track_id, family.id AS genre_id, family.name AS genre
+                FROM source_genres original
+                JOIN genre_label_mappings mapping ON mapping.normalized_label = original.genre
+                    AND mapping.source = 'smarterplaylists' AND mapping.field = 'genres'
+                    AND mapping.status = 'approved'
+                JOIN genre_ancestors ancestor ON ancestor.genre_id = mapping.genre_id
+                JOIN genres family ON family.id = ancestor.ancestor_id
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM genre_relations relation WHERE relation.child_id = family.id
+                )"""
+        rows = self._query(f"""
+            WITH RECURSIVE {taxonomy_cte} event_tracks AS (
                 SELECT track_id, COUNT(*)::numeric AS plays
                 FROM listening_events
                 GROUP BY track_id
@@ -103,7 +125,7 @@ class SummaryQueryService:
                     CASE WHEN jsonb_typeof(t.artists_ids::jsonb) = 'array'
                          THEN t.artists_ids::jsonb ELSE '[]'::jsonb END
                 ) AS artist(artist_id)
-            ), track_genres AS (
+            ), source_genres AS (
                 SELECT DISTINCT ta.track_id, lower(btrim(genre.value)) AS genre
                 FROM track_artists ta
                 JOIN smarterplaylists_artist_metadata m
@@ -113,6 +135,8 @@ class SummaryQueryService:
                          THEN m.normalized_data->'genres' ELSE '[]'::jsonb END
                 ) AS genre(value)
                 WHERE btrim(genre.value) <> ''
+            ), track_genres AS (
+                {resolved_genres}
             ), track_genre_counts AS (
                 SELECT track_id, COUNT(*) AS genre_count
                 FROM track_genres
@@ -121,7 +145,7 @@ class SummaryQueryService:
                 SELECT tg.genre, SUM(et.plays) AS weighted_plays
                 FROM track_genres tg
                 JOIN event_tracks et USING (track_id)
-                GROUP BY tg.genre
+                GROUP BY tg.genre_id, tg.genre
             ), coverage AS (
                 SELECT COALESCE(SUM(et.plays), 0) AS total_listens,
                     COALESCE(SUM(et.plays) FILTER (WHERE gc.track_id IS NOT NULL), 0)

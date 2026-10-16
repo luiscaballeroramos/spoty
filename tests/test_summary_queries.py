@@ -73,6 +73,20 @@ class SummaryQueryServiceTest(unittest.TestCase):
         self.assertNotIn("et.plays / gc.genre_count", query)
         self.assertEqual(parameters, (10,))
 
+    def test_genre_families_deduplicate_tracks_and_traverse_all_parents(self):
+        """Resolve approved labels to root families without dividing listens."""
+        service, _, cursor = self._service([])
+        self.assertEqual(service.top_listened_genres(grouping="families")["genres"], [])
+        query, parameters = cursor.execute.call_args.args
+        self.assertIn("WITH RECURSIVE", query)
+        self.assertIn("SELECT DISTINCT original.track_id, family.id", query)
+        self.assertIn("mapping.status = 'approved'", query)
+        self.assertIn("mapping.source = 'smarterplaylists'", query)
+        self.assertIn("relation.child_id = family.id", query)
+        self.assertEqual(parameters, (10,))
+        with self.assertRaises(ValueError):
+            service.top_listened_genres(grouping="unsupported")
+
     def test_metadata_overview_maps_sources_and_fields(self):
         """Keep source coverage separate and preserve zero-valued field counts."""
         service, connect, cursor = self._service([

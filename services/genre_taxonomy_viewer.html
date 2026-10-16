@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Taxonomia musical</title>
+<style>
+:root{color-scheme:light;--ink:#202421;--muted:#646b66;--line:#dce2de;--paper:#fff;--accent:#17664b;--zoom:1}
+*{box-sizing:border-box;letter-spacing:0}
+body{margin:0;color:var(--ink);background:#f4f6f5;font-family:"Trebuchet MS",sans-serif;font-size:15px}
+button,input,select{font:inherit;color:inherit}
+button,select{cursor:pointer}
+button{background:var(--paper);border:1px solid var(--line);border-radius:4px}
+button:hover{background:#edf3ef}
+button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #15836b;outline-offset:2px}
+header{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:20px 28px;background:#fff;border-bottom:1px solid var(--line)}
+h1{font-family:Bahnschrift,"Trebuchet MS",sans-serif;font-size:23px;font-weight:600;margin:0}
+.inventory{font-size:13px;color:var(--muted);margin:5px 0 0}
+.tools{display:flex;align-items:center;gap:6px;flex:none}
+.icon{width:36px;height:36px;display:inline-grid;place-items:center;font-size:21px;line-height:1}
+output{width:46px;text-align:center;font-size:12px;font-variant-numeric:tabular-nums}
+.toolbar{display:grid;grid-template-columns:minmax(220px,1fr) minmax(220px,1fr);gap:20px;padding:18px 28px;border-bottom:1px solid var(--line);background:#fff}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:7px}
+input,select{width:100%;min-width:0;height:40px;padding:8px 12px;border:1px solid #b8c4bd;background:#fff;border-radius:4px}
+main{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);max-width:1600px;margin:auto;min-height:calc(100vh - 190px)}
+.tree-pane{padding:22px 26px;background:linear-gradient(90deg,#fbfcfb,#fff);border-right:1px solid var(--line);min-width:0}
+.pane-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:32px;margin-bottom:18px}
+h2{font-family:Bahnschrift,"Trebuchet MS",sans-serif;font-size:18px;font-weight:600;margin:0;overflow-wrap:anywhere}
+.pane-tools{display:flex;gap:5px}
+.pane-tools .icon{width:30px;height:30px;font-size:16px}
+.tree{font-size:calc(15px * var(--zoom));line-height:1.45}
+.tree ul{list-style:none;padding:0 0 0 22px;margin:0 0 0 9px;border-left:1px solid #bdcdc4}
+.tree>ul{padding:0;margin:0;border:0}
+.tree li{position:relative;min-width:0}
+.tree ul ul>li:before{position:absolute;content:"";left:-22px;top:22px;width:21px;border-top:1px solid #bdcdc4}
+.tree-row{display:flex;align-items:flex-start;gap:3px;min-height:43px;padding:3px 0}
+.disclosure{width:24px;min-width:24px;height:36px;border:0;background:transparent;padding:0;font-size:14px}
+.disclosure:disabled{visibility:hidden;cursor:default}
+.node{display:flex;align-items:center;justify-content:space-between;gap:9px;min-height:36px;width:100%;padding:6px 10px;text-align:left;border:1px solid transparent;background:transparent;font-size:inherit}
+.node .name{overflow-wrap:anywhere;min-width:0}
+.node[aria-current="true"]{color:#104f3d;background:#dcefe5;border-color:#9cc6b2;font-weight:bold}
+.count{font-size:11px;color:var(--muted);font-weight:normal;min-width:23px;text-align:center;border-left:1px solid var(--line);padding-left:7px;flex:none}
+.multi{font-size:11px;color:#9a4c21;padding-left:6px;flex:none}
+.details{padding:25px 28px;min-width:0;align-self:start;position:sticky;top:0}
+.detail-title{font-size:27px;line-height:1.2;margin:0 0 8px;overflow-wrap:anywhere}
+.identifier{font-size:12px;color:var(--muted);margin:0 0 25px;font-family:Consolas,monospace;overflow-wrap:anywhere}
+.section-title{font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:0;color:var(--muted);margin:25px 0 10px}
+.relation-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px}
+.relation{display:flex;align-items:center;gap:9px;border:0;border-bottom:1px solid #e6ebe8;border-radius:0;background:transparent;padding:9px 0;text-align:left;width:100%;min-height:36px;overflow-wrap:anywhere}
+.relation .arrow{color:#347b64;flex:none}
+.source-labels{list-style:none;padding:0;margin:0;columns:2;column-gap:20px}
+.source-labels li{padding:5px 0;break-inside:avoid;overflow-wrap:anywhere;font-size:14px}
+.empty{color:var(--muted);font-size:14px;line-height:1.5}
+.family-list{display:flex;flex-wrap:wrap;gap:6px 14px}
+.family-link{font-size:13px;color:var(--accent);background:none;border:0;border-bottom:1px solid #acc8b9;border-radius:0;padding:5px 0;text-align:left}
+.breadcrumb{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:0 0 18px;font-size:12px;color:var(--muted)}
+.breadcrumb button{border:0;background:none;padding:2px 0;border-radius:0;color:var(--accent);font-size:12px;text-align:left}
+.search-results{list-style:none;padding:0;margin:0}
+.result{display:block;width:100%;text-align:left;background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:13px 4px}
+.result strong{display:block;font-size:15px;overflow-wrap:anywhere}
+.result small{display:block;color:var(--muted);margin-top:5px;overflow-wrap:anywhere}
+footer{padding:14px 28px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);background:#fff}
+[hidden]{display:none!important}
+@media(min-width:901px){.tree-pane{max-height:calc(100vh - 180px);overflow:auto}.details{max-height:calc(100vh - 180px);overflow:auto}}
+@media(max-width:900px){header{padding:18px 16px;align-items:flex-start;gap:10px}h1{font-size:21px}.tools{flex-wrap:wrap;justify-content:flex-end;max-width:142px}.toolbar{padding:15px 16px;grid-template-columns:1fr;gap:13px}main{grid-template-columns:1fr}.tree-pane{border-right:0;border-bottom:1px solid var(--line);padding:19px 16px;max-height:52vh;overflow:auto}.details{position:static;padding:23px 16px}.detail-title{font-size:24px}.tree ul{padding-left:16px;margin-left:6px}.tree ul ul>li:before{left:-16px;width:15px}footer{padding:14px 16px}}
+</style>
+</head>
+<body>
+<header>
+<div><h1>Taxonomia musical</h1><p class="inventory" id="inventory"></p></div>
+<div class="tools" aria-label="Navegacion y tamano">
+<button class="icon" id="back" title="Volver" aria-label="Volver">&larr;</button>
+<button class="icon" id="home" title="Raiz de la familia" aria-label="Raiz de la familia">&uarr;</button>
+<button class="icon" id="smaller" title="Reducir arbol" aria-label="Reducir arbol">&minus;</button>
+<output id="zoom" aria-label="Tamano del arbol">100%</output>
+<button class="icon" id="larger" title="Ampliar arbol" aria-label="Ampliar arbol">+</button>
+</div>
+</header>
+<div class="toolbar">
+<div><label for="family">Familia</label><select id="family"></select></div>
+<div><label for="search">Genero o etiqueta</label><input id="search" type="search" placeholder="Buscar" autocomplete="off"></div>
+</div>
+<main>
+<section class="tree-pane" aria-label="Arbol de generos">
+<div class="pane-heading"><h2 id="tree-title"></h2><div class="pane-tools"><button class="icon" id="collapse" title="Plegar ramas" aria-label="Plegar ramas">&minus;</button><button class="icon" id="expand" title="Abrir un nivel" aria-label="Abrir un nivel">+</button></div></div>
+<div id="tree" class="tree"></div>
+<ul id="results" class="search-results" hidden></ul>
+<p id="no-results" class="empty" hidden>Sin resultados</p>
+</section>
+<aside class="details" aria-label="Detalle del genero" aria-live="polite">
+<nav class="breadcrumb" id="breadcrumb" aria-label="Ruta"></nav>
+<h2 class="detail-title" id="name"></h2><p class="identifier" id="identifier"></p>
+<h3 class="section-title">Familias relacionadas</h3><div id="families" class="family-list"></div>
+<h3 class="section-title">Padres directos</h3><ul id="parents" class="relation-list"></ul>
+<h3 class="section-title">Generos y subgeneros directos</h3><ul id="children" class="relation-list"></ul>
+<h3 class="section-title">Etiquetas de origen</h3><ul id="labels" class="source-labels"></ul>
+</aside>
+</main>
+<footer id="footer">Semilla JSON local &middot; Clasificacion editorial &middot; Familias no excluyentes</footer>
+<noscript><p>JavaScript no esta activado.</p></noscript>
+<script type="application/json" id="taxonomy-data">__TAXONOMY_DATA__</script>
+<script>
+"use strict";
+const seed = JSON.parse(document.getElementById("taxonomy-data").textContent);
+const genres = new Map(seed.genres.map(genre => [genre.id, genre]));
+const roots = seed.genres.filter(genre => !genre.parents.length);
+const children = new Map(seed.genres.map(genre => [genre.id, []]));
+for (const genre of seed.genres) for (const parent of genre.parents) children.get(parent).push(genre.id);
+for (const list of children.values()) list.sort((left, right) => genres.get(left).name.localeCompare(genres.get(right).name));
+const byId = id => document.getElementById(id);
+const normalize = text => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+let selected = genres.has(location.hash.slice(1)) ? location.hash.slice(1) : (genres.has("latin") ? "latin" : roots[0].id);
+let family = roots[0].id;
+let expanded = new Set();
+let zoom = 1;
+const history = [];
+
+function rootIds(genreId) {
+  const found = new Set();
+  const seen = new Set();
+  const pending = [genreId];
+  while (pending.length) {
+    const current = pending.pop();
+    if (seen.has(current)) continue;
+    seen.add(current);
+    const parents = genres.get(current).parents;
+    if (!parents.length) found.add(current);
+    else pending.push(...parents);
+  }
+  return roots.filter(root => found.has(root.id)).map(root => root.id);
+}
+
+function pathTo(genreId, rootId) {
+  if (genreId === rootId) return [genreId];
+  for (const parent of genres.get(genreId).parents) {
+    const path = pathTo(parent, rootId);
+    if (path) return [...path, genreId];
+  }
+  return null;
+}
+
+function makeButton(text, className, action) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = className;
+  button.textContent = text;
+  button.addEventListener("click", action);
+  return button;
+}
+
+function showNode(genreId, record = true, preferredFamily = null) {
+  if (!genres.has(genreId)) return;
+  if (record && (genreId !== selected || preferredFamily && preferredFamily !== family)) history.push({selected, family});
+  selected = genreId;
+  const available = rootIds(selected);
+  family = available.includes(preferredFamily) ? preferredFamily : (available.includes(family) ? family : available[0]);
+  byId("family").value = family;
+  byId("search").value = "";
+  for (const ancestor of pathTo(selected, family) || []) expanded.add(ancestor);
+  expanded.add(family);
+  location.replace("#" + selected);
+  renderTree();
+  renderDetails();
+  requestAnimationFrame(() => {
+    const pane = document.querySelector(".tree-pane");
+    const node = byId("tree").querySelector('[aria-current="true"]');
+    if (node) pane.scrollTop += node.getBoundingClientRect().top - pane.getBoundingClientRect().top - pane.clientHeight / 2 + node.offsetHeight / 2;
+    if (record && selected !== family && matchMedia("(max-width:900px)").matches) document.querySelector(".details").scrollIntoView({block:"start"});
+  });
+  byId("back").disabled = !history.length;
+}
+
+function branch(genreId) {
+  const genre = genres.get(genreId);
+  const descendants = children.get(genreId);
+  const item = document.createElement("li");
+  const row = document.createElement("div");
+  row.className = "tree-row";
+  const toggle = makeButton(expanded.has(genreId) ? "\u25be" : "\u25b8", "disclosure", () => {
+    if (expanded.has(genreId)) expanded.delete(genreId); else expanded.add(genreId);
+    renderTree();
+  });
+  toggle.disabled = !descendants.length;
+  toggle.title = (expanded.has(genreId) ? "Plegar " : "Abrir ") + genre.name;
+  toggle.setAttribute("aria-label", toggle.title);
+  toggle.setAttribute("aria-expanded", String(expanded.has(genreId)));
+  const node = makeButton("", "node", () => showNode(genreId));
+  node.dataset.genreId = genreId;
+  node.setAttribute("aria-current", String(genreId === selected));
+  const name = document.createElement("span");
+  name.className = "name";
+  name.textContent = genre.name;
+  node.append(name);
+  if (genre.parents.length > 1) {
+    const multi = document.createElement("span");
+    multi.className = "multi";
+    multi.textContent = "\u2197 " + genre.parents.length;
+    multi.title = "Varios padres: " + genre.parents.map(parent => genres.get(parent).name).join(", ");
+    node.append(multi);
+  }
+  if (descendants.length) {
+    const count = document.createElement("span");
+    count.className = "count";
+    count.textContent = descendants.length;
+    count.title = "Generos hijos directos";
+    node.append(count);
+  }
+  row.append(toggle, node);
+  item.append(row);
+  if (descendants.length && expanded.has(genreId)) {
+    const list = document.createElement("ul");
+    for (const child of descendants) list.append(branch(child));
+    item.append(list);
+  }
+  return item;
+}
+
+function renderTree() {
+  byId("results").hidden = true;
+  byId("no-results").hidden = true;
+  byId("tree").hidden = false;
+  byId("tree-title").textContent = genres.get(family).name;
+  const list = document.createElement("ul");
+  list.append(branch(family));
+  byId("tree").replaceChildren(list);
+}
+
+function relationList(container, genreIds, emptyText, arrow) {
+  container.replaceChildren();
+  if (!genreIds.length) {
+    const item = document.createElement("li");
+    item.textContent = emptyText;
+    item.className = "empty";
+    container.append(item);
+  }
+  for (const genreId of genreIds) {
+    const item = document.createElement("li");
+    const button = makeButton("", "relation", () => showNode(genreId));
+    const marker = document.createElement("span");
+    marker.className = "arrow";
+    marker.textContent = arrow;
+    const name = document.createElement("span");
+    name.textContent = genres.get(genreId).name;
+    button.append(marker, name);
+    item.append(button);
+    container.append(item);
+  }
+}
+
+function renderDetails() {
+  const genre = genres.get(selected);
+  byId("name").textContent = genre.name;
+  byId("identifier").textContent = genre.id;
+  byId("breadcrumb").replaceChildren();
+  const path = pathTo(selected, family) || [];
+  path.forEach((genreId, index) => {
+    if (index) byId("breadcrumb").append(document.createTextNode(" / "));
+    byId("breadcrumb").append(makeButton(genres.get(genreId).name, "", () => showNode(genreId)));
+  });
+  byId("families").replaceChildren(...rootIds(selected).map(rootId => makeButton(genres.get(rootId).name, "family-link", () => showNode(selected, true, rootId))));
+  relationList(byId("parents"), genre.parents, "Familia raiz", "\u2191");
+  relationList(byId("children"), children.get(selected), "Sin subgeneros directos", "\u2192");
+  byId("labels").replaceChildren();
+  for (const label of genre.labels) {
+    const item = document.createElement("li");
+    item.textContent = label;
+    byId("labels").append(item);
+  }
+  if (!genre.labels.length) {
+    const item = document.createElement("li");
+    item.className = "empty";
+    item.textContent = "Nodo de agrupacion";
+    byId("labels").append(item);
+  }
+}
+
+function search() {
+  const query = normalize(byId("search").value.trim());
+  if (!query) {renderTree(); return;}
+  const matches = seed.genres.map(genre => ({genre, labels:genre.labels.filter(label => normalize(label).includes(query))}))
+    .filter(result => normalize(result.genre.name).includes(query) || normalize(result.genre.id).includes(query) || result.labels.length);
+  byId("tree").hidden = true;
+  byId("results").hidden = false;
+  byId("no-results").hidden = Boolean(matches.length);
+  byId("tree-title").textContent = "Resultados (" + matches.length + ")";
+  byId("results").replaceChildren();
+  for (const result of matches) {
+    const item = document.createElement("li");
+    const button = makeButton("", "result", () => showNode(result.genre.id));
+    const title = document.createElement("strong");
+    title.textContent = result.genre.name;
+    const detail = document.createElement("small");
+    detail.textContent = result.labels.length ? result.labels.join(", ") : rootIds(result.genre.id).map(rootId => genres.get(rootId).name).join(" / ");
+    button.append(title, detail);
+    item.append(button);
+    byId("results").append(item);
+  }
+}
+
+for (const root of roots) {
+  const option = document.createElement("option");
+  option.value = root.id;
+  option.textContent = root.name;
+  byId("family").append(option);
+}
+byId("inventory").textContent = roots.length + " familias / " + genres.size + " generos / " + seed.genres.reduce((total, genre) => total + genre.labels.length, 0) + " etiquetas";
+byId("family").addEventListener("change", event => {expanded = new Set(); showNode(event.target.value, true, event.target.value);});
+byId("search").addEventListener("input", search);
+byId("home").addEventListener("click", () => showNode(family));
+byId("back").addEventListener("click", () => {const previous = history.pop(); if (previous) showNode(previous.selected, false, previous.family);});
+byId("collapse").addEventListener("click", () => {expanded = new Set([family]); renderTree();});
+byId("expand").addEventListener("click", () => {const next = new Set(expanded); for (const genreId of expanded) for (const child of children.get(genreId)) next.add(child); expanded = next; renderTree();});
+function resizeTree(delta) {
+  zoom = Math.max(.8, Math.min(1.6, Math.round((zoom + delta) * 10) / 10));
+  document.documentElement.style.setProperty("--zoom", zoom);
+  byId("zoom").textContent = Math.round(zoom * 100) + "%";
+  byId("smaller").disabled = zoom <= .8;
+  byId("larger").disabled = zoom >= 1.6;
+}
+byId("smaller").addEventListener("click", () => resizeTree(-.1));
+byId("larger").addEventListener("click", () => resizeTree(.1));
+window.addEventListener("hashchange", () => {const genreId = location.hash.slice(1); if (genres.has(genreId) && genreId !== selected) showNode(genreId);});
+showNode(selected, false);
+</script>
+</body>
+</html>

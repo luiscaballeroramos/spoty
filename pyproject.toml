@@ -30,6 +30,7 @@ spoty-import-smarterplaylists = "_smarterplaylists:main"
 spoty-refresh-smarterplaylists = "_smarterplaylists_refresh:main"
 spoty-print-summary = "_print_summary:print_database_summary"
 spoty-print-liked = "_print:print_liked_tracks"
+spoty-genres = "services.genre_taxonomy:main"
 
 [tool.setuptools]
 py-modules = [
@@ -50,3 +51,6 @@ py-modules = [
 where = ["."]
 include = ["app_views*", "metadata_sources*", "register*", "services*", "spotifyapi*", "streamlit_lab*"]
 namespaces = true
+
+[tool.setuptools.package-data]
+services = ["genre_taxonomy_seed.json", "genre_taxonomy_viewer.html"]

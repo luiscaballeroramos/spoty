@@ -102,6 +102,17 @@ flowchart LR
   propios de cada recurso, sin mezclar datos o inventar fuentes originales.
 - Los scripts de analisis consultan PostgreSQL sin requerir credenciales de
   Spotify. Los graficos se escriben en `outputs/chart/`.
+- La taxonomia local usa una semilla JSON empaquetada y versionada en Git;
+  PostgreSQL es la autoridad operativa. `services.genre_taxonomy` valida el grafo
+  y expone `spoty-genres`; `register.genre_taxonomy` importa de forma aditiva y
+  descubre etiquetas pendientes sin HTTP. `0007_genre_taxonomy` incorpora generos,
+  relaciones con varios padres y equivalencias por fuente/campo/etiqueta.
+  Importar requiere `--apply`, preserva aprobaciones y exclusiones existentes y
+  puede aprobar pendientes incluidos explicitamente. La union de relaciones se
+  valida bajo bloqueo transaccional; futuros editores deben reutilizarlo.
+  Summary conserva las etiquetas y permite consultar familias raiz mediante SQL
+  recursivo, deduplicando cada cancion por familia. No se materializan agregados
+  ni se cachea la taxonomia en esta primera version.
 - `streamlit_lab` contiene modelos, controles y renderizado reutilizables. La
   demo independiente esta en `examples/`; las pruebas viven en `tests/`.
 - La configuracion Neon se valida al abrir una conexion. Las credenciales de

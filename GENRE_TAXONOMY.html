@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Taxonomia musical</title>
+<style>
+:root{color-scheme:light;--ink:#202421;--muted:#646b66;--line:#dce2de;--paper:#fff;--accent:#17664b;--zoom:1}
+*{box-sizing:border-box;letter-spacing:0}
+body{margin:0;color:var(--ink);background:#f4f6f5;font-family:"Trebuchet MS",sans-serif;font-size:15px}
+button,input,select{font:inherit;color:inherit}
+button,select{cursor:pointer}
+button{background:var(--paper);border:1px solid var(--line);border-radius:4px}
+button:hover{background:#edf3ef}
+button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #15836b;outline-offset:2px}
+header{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:20px 28px;background:#fff;border-bottom:1px solid var(--line)}
+h1{font-family:Bahnschrift,"Trebuchet MS",sans-serif;font-size:23px;font-weight:600;margin:0}
+.inventory{font-size:13px;color:var(--muted);margin:5px 0 0}
+.tools{display:flex;align-items:center;gap:6px;flex:none}
+.icon{width:36px;height:36px;display:inline-grid;place-items:center;font-size:21px;line-height:1}
+output{width:46px;text-align:center;font-size:12px;font-variant-numeric:tabular-nums}
+.toolbar{display:grid;grid-template-columns:minmax(220px,1fr) minmax(220px,1fr);gap:20px;padding:18px 28px;border-bottom:1px solid var(--line);background:#fff}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:7px}
+input,select{width:100%;min-width:0;height:40px;padding:8px 12px;border:1px solid #b8c4bd;background:#fff;border-radius:4px}
+main{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);max-width:1600px;margin:auto;min-height:calc(100vh - 190px)}
+.tree-pane{padding:22px 26px;background:linear-gradient(90deg,#fbfcfb,#fff);border-right:1px solid var(--line);min-width:0}
+.pane-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:32px;margin-bottom:18px}
+h2{font-family:Bahnschrift,"Trebuchet MS",sans-serif;font-size:18px;font-weight:600;margin:0;overflow-wrap:anywhere}
+.pane-tools{display:flex;gap:5px}
+.pane-tools .icon{width:30px;height:30px;font-size:16px}
+.tree{font-size:calc(15px * var(--zoom));line-height:1.45}
+.tree ul{list-style:none;padding:0 0 0 22px;margin:0 0 0 9px;border-left:1px solid #bdcdc4}
+.tree>ul{padding:0;margin:0;border:0}
+.tree li{position:relative;min-width:0}
+.tree ul ul>li:before{position:absolute;content:"";left:-22px;top:22px;width:21px;border-top:1px solid #bdcdc4}
+.tree-row{display:flex;align-items:flex-start;gap:3px;min-height:43px;padding:3px 0}
+.disclosure{width:24px;min-width:24px;height:36px;border:0;background:transparent;padding:0;font-size:14px}
+.disclosure:disabled{visibility:hidden;cursor:default}
+.node{display:flex;align-items:center;justify-content:space-between;gap:9px;min-height:36px;width:100%;padding:6px 10px;text-align:left;border:1px solid transparent;background:transparent;font-size:inherit}
+.node .name{overflow-wrap:anywhere;min-width:0}
+.node[aria-current="true"]{color:#104f3d;background:#dcefe5;border-color:#9cc6b2;font-weight:bold}
+.count{font-size:11px;color:var(--muted);font-weight:normal;min-width:23px;text-align:center;border-left:1px solid var(--line);padding-left:7px;flex:none}
+.multi{font-size:11px;color:#9a4c21;padding-left:6px;flex:none}
+.details{padding:25px 28px;min-width:0;align-self:start;position:sticky;top:0}
+.detail-title{font-size:27px;line-height:1.2;margin:0 0 8px;overflow-wrap:anywhere}
+.identifier{font-size:12px;color:var(--muted);margin:0 0 25px;font-family:Consolas,monospace;overflow-wrap:anywhere}
+.section-title{font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:0;color:var(--muted);margin:25px 0 10px}
+.relation-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px}
+.relation{display:flex;align-items:center;gap:9px;border:0;border-bottom:1px solid #e6ebe8;border-radius:0;background:transparent;padding:9px 0;text-align:left;width:100%;min-height:36px;overflow-wrap:anywhere}
+.relation .arrow{color:#347b64;flex:none}
+.source-labels{list-style:none;padding:0;margin:0;columns:2;column-gap:20px}
+.source-labels li{padding:5px 0;break-inside:avoid;overflow-wrap:anywhere;font-size:14px}
+.empty{color:var(--muted);font-size:14px;line-height:1.5}
+.family-list{display:flex;flex-wrap:wrap;gap:6px 14px}
+.family-link{font-size:13px;color:var(--accent);background:none;border:0;border-bottom:1px solid #acc8b9;border-radius:0;padding:5px 0;text-align:left}
+.breadcrumb{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:0 0 18px;font-size:12px;color:var(--muted)}
+.breadcrumb button{border:0;background:none;padding:2px 0;border-radius:0;color:var(--accent);font-size:12px;text-align:left}
+.search-results{list-style:none;padding:0;margin:0}
+.result{display:block;width:100%;text-align:left;background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:13px 4px}
+.result strong{display:block;font-size:15px;overflow-wrap:anywhere}
+.result small{display:block;color:var(--muted);margin-top:5px;overflow-wrap:anywhere}
+footer{padding:14px 28px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);background:#fff}
+[hidden]{display:none!important}
+@media(min-width:901px){.tree-pane{max-height:calc(100vh - 180px);overflow:auto}.details{max-height:calc(100vh - 180px);overflow:auto}}
+@media(max-width:900px){header{padding:18px 16px;align-items:flex-start;gap:10px}h1{font-size:21px}.tools{flex-wrap:wrap;justify-content:flex-end;max-width:142px}.toolbar{padding:15px 16px;grid-template-columns:1fr;gap:13px}main{grid-template-columns:1fr}.tree-pane{border-right:0;border-bottom:1px solid var(--line);padding:19px 16px;max-height:52vh;overflow:auto}.details{position:static;padding:23px 16px}.detail-title{font-size:24px}.tree ul{padding-left:16px;margin-left:6px}.tree ul ul>li:before{left:-16px;width:15px}footer{padding:14px 16px}}
+</style>
+</head>
+<body>
+<header>
+<div><h1>Taxonomia musical</h1><p class="inventory" id="inventory"></p></div>
+<div class="tools" aria-label="Navegacion y tamano">
+<button class="icon" id="back" title="Volver" aria-label="Volver">&larr;</button>
+<button class="icon" id="home" title="Raiz de la familia" aria-label="Raiz de la familia">&uarr;</button>
+<button class="icon" id="smaller" title="Reducir arbol" aria-label="Reducir arbol">&minus;</button>
+<output id="zoom" aria-label="Tamano del arbol">100%</output>
+<button class="icon" id="larger" title="Ampliar arbol" aria-label="Ampliar arbol">+</button>
+</div>
+</header>
+<div class="toolbar">
+<div><label for="family">Familia</label><select id="family"></select></div>
+<div><label for="search">Genero o etiqueta</label><input id="search" type="search" placeholder="Buscar" autocomplete="off"></div>
+</div>
+<main>
+<section class="tree-pane" aria-label="Arbol de generos">
+<div class="pane-heading"><h2 id="tree-title"></h2><div class="pane-tools"><button class="icon" id="collapse" title="Plegar ramas" aria-label="Plegar ramas">&minus;</button><button class="icon" id="expand" title="Abrir un nivel" aria-label="Abrir un nivel">+</button></div></div>
+<div id="tree" class="tree"></div>
+<ul id="results" class="search-results" hidden></ul>
+<p id="no-results" class="empty" hidden>Sin resultados</p>
+</section>
+<aside class="details" aria-label="Detalle del genero" aria-live="polite">
+<nav class="breadcrumb" id="breadcrumb" aria-label="Ruta"></nav>
+<h2 class="detail-title" id="name"></h2><p class="identifier" id="identifier"></p>
+<h3 class="section-title">Familias relacionadas</h3><div id="families" class="family-list"></div>
+<h3 class="section-title">Padres directos</h3><ul id="parents" class="relation-list"></ul>
+<h3 class="section-title">Generos y subgeneros directos</h3><ul id="children" class="relation-list"></ul>
+<h3 class="section-title">Etiquetas de origen</h3><ul id="labels" class="source-labels"></ul>
+</aside>
+</main>
+<footer id="footer">Semilla JSON local &middot; Clasificacion editorial &middot; Familias no excluyentes</footer>
+<noscript><p>JavaScript no esta activado.</p></noscript>
+<script type="application/json" id="taxonomy-data">{"version": 1, "genres": [{"id": "rock", "name": "Rock", "parents": [], "labels": ["rock"]}, {"id": "pop", "name": "Pop", "parents": [], "labels": ["pop"]}, {"id": "electronic", "name": "Electronic", "parents": [], "labels": ["electronic", "electronica"]}, {"id": "hip-hop", "name": "Hip-Hop", "parents": [], "labels": ["hip hop", "hip-hop", "rap"]}, {"id": "soul-rnb", "name": "Soul / R\u0026B", "parents": [], "labels": ["soul", "r\u0026b", "rhythm and blues"]}, {"id": "jazz", "name": "Jazz", "parents": [], "labels": ["jazz"]}, {"id": "blues", "name": "Blues", "parents": [], "labels": ["blues"]}, {"id": "folk", "name": "Folk", "parents": [], "labels": ["folk"]}, {"id": "country", "name": "Country", "parents": [], "labels": ["country"]}, {"id": "classical", "name": "Classical", "parents": [], "labels": ["classical"]}, {"id": "reggae", "name": "Reggae", "parents": [], "labels": ["reggae"]}, {"id": "metal", "name": "Metal", "parents": [], "labels": ["metal"]}, {"id": "funk", "name": "Funk", "parents": [], "labels": ["funk"]}, {"id": "alternative-rock", "name": "Alternative Rock", "parents": ["rock"], "labels": ["alternative rock", "alt rock"]}, {"id": "indie-rock", "name": "Indie Rock", "parents": ["rock"], "labels": ["indie rock"]}, {"id": "grunge", "name": "Grunge", "parents": ["alternative-rock"], "labels": ["grunge"]}, {"id": "punk-rock", "name": "Punk Rock", "parents": ["rock"], "labels": ["punk", "punk rock"]}, {"id": "hard-rock", "name": "Hard Rock", "parents": ["rock"], "labels": ["hard rock"]}, {"id": "classic-rock", "name": "Classic Rock", "parents": ["rock"], "labels": ["classic rock"]}, {"id": "progressive-rock", "name": "Progressive Rock", "parents": ["rock"], "labels": ["progressive rock", "prog rock"]}, {"id": "folk-rock", "name": "Folk Rock", "parents": ["folk", "rock"], "labels": ["folk rock"]}, {"id": "pop-rock", "name": "Pop Rock", "parents": ["pop", "rock"], "labels": ["pop rock"]}, {"id": "indie-pop", "name": "Indie Pop", "parents": ["pop"], "labels": ["indie pop"]}, {"id": "synthpop", "name": "Synthpop", "parents": ["pop", "electronic"], "labels": ["synthpop", "synth-pop"]}, {"id": "house", "name": "House", "parents": ["electronic"], "labels": ["house"]}, {"id": "techno", "name": "Techno", "parents": ["electronic"], "labels": ["techno"]}, {"id": "ambient", "name": "Ambient", "parents": ["electronic"], "labels": ["ambient"]}, {"id": "neo-soul", "name": "Neo Soul", "parents": ["soul-rnb"], "labels": ["neo soul", "neo-soul"]}, {"id": "retro-soul", "name": "Retro Soul", "parents": ["soul-rnb"], "labels": ["retro soul"]}, {"id": "heavy-metal", "name": "Heavy Metal", "parents": ["metal"], "labels": ["heavy metal"]}, {"id": "alternative-metal", "name": "Alternative Metal", "parents": ["metal"], "labels": ["alternative metal"]}, {"id": "latin", "name": "Latin / Ibero-American", "parents": [], "labels": ["latin"]}, {"id": "african", "name": "African", "parents": [], "labels": []}, {"id": "caribbean", "name": "Caribbean", "parents": [], "labels": []}, {"id": "regional-traditional", "name": "Regional / Traditional", "parents": [], "labels": ["traditional music"]}, {"id": "flamenco", "name": "Flamenco", "parents": [], "labels": ["flamenco"]}, {"id": "religious", "name": "Gospel / Religious", "parents": [], "labels": ["christian", "worship", "hymns"]}, {"id": "stage-screen", "name": "Stage / Screen", "parents": [], "labels": []}, {"id": "contextual", "name": "Transversal / Contextual", "parents": [], "labels": []}, {"id": "experimental", "name": "Experimental", "parents": [], "labels": ["experimental", "avant-garde"]}, {"id": "urbano-latino", "name": "Urbano Latino", "parents": ["latin"], "labels": ["urbano latino", "pop urbano"]}, {"id": "reggaeton", "name": "Reggaeton", "parents": ["urbano-latino"], "labels": ["reggaeton", "reggaeton chileno", "reggaeton mexa"]}, {"id": "christian-reggaeton", "name": "Christian Reggaeton", "parents": ["reggaeton", "religious"], "labels": ["christian reggaeton"]}, {"id": "neoperreo", "name": "Neoperreo", "parents": ["reggaeton", "electronic"], "labels": ["neoperreo"]}, {"id": "dembow", "name": "Dembow", "parents": ["urbano-latino"], "labels": ["dembow", "dembow belico"]}, {"id": "latin-trap", "name": "Latin Trap", "parents": ["urbano-latino", "trap"], "labels": ["trap latino", "argentine trap", "chilean trap"]}, {"id": "latin-hip-hop", "name": "Latin Hip-Hop", "parents": ["latin", "hip-hop"], "labels": ["latin hip hop", "mexican hip hop"]}, {"id": "latin-rnb", "name": "Latin R\u0026B", "parents": ["latin", "soul-rnb"], "labels": ["latin r\u0026b"]}, {"id": "latin-pop", "name": "Latin Pop", "parents": ["latin", "pop"], "labels": ["latin pop", "colombian pop"]}, {"id": "latin-alternative", "name": "Latin Alternative", "parents": ["latin"], "labels": ["latin alternative", "latin indie", "mexican indie"]}, {"id": "latin-rock", "name": "Latin Rock", "parents": ["latin", "rock"], "labels": ["latin rock", "rock en espa\u00f1ol", "argentine rock"]}, {"id": "latin-folk", "name": "Latin Folk", "parents": ["latin", "folk"], "labels": ["latin folk", "latin folklore", "folclor andino", "folklore argentino", "chamam\u00e9", "son jarocho"]}, {"id": "trova", "name": "Trova", "parents": ["latin-folk"], "labels": ["trova", "nueva trova"]}, {"id": "tropical-latin", "name": "Tropical Latin", "parents": ["latin"], "labels": ["m\u00fasica tropical"]}, {"id": "salsa", "name": "Salsa", "parents": ["tropical-latin"], "labels": ["salsa", "salsa choke"]}, {"id": "son-cubano", "name": "Son Cubano / Timba", "parents": ["tropical-latin"], "labels": ["son cubano", "timba"]}, {"id": "mambo", "name": "Mambo / Cha-Cha-Cha", "parents": ["tropical-latin"], "labels": ["mambo", "cha cha cha"]}, {"id": "merengue", "name": "Merengue", "parents": ["tropical-latin"], "labels": ["merengue"]}, {"id": "bachata", "name": "Bachata", "parents": ["tropical-latin"], "labels": ["bachata"]}, {"id": "cumbia", "name": "Cumbia", "parents": ["tropical-latin"], "labels": ["cumbia", "cumbia sonidera", "chicha"]}, {"id": "electrocumbia", "name": "Electrocumbia", "parents": ["cumbia", "electronic"], "labels": ["electrocumbia"]}, {"id": "vallenato", "name": "Vallenato", "parents": ["tropical-latin"], "labels": ["vallenato"]}, {"id": "cuarteto", "name": "Cuarteto", "parents": ["latin"], "labels": ["cuarteto"]}, {"id": "rioplatense", "name": "Tango / Rioplatense", "parents": ["latin", "regional-traditional"], "labels": ["tango", "candombe", "murga"]}, {"id": "bolero", "name": "Bolero", "parents": ["latin"], "labels": ["bolero"]}, {"id": "mexican-regional", "name": "Regional Mexican", "parents": ["latin", "regional-traditional"], "labels": ["m\u00fasica mexicana", "grupera"]}, {"id": "banda", "name": "Banda", "parents": ["mexican-regional"], "labels": ["banda"]}, {"id": "corrido", "name": "Corrido", "parents": ["mexican-regional"], "labels": ["corrido", "corridos b\u00e9licos"]}, {"id": "corridos-tumbados", "name": "Corridos Tumbados", "parents": ["corrido"], "labels": ["corridos tumbados"]}, {"id": "sierreno", "name": "Sierreno", "parents": ["mexican-regional"], "labels": ["sierre\u00f1o", "sad sierre\u00f1o"]}, {"id": "norteno", "name": "Norteno", "parents": ["mexican-regional"], "labels": ["norte\u00f1o"]}, {"id": "mariachi-ranchera", "name": "Mariachi / Ranchera", "parents": ["mexican-regional"], "labels": ["mariachi", "ranchera"]}, {"id": "colombian-popular", "name": "Colombian Popular", "parents": ["latin", "regional-traditional"], "labels": ["musica popular colombiana"]}, {"id": "latin-club", "name": "Latin Club", "parents": ["latin", "electronic"], "labels": ["latin dance", "chilean mambo", "techengue", "turreo", "rkt"]}, {"id": "guaracha", "name": "Guaracha Electronica", "parents": ["latin-club"], "labels": ["guaracha"]}, {"id": "electro-corridos", "name": "Electro Corridos", "parents": ["latin-club", "corrido"], "labels": ["electro corridos"]}, {"id": "flamenco-pop", "name": "Flamenco Pop", "parents": ["flamenco", "pop"], "labels": ["flamenco pop"]}, {"id": "flamenco-urbano", "name": "Flamenco Urbano", "parents": ["flamenco", "urbano-latino"], "labels": ["flamenco urbano"]}, {"id": "brazilian", "name": "Brazilian", "parents": ["latin"], "labels": []}, {"id": "brazilian-pop", "name": "Brazilian Pop / MPB", "parents": ["brazilian", "pop"], "labels": ["brazilian pop", "mpb", "new mpb"]}, {"id": "samba", "name": "Samba", "parents": ["brazilian"], "labels": ["samba"]}, {"id": "bossa-nova", "name": "Bossa Nova", "parents": ["brazilian", "jazz"], "labels": ["bossa nova"]}, {"id": "forro", "name": "Forro / Piseiro", "parents": ["brazilian", "regional-traditional"], "labels": ["forr\u00f3", "forr\u00f3 tradicional", "piseiro"]}, {"id": "brega", "name": "Brega / Seresta", "parents": ["brazilian"], "labels": ["brega", "arrocha", "seresta"]}, {"id": "sertanejo", "name": "Sertanejo", "parents": ["brazilian", "regional-traditional"], "labels": ["sertanejo tradicional"]}, {"id": "brazilian-hip-hop", "name": "Brazilian Hip-Hop", "parents": ["brazilian", "hip-hop"], "labels": ["brazilian hip hop"]}, {"id": "funk-carioca", "name": "Brazilian Funk / Funk Carioca", "parents": ["brazilian", "electronic"], "labels": ["brazilian funk", "funk carioca", "funk de bh", "funk bruxaria", "funk melody", "brega funk"]}, {"id": "funk-gospel", "name": "Brazilian Funk Gospel", "parents": ["funk-carioca", "religious"], "labels": ["funk gospel"]}, {"id": "afrobeat", "name": "Afrobeat", "parents": ["african", "funk"], "labels": ["afrobeat"]}, {"id": "afrobeats", "name": "Afrobeats", "parents": ["african", "pop"], "labels": ["afrobeats", "azonto"]}, {"id": "afropop", "name": "Afropop", "parents": ["african", "pop"], "labels": ["afropop"]}, {"id": "afro-adura", "name": "Afro Adura", "parents": ["african"], "labels": ["afro adura"]}, {"id": "alte", "name": "Alte", "parents": ["african"], "labels": ["alt\u00e9"]}, {"id": "afrogospel", "name": "Afrogospel", "parents": ["afrobeats", "religious"], "labels": ["afrogospel"]}, {"id": "afroswing", "name": "Afroswing", "parents": ["afrobeats", "hip-hop"], "labels": ["afroswing"]}, {"id": "latin-afrobeats", "name": "Latin Afrobeats", "parents": ["afrobeats", "latin"], "labels": ["latin afrobeats"]}, {"id": "highlife", "name": "Highlife", "parents": ["african"], "labels": ["highlife"]}, {"id": "hiplife", "name": "Hiplife", "parents": ["highlife", "hip-hop"], "labels": ["hiplife"]}, {"id": "bikutsi", "name": "Bikutsi", "parents": ["african", "regional-traditional"], "labels": ["bikutsi"]}, {"id": "african-dance", "name": "African Dance", "parents": ["african", "electronic"], "labels": ["gqom", "kuduro"]}, {"id": "kizomba", "name": "Kizomba", "parents": ["african"], "labels": ["kizomba"]}, {"id": "caribbean-traditional", "name": "Caribbean Traditional / Dance", "parents": ["caribbean", "regional-traditional"], "labels": ["calypso", "soca", "kompa", "zouk", "punta"]}, {"id": "regional-hip-hop", "name": "Regional Hip-Hop", "parents": ["hip-hop"], "labels": ["dansk rap", "desi hip hop", "french rap", "german hip hop", "ghanaian hip hop", "hindi hip hop", "indonesian hip hop", "k-rap", "norwegian hip hop", "rap qu\u00e9b\u00e9cois", "turkish hip hop"]}, {"id": "alternative-hip-hop", "name": "Alternative Hip-Hop", "parents": ["hip-hop"], "labels": ["alternative hip hop", "underground hip hop"]}, {"id": "experimental-hip-hop", "name": "Experimental Hip-Hop", "parents": ["alternative-hip-hop", "experimental"], "labels": ["experimental hip hop"]}, {"id": "boom-bap", "name": "Boom Bap / Old School", "parents": ["hip-hop"], "labels": ["boom bap", "old school hip hop", "east coast hip hop"]}, {"id": "west-coast-hip-hop", "name": "West Coast Hip-Hop", "parents": ["hip-hop"], "labels": ["west coast hip hop", "hyphy"]}, {"id": "gangsta-rap", "name": "Gangsta / Hardcore Rap", "parents": ["hip-hop"], "labels": ["gangster rap", "hardcore hip hop", "horrorcore"]}, {"id": "southern-hip-hop", "name": "Southern Hip-Hop", "parents": ["hip-hop"], "labels": ["southern hip hop", "bounce", "miami bass"]}, {"id": "g-funk", "name": "G-Funk", "parents": ["west-coast-hip-hop", "funk"], "labels": ["g-funk"]}, {"id": "trap", "name": "Trap", "parents": ["hip-hop"], "labels": ["trap", "italian trap", "rage rap"]}, {"id": "drill", "name": "Drill", "parents": ["hip-hop"], "labels": ["drill", "uk drill", "nigerian drill", "sexy drill"]}, {"id": "grime", "name": "Grime", "parents": ["hip-hop", "electronic"], "labels": ["grime", "uk grime"]}, {"id": "melodic-rap", "name": "Melodic / Emo Rap", "parents": ["hip-hop"], "labels": ["melodic rap", "emo rap"]}, {"id": "jazz-rap", "name": "Jazz Rap", "parents": ["hip-hop", "jazz"], "labels": ["jazz rap"]}, {"id": "lofi-hip-hop", "name": "Lo-Fi Hip-Hop / Beats", "parents": ["hip-hop"], "labels": ["lo-fi hip hop", "lo-fi beats"]}, {"id": "jazz-beats", "name": "Jazz Beats", "parents": ["lofi-hip-hop", "jazz"], "labels": ["jazz beats"]}, {"id": "phonk", "name": "Phonk", "parents": ["hip-hop", "electronic"], "labels": ["phonk", "brazilian phonk"]}, {"id": "christian-hip-hop", "name": "Christian Hip-Hop", "parents": ["hip-hop", "religious"], "labels": ["christian hip hop"]}, {"id": "anime-rap", "name": "Anime Rap", "parents": ["hip-hop", "stage-screen"], "labels": ["anime rap"]}, {"id": "rap-rock", "name": "Rap Rock", "parents": ["rock", "hip-hop"], "labels": ["rap rock"]}, {"id": "rap-metal", "name": "Rap Metal", "parents": ["metal", "hip-hop"], "labels": ["rap metal"]}, {"id": "regional-pop", "name": "Regional Pop", "parents": ["pop"], "labels": ["bangla pop", "dansk pop", "french pop", "german pop", "indonesian pop", "marathi pop", "nederpop", "norwegian pop", "pop qu\u00e9b\u00e9coise", "swedish pop", "turkish pop"]}, {"id": "acoustic-pop", "name": "Acoustic Pop", "parents": ["pop"], "labels": ["acoustic pop"]}, {"id": "k-pop", "name": "K-Pop", "parents": ["pop"], "labels": ["k-pop"]}, {"id": "art-pop", "name": "Art / Baroque Pop", "parents": ["pop"], "labels": ["art pop", "baroque pop"]}, {"id": "bedroom-pop", "name": "Bedroom Pop", "parents": ["indie-pop"], "labels": ["bedroom pop"]}, {"id": "regional-indie-pop", "name": "Regional Indie Pop", "parents": ["indie-pop"], "labels": ["french indie pop", "german indie pop"]}, {"id": "dream-pop", "name": "Dream Pop", "parents": ["indie-pop"], "labels": ["dream pop"]}, {"id": "jangle-power-pop", "name": "Jangle / Power Pop", "parents": ["pop", "rock"], "labels": ["jangle pop", "power pop"]}, {"id": "dance-pop", "name": "Dance Pop", "parents": ["pop", "electronic"], "labels": ["dance pop", "eurodance", "freestyle", "russel\u00e5ter"]}, {"id": "electropop", "name": "Electropop / Hyperpop", "parents": ["pop", "electronic"], "labels": ["electropop", "hyperpop"]}, {"id": "folk-pop", "name": "Folk Pop", "parents": ["pop", "folk"], "labels": ["folk pop"]}, {"id": "pop-soul", "name": "Pop Soul", "parents": ["pop", "soul-rnb"], "labels": ["pop soul"]}, {"id": "retro-pop", "name": "Retro / Soft Pop", "parents": ["pop"], "labels": ["retro pop", "soft pop", "city pop", "adult standards"]}, {"id": "chanson", "name": "Chanson / Variete", "parents": ["pop"], "labels": ["chanson", "chanson qu\u00e9b\u00e9coise", "vari\u00e9t\u00e9 fran\u00e7aise", "canzone napoletana", "neomelodico"]}, {"id": "pop-urbaine", "name": "Pop Urbaine", "parents": ["pop", "hip-hop"], "labels": ["pop urbaine"]}, {"id": "christian-pop", "name": "Christian Pop", "parents": ["pop", "religious"], "labels": ["christian pop"]}, {"id": "regional-rnb", "name": "Regional R\u0026B / Soul", "parents": ["soul-rnb"], "labels": ["french r\u0026b", "indonesian r\u0026b", "uk r\u0026b"]}, {"id": "african-rnb", "name": "African R\u0026B / Soul", "parents": ["soul-rnb", "african"], "labels": ["afro r\u0026b", "afro soul"]}, {"id": "alternative-rnb", "name": "Alternative / Indie R\u0026B", "parents": ["soul-rnb"], "labels": ["alternative r\u0026b", "dark r\u0026b", "indie r\u0026b", "indie soul"]}, {"id": "classic-soul", "name": "Classic Soul / Motown", "parents": ["soul-rnb"], "labels": ["classic soul", "motown", "northern soul", "philly soul"]}, {"id": "contemporary-rnb", "name": "Contemporary R\u0026B", "parents": ["soul-rnb"], "labels": ["contemporary r\u0026b", "new jack swing", "quiet storm", "trap soul"]}, {"id": "christian-rnb", "name": "Christian R\u0026B", "parents": ["soul-rnb", "religious"], "labels": ["christian r\u0026b"]}, {"id": "gospel", "name": "Gospel", "parents": ["religious"], "labels": ["gospel", "southern gospel", "traditional gospel"]}, {"id": "bhajan", "name": "Bhajan", "parents": ["religious", "regional-traditional"], "labels": ["bhajan"]}, {"id": "sufi", "name": "Sufi", "parents": ["religious", "regional-traditional"], "labels": ["sufi"]}, {"id": "acid-jazz", "name": "Acid Jazz", "parents": ["jazz", "funk"], "labels": ["acid jazz"]}, {"id": "nu-jazz", "name": "Nu Jazz", "parents": ["jazz", "electronic"], "labels": ["nu jazz"]}, {"id": "jazz-funk", "name": "Jazz Funk", "parents": ["jazz", "funk"], "labels": ["jazz funk"]}, {"id": "jazz-fusion", "name": "Jazz Fusion", "parents": ["jazz"], "labels": ["jazz fusion"]}, {"id": "latin-jazz", "name": "Latin Jazz", "parents": ["jazz", "latin"], "labels": ["latin jazz", "afro-cuban jazz"]}, {"id": "brazilian-jazz", "name": "Brazilian Jazz", "parents": ["jazz", "brazilian"], "labels": ["brazilian jazz"]}, {"id": "regional-jazz", "name": "Regional Jazz", "parents": ["jazz"], "labels": ["french jazz", "indonesian jazz"]}, {"id": "bebop", "name": "Bebop / Hard Bop", "parents": ["jazz"], "labels": ["bebop", "hard bop"]}, {"id": "cool-jazz", "name": "Cool / Smooth Jazz", "parents": ["jazz"], "labels": ["cool jazz", "smooth jazz", "ambient jazz"]}, {"id": "swing", "name": "Swing / Big Band", "parents": ["jazz"], "labels": ["swing music", "big band"]}, {"id": "vocal-jazz", "name": "Vocal Jazz / Ballads", "parents": ["jazz"], "labels": ["vocal jazz", "jazz ballads"]}, {"id": "soul-jazz", "name": "Soul Jazz", "parents": ["jazz", "soul-rnb"], "labels": ["soul jazz"]}, {"id": "jazz-pop", "name": "Jazz Pop", "parents": ["jazz", "pop"], "labels": ["jazz pop"]}, {"id": "indie-jazz", "name": "Indie Jazz", "parents": ["jazz"], "labels": ["indie jazz"]}, {"id": "free-jazz", "name": "Free / Experimental Jazz", "parents": ["jazz", "experimental"], "labels": ["free jazz", "experimental jazz"]}, {"id": "ragtime", "name": "Ragtime", "parents": ["jazz"], "labels": ["ragtime"]}, {"id": "brass-band", "name": "Brass Band", "parents": ["jazz", "regional-traditional"], "labels": ["brass band"]}, {"id": "christian-jazz", "name": "Christian Jazz", "parents": ["jazz", "religious"], "labels": ["christian jazz"]}, {"id": "classic-blues", "name": "Classic / Country Blues", "parents": ["blues"], "labels": ["classic blues", "country blues", "boogie-woogie"]}, {"id": "modern-blues", "name": "Modern Blues", "parents": ["blues"], "labels": ["modern blues"]}, {"id": "soul-blues", "name": "Soul Blues", "parents": ["blues", "soul-rnb"], "labels": ["soul blues"]}, {"id": "blues-rock", "name": "Blues Rock", "parents": ["blues", "rock"], "labels": ["blues rock"]}, {"id": "funk-rock", "name": "Funk Rock", "parents": ["funk", "rock"], "labels": ["funk rock"]}, {"id": "funk-pop", "name": "Funk Pop", "parents": ["funk", "pop"], "labels": ["funk pop"]}, {"id": "boogie", "name": "Boogie / Post-Disco", "parents": ["funk", "electronic"], "labels": ["boogie", "post-disco"]}, {"id": "disco", "name": "Disco", "parents": ["funk", "electronic"], "labels": ["disco"]}, {"id": "psychedelic-rock", "name": "Psychedelic Rock", "parents": ["rock"], "labels": ["psychedelic rock", "acid rock", "neo-psychedelic"]}, {"id": "art-rock", "name": "Art Rock", "parents": ["rock"], "labels": ["art rock", "krautrock"]}, {"id": "garage-rock", "name": "Garage Rock", "parents": ["rock"], "labels": ["garage rock"]}, {"id": "glam-rock", "name": "Glam Rock", "parents": ["rock"], "labels": ["glam rock"]}, {"id": "soft-rock", "name": "Soft Rock / AOR", "parents": ["rock"], "labels": ["soft rock", "aor", "yacht rock"]}, {"id": "roots-rock", "name": "Roots / Southern Rock", "parents": ["rock"], "labels": ["roots rock", "southern rock"]}, {"id": "rock-and-roll", "name": "Rock and Roll", "parents": ["rock"], "labels": ["rock and roll", "rockabilly"]}, {"id": "surf-rock", "name": "Surf Rock", "parents": ["rock"], "labels": ["surf rock"]}, {"id": "stoner-rock", "name": "Stoner Rock", "parents": ["rock"], "labels": ["stoner rock"]}, {"id": "post-grunge", "name": "Post-Grunge", "parents": ["alternative-rock"], "labels": ["post-grunge"]}, {"id": "britpop", "name": "Britpop", "parents": ["alternative-rock", "pop"], "labels": ["britpop"]}, {"id": "madchester", "name": "Madchester", "parents": ["alternative-rock", "electronic"], "labels": ["madchester"]}, {"id": "shoegaze", "name": "Shoegaze", "parents": ["alternative-rock"], "labels": ["shoegaze"]}, {"id": "post-rock", "name": "Post-Rock / Math Rock", "parents": ["rock"], "labels": ["post-rock", "math rock"]}, {"id": "slowcore", "name": "Slowcore", "parents": ["indie-rock"], "labels": ["slowcore"]}, {"id": "post-punk", "name": "Post-Punk / Gothic Rock", "parents": ["rock"], "labels": ["post-punk", "gothic rock"]}, {"id": "new-wave", "name": "New Wave", "parents": ["rock", "pop"], "labels": ["new wave"]}, {"id": "darkwave", "name": "Darkwave / Cold Wave", "parents": ["post-punk", "electronic"], "labels": ["darkwave", "cold wave"]}, {"id": "hardcore-punk", "name": "Hardcore Punk", "parents": ["punk-rock"], "labels": ["hardcore punk", "skate punk"]}, {"id": "proto-punk", "name": "Proto-Punk", "parents": ["punk-rock"], "labels": ["proto-punk"]}, {"id": "pop-punk", "name": "Pop Punk", "parents": ["punk-rock", "pop"], "labels": ["pop punk"]}, {"id": "emo", "name": "Emo / Post-Hardcore", "parents": ["punk-rock"], "labels": ["emo", "post-hardcore", "screamo"]}, {"id": "ska-punk", "name": "Ska Punk", "parents": ["punk-rock", "ska"], "labels": ["ska punk"]}, {"id": "regional-rock", "name": "Regional / Folk Rock", "parents": ["rock", "regional-traditional"], "labels": ["anatolian rock", "celtic rock"]}, {"id": "country-rock", "name": "Country Rock", "parents": ["country", "rock"], "labels": ["country rock"]}, {"id": "nu-metal", "name": "Nu Metal", "parents": ["alternative-metal"], "labels": ["nu metal"]}, {"id": "progressive-metal", "name": "Progressive Metal / Djent", "parents": ["metal"], "labels": ["progressive metal", "djent"]}, {"id": "doom-metal", "name": "Doom Metal", "parents": ["metal"], "labels": ["doom metal"]}, {"id": "thrash-metal", "name": "Thrash Metal", "parents": ["metal"], "labels": ["thrash metal"]}, {"id": "glam-metal", "name": "Glam Metal", "parents": ["metal"], "labels": ["glam metal"]}, {"id": "metalcore", "name": "Metalcore", "parents": ["metal", "hardcore-punk"], "labels": ["metalcore"]}, {"id": "indie-folk", "name": "Indie / Alternative Folk", "parents": ["folk"], "labels": ["indie folk", "anti-folk", "ambient folk"]}, {"id": "traditional-folk", "name": "Traditional Folk", "parents": ["folk", "regional-traditional"], "labels": ["traditional folk", "celtic"]}, {"id": "christian-folk", "name": "Christian Folk", "parents": ["folk", "religious"], "labels": ["christian folk"]}, {"id": "americana", "name": "Americana / Alt-Country", "parents": ["country", "folk"], "labels": ["americana", "alt country", "southern gothic"]}, {"id": "traditional-country", "name": "Traditional Country", "parents": ["country"], "labels": ["acoustic country", "classic country", "traditional country", "honky tonk", "outlaw country", "red dirt"]}, {"id": "bluegrass", "name": "Bluegrass", "parents": ["country", "folk"], "labels": ["bluegrass", "newgrass"]}, {"id": "christian-country", "name": "Christian Country / Bluegrass", "parents": ["country", "religious"], "labels": ["country christian", "christian bluegrass"]}, {"id": "fado", "name": "Fado", "parents": ["regional-traditional", "latin"], "labels": ["fado"]}, {"id": "mediterranean", "name": "Mediterranean Regional", "parents": ["regional-traditional"], "labels": ["arabesk", "entehno", "la\u00efko", "mizrahi", "oyun havas\u0131"]}, {"id": "ghazal", "name": "Ghazal", "parents": ["regional-traditional"], "labels": ["ghazal"]}, {"id": "rai", "name": "Rai", "parents": ["regional-traditional", "african"], "labels": ["ra\u00ef"]}, {"id": "zydeco", "name": "Zydeco", "parents": ["regional-traditional"], "labels": ["zydeco"]}, {"id": "ska", "name": "Ska / Rocksteady", "parents": ["reggae"], "labels": ["ska", "mexican ska", "rocksteady"]}, {"id": "roots-reggae", "name": "Roots Reggae", "parents": ["reggae"], "labels": ["roots reggae"]}, {"id": "lovers-rock", "name": "Lovers Rock", "parents": ["reggae"], "labels": ["lovers rock"]}, {"id": "regional-reggae", "name": "Regional Reggae", "parents": ["reggae"], "labels": ["nz reggae", "reggae en espa\u00f1ol"]}, {"id": "dancehall", "name": "Dancehall / Ragga", "parents": ["reggae"], "labels": ["dancehall", "ragga", "shatta"]}, {"id": "dub", "name": "Dub", "parents": ["reggae"], "labels": ["dub"]}, {"id": "reggae-rock", "name": "Reggae Rock", "parents": ["reggae", "rock"], "labels": ["reggae rock"]}, {"id": "christian-reggae", "name": "Christian Reggae", "parents": ["reggae", "religious"], "labels": ["christian reggae"]}, {"id": "early-music", "name": "Early / Renaissance Music", "parents": ["classical"], "labels": ["early music", "renaissance", "gregorian chant"]}, {"id": "baroque", "name": "Baroque", "parents": ["classical"], "labels": ["baroque"]}, {"id": "orchestral", "name": "Orchestral / Concerto", "parents": ["classical"], "labels": ["orchestral", "concerto", "ballet"]}, {"id": "chamber-music", "name": "Chamber / Piano Music", "parents": ["classical"], "labels": ["chamber music", "classical piano"]}, {"id": "vocal-classical", "name": "Opera / Choral", "parents": ["classical"], "labels": ["opera", "choral"]}, {"id": "modern-classical", "name": "Modern / Contemporary Classical", "parents": ["classical"], "labels": ["contemporary classical", "neoclassical", "impressionism", "expressionism", "minimalism", "japanese classical"]}, {"id": "classical-crossover", "name": "Classical Crossover", "parents": ["classical"], "labels": ["classical crossover"]}, {"id": "electroacoustic", "name": "Electroacoustic / Concrete", "parents": ["classical", "electronic", "experimental"], "labels": ["electroacoustic", "electronic classical", "musique concr\u00e8te"]}, {"id": "edm", "name": "EDM", "parents": ["electronic"], "labels": ["edm", "big room", "melbourne bounce"]}, {"id": "acid-house", "name": "Acid / Chicago House", "parents": ["house"], "labels": ["acid house", "chicago house"]}, {"id": "afro-house", "name": "Afro House / Afro Tech", "parents": ["house", "african"], "labels": ["afro house", "afro tech", "3 step"]}, {"id": "amapiano", "name": "Amapiano / Afropiano", "parents": ["house", "african"], "labels": ["afropiano"]}, {"id": "bass-house", "name": "Bass / G-House", "parents": ["house"], "labels": ["bass house", "g-house", "brazilian bass"]}, {"id": "deep-house", "name": "Deep / Organic House", "parents": ["house"], "labels": ["deep house", "organic house", "lo-fi house"]}, {"id": "disco-house", "name": "Disco / Funky House", "parents": ["house", "funk"], "labels": ["disco house", "funky house", "french house"]}, {"id": "electro-house", "name": "Electro / Future House", "parents": ["house"], "labels": ["electro house", "future house", "slap house", "stutter house"]}, {"id": "hard-house", "name": "Hard / Rally House", "parents": ["house"], "labels": ["hard house", "rally house", "vinahouse"]}, {"id": "hip-house", "name": "Hip House", "parents": ["house", "hip-hop"], "labels": ["hip house"]}, {"id": "jazz-house", "name": "Jazz House", "parents": ["house", "jazz"], "labels": ["jazz house"]}, {"id": "latin-house", "name": "Latin House", "parents": ["house", "latin"], "labels": ["latin house"]}, {"id": "tribal-house", "name": "Tribal House", "parents": ["house"], "labels": ["tribal house"]}, {"id": "melodic-house", "name": "Melodic / Progressive House", "parents": ["house"], "labels": ["melodic house", "progressive house"]}, {"id": "tech-house", "name": "Tech House", "parents": ["house"], "labels": ["tech house"]}, {"id": "tropical-house", "name": "Tropical House", "parents": ["house"], "labels": ["tropical house"]}, {"id": "acid-techno", "name": "Acid Techno", "parents": ["techno"], "labels": ["acid techno"]}, {"id": "hard-techno", "name": "Hard / Hypertechno", "parents": ["techno"], "labels": ["hard techno", "hypertechno"]}, {"id": "melodic-techno", "name": "Melodic / Minimal Techno", "parents": ["techno"], "labels": ["melodic techno", "minimal techno"]}, {"id": "trance", "name": "Trance", "parents": ["electronic"], "labels": ["trance", "progressive trance"]}, {"id": "hard-dance", "name": "Hard Dance", "parents": ["electronic"], "labels": ["hardstyle", "happy hardcore", "funkot"]}, {"id": "bass-music", "name": "Bass Music", "parents": ["electronic"], "labels": ["bass music", "bassline", "future bass", "melodic bass"]}, {"id": "dubstep", "name": "Dubstep", "parents": ["bass-music"], "labels": ["dubstep", "deathstep", "riddim", "chillstep"]}, {"id": "drum-and-bass", "name": "Drum and Bass", "parents": ["bass-music"], "labels": ["drum and bass", "jungle", "liquid funk", "drumstep"]}, {"id": "breakbeat", "name": "Breakbeat / Big Beat", "parents": ["electronic"], "labels": ["breakbeat", "big beat", "breakcore"]}, {"id": "uk-garage", "name": "UK Garage / Funky", "parents": ["electronic"], "labels": ["uk garage", "uk funky"]}, {"id": "club", "name": "Club / Ballroom", "parents": ["electronic"], "labels": ["ballroom vogue", "baltimore club", "jersey club"]}, {"id": "downtempo", "name": "Downtempo", "parents": ["electronic"], "labels": ["downtempo"]}, {"id": "trip-hop", "name": "Trip-Hop", "parents": ["downtempo", "hip-hop"], "labels": ["trip hop"]}, {"id": "electro", "name": "Electro", "parents": ["electronic"], "labels": ["electro", "electroclash"]}, {"id": "electro-swing", "name": "Electro Swing", "parents": ["electronic", "swing"], "labels": ["electro swing"]}, {"id": "nu-disco", "name": "Nu Disco / Italo Disco", "parents": ["electronic", "disco"], "labels": ["nu disco", "italo disco", "hi-nrg"]}, {"id": "alternative-dance", "name": "Alternative / Indie Dance", "parents": ["electronic", "alternative-rock"], "labels": ["alternative dance", "indie dance", "new rave"]}, {"id": "moombahton", "name": "Moombahton", "parents": ["electronic", "reggaeton"], "labels": ["moombahton"]}, {"id": "synthwave", "name": "Synthwave / Chillwave", "parents": ["electronic"], "labels": ["synthwave", "chillwave", "vaporwave"]}, {"id": "dark-ambient", "name": "Dark Ambient / Drone", "parents": ["ambient"], "labels": ["dark ambient", "drone", "space music"]}, {"id": "idm", "name": "IDM / Glitch", "parents": ["electronic", "experimental"], "labels": ["idm", "glitch"]}, {"id": "noise", "name": "Noise / Plunderphonics", "parents": ["experimental"], "labels": ["noise music", "plunderphonics"]}, {"id": "soundtrack", "name": "Soundtrack / Score", "parents": ["stage-screen"], "labels": ["soundtrack", "score", "anime", "bollywood"]}, {"id": "musicals", "name": "Musicals", "parents": ["stage-screen"], "labels": ["musicals"]}, {"id": "indie-context", "name": "Indie (Unspecified Style)", "parents": ["contextual"], "labels": ["indie", "german indie", "indie qu\u00e9b\u00e9cois", "indonesian indie", "lo-fi indie"]}, {"id": "lofi-context", "name": "Lo-Fi (Unspecified Style)", "parents": ["contextual"], "labels": ["lo-fi"]}, {"id": "christian-lofi", "name": "Christian Lo-Fi", "parents": ["lofi-context", "religious"], "labels": ["christian lo-fi"]}, {"id": "songwriter-context", "name": "Singer-Songwriter", "parents": ["contextual"], "labels": ["singer-songwriter", "italian singer-songwriter"]}, {"id": "lounge-context", "name": "Lounge / Exotica / New Age", "parents": ["contextual"], "labels": ["lounge", "exotica", "new age"]}, {"id": "seasonal-context", "name": "Seasonal / Christmas", "parents": ["contextual"], "labels": ["christmas", "villancicos"]}, {"id": "performance-context", "name": "Spoken Word / Comedy", "parents": ["contextual"], "labels": ["spoken word", "comedy"]}, {"id": "jam-band-context", "name": "Jam Band", "parents": ["contextual"], "labels": ["jam band"]}, {"id": "regional-context", "name": "Regional (Unspecified Style)", "parents": ["contextual"], "labels": ["malay"]}]}</script>
+<script>
+"use strict";
+const seed = JSON.parse(document.getElementById("taxonomy-data").textContent);
+const genres = new Map(seed.genres.map(genre => [genre.id, genre]));
+const roots = seed.genres.filter(genre => !genre.parents.length);
+const children = new Map(seed.genres.map(genre => [genre.id, []]));
+for (const genre of seed.genres) for (const parent of genre.parents) children.get(parent).push(genre.id);
+for (const list of children.values()) list.sort((left, right) => genres.get(left).name.localeCompare(genres.get(right).name));
+const byId = id => document.getElementById(id);
+const normalize = text => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+let selected = genres.has(location.hash.slice(1)) ? location.hash.slice(1) : (genres.has("latin") ? "latin" : roots[0].id);
+let family = roots[0].id;
+let expanded = new Set();
+let zoom = 1;
+const history = [];
+
+function rootIds(genreId) {
+  const found = new Set();
+  const seen = new Set();
+  const pending = [genreId];
+  while (pending.length) {
+    const current = pending.pop();
+    if (seen.has(current)) continue;
+    seen.add(current);
+    const parents = genres.get(current).parents;
+    if (!parents.length) found.add(current);
+    else pending.push(...parents);
+  }
+  return roots.filter(root => found.has(root.id)).map(root => root.id);
+}
+
+function pathTo(genreId, rootId) {
+  if (genreId === rootId) return [genreId];
+  for (const parent of genres.get(genreId).parents) {
+    const path = pathTo(parent, rootId);
+    if (path) return [...path, genreId];
+  }
+  return null;
+}
+
+function makeButton(text, className, action) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = className;
+  button.textContent = text;
+  button.addEventListener("click", action);
+  return button;
+}
+
+function showNode(genreId, record = true, preferredFamily = null) {
+  if (!genres.has(genreId)) return;
+  if (record && (genreId !== selected || preferredFamily && preferredFamily !== family)) history.push({selected, family});
+  selected = genreId;
+  const available = rootIds(selected);
+  family = available.includes(preferredFamily) ? preferredFamily : (available.includes(family) ? family : available[0]);
+  byId("family").value = family;
+  byId("search").value = "";
+  for (const ancestor of pathTo(selected, family) || []) expanded.add(ancestor);
+  expanded.add(family);
+  location.replace("#" + selected);
+  renderTree();
+  renderDetails();
+  requestAnimationFrame(() => {
+    const pane = document.querySelector(".tree-pane");
+    const node = byId("tree").querySelector('[aria-current="true"]');
+    if (node) pane.scrollTop += node.getBoundingClientRect().top - pane.getBoundingClientRect().top - pane.clientHeight / 2 + node.offsetHeight / 2;
+    if (record && selected !== family && matchMedia("(max-width:900px)").matches) document.querySelector(".details").scrollIntoView({block:"start"});
+  });
+  byId("back").disabled = !history.length;
+}
+
+function branch(genreId) {
+  const genre = genres.get(genreId);
+  const descendants = children.get(genreId);
+  const item = document.createElement("li");
+  const row = document.createElement("div");
+  row.className = "tree-row";
+  const toggle = makeButton(expanded.has(genreId) ? "\u25be" : "\u25b8", "disclosure", () => {
+    if (expanded.has(genreId)) expanded.delete(genreId); else expanded.add(genreId);
+    renderTree();
+  });
+  toggle.disabled = !descendants.length;
+  toggle.title = (expanded.has(genreId) ? "Plegar " : "Abrir ") + genre.name;
+  toggle.setAttribute("aria-label", toggle.title);
+  toggle.setAttribute("aria-expanded", String(expanded.has(genreId)));
+  const node = makeButton("", "node", () => showNode(genreId));
+  node.dataset.genreId = genreId;
+  node.setAttribute("aria-current", String(genreId === selected));
+  const name = document.createElement("span");
+  name.className = "name";
+  name.textContent = genre.name;
+  node.append(name);
+  if (genre.parents.length > 1) {
+    const multi = document.createElement("span");
+    multi.className = "multi";
+    multi.textContent = "\u2197 " + genre.parents.length;
+    multi.title = "Varios padres: " + genre.parents.map(parent => genres.get(parent).name).join(", ");
+    node.append(multi);
+  }
+  if (descendants.length) {
+    const count = document.createElement("span");
+    count.className = "count";
+    count.textContent = descendants.length;
+    count.title = "Generos hijos directos";
+    node.append(count);
+  }
+  row.append(toggle, node);
+  item.append(row);
+  if (descendants.length && expanded.has(genreId)) {
+    const list = document.createElement("ul");
+    for (const child of descendants) list.append(branch(child));
+    item.append(list);
+  }
+  return item;
+}
+
+function renderTree() {
+  byId("results").hidden = true;
+  byId("no-results").hidden = true;
+  byId("tree").hidden = false;
+  byId("tree-title").textContent = genres.get(family).name;
+  const list = document.createElement("ul");
+  list.append(branch(family));
+  byId("tree").replaceChildren(list);
+}
+
+function relationList(container, genreIds, emptyText, arrow) {
+  container.replaceChildren();
+  if (!genreIds.length) {
+    const item = document.createElement("li");
+    item.textContent = emptyText;
+    item.className = "empty";
+    container.append(item);
+  }
+  for (const genreId of genreIds) {
+    const item = document.createElement("li");
+    const button = makeButton("", "relation", () => showNode(genreId));
+    const marker = document.createElement("span");
+    marker.className = "arrow";
+    marker.textContent = arrow;
+    const name = document.createElement("span");
+    name.textContent = genres.get(genreId).name;
+    button.append(marker, name);
+    item.append(button);
+    container.append(item);
+  }
+}
+
+function renderDetails() {
+  const genre = genres.get(selected);
+  byId("name").textContent = genre.name;
+  byId("identifier").textContent = genre.id;
+  byId("breadcrumb").replaceChildren();
+  const path = pathTo(selected, family) || [];
+  path.forEach((genreId, index) => {
+    if (index) byId("breadcrumb").append(document.createTextNode(" / "));
+    byId("breadcrumb").append(makeButton(genres.get(genreId).name, "", () => showNode(genreId)));
+  });
+  byId("families").replaceChildren(...rootIds(selected).map(rootId => makeButton(genres.get(rootId).name, "family-link", () => showNode(selected, true, rootId))));
+  relationList(byId("parents"), genre.parents, "Familia raiz", "\u2191");
+  relationList(byId("children"), children.get(selected), "Sin subgeneros directos", "\u2192");
+  byId("labels").replaceChildren();
+  for (const label of genre.labels) {
+    const item = document.createElement("li");
+    item.textContent = label;
+    byId("labels").append(item);
+  }
+  if (!genre.labels.length) {
+    const item = document.createElement("li");
+    item.className = "empty";
+    item.textContent = "Nodo de agrupacion";
+    byId("labels").append(item);
+  }
+}
+
+function search() {
+  const query = normalize(byId("search").value.trim());
+  if (!query) {renderTree(); return;}
+  const matches = seed.genres.map(genre => ({genre, labels:genre.labels.filter(label => normalize(label).includes(query))}))
+    .filter(result => normalize(result.genre.name).includes(query) || normalize(result.genre.id).includes(query) || result.labels.length);
+  byId("tree").hidden = true;
+  byId("results").hidden = false;
+  byId("no-results").hidden = Boolean(matches.length);
+  byId("tree-title").textContent = "Resultados (" + matches.length + ")";
+  byId("results").replaceChildren();
+  for (const result of matches) {
+    const item = document.createElement("li");
+    const button = makeButton("", "result", () => showNode(result.genre.id));
+    const title = document.createElement("strong");
+    title.textContent = result.genre.name;
+    const detail = document.createElement("small");
+    detail.textContent = result.labels.length ? result.labels.join(", ") : rootIds(result.genre.id).map(rootId => genres.get(rootId).name).join(" / ");
+    button.append(title, detail);
+    item.append(button);
+    byId("results").append(item);
+  }
+}
+
+for (const root of roots) {
+  const option = document.createElement("option");
+  option.value = root.id;
+  option.textContent = root.name;
+  byId("family").append(option);
+}
+byId("inventory").textContent = roots.length + " familias / " + genres.size + " generos / " + seed.genres.reduce((total, genre) => total + genre.labels.length, 0) + " etiquetas";
+byId("family").addEventListener("change", event => {expanded = new Set(); showNode(event.target.value, true, event.target.value);});
+byId("search").addEventListener("input", search);
+byId("home").addEventListener("click", () => showNode(family));
+byId("back").addEventListener("click", () => {const previous = history.pop(); if (previous) showNode(previous.selected, false, previous.family);});
+byId("collapse").addEventListener("click", () => {expanded = new Set([family]); renderTree();});
+byId("expand").addEventListener("click", () => {const next = new Set(expanded); for (const genreId of expanded) for (const child of children.get(genreId)) next.add(child); expanded = next; renderTree();});
+function resizeTree(delta) {
+  zoom = Math.max(.8, Math.min(1.6, Math.round((zoom + delta) * 10) / 10));
+  document.documentElement.style.setProperty("--zoom", zoom);
+  byId("zoom").textContent = Math.round(zoom * 100) + "%";
+  byId("smaller").disabled = zoom <= .8;
+  byId("larger").disabled = zoom >= 1.6;
+}
+byId("smaller").addEventListener("click", () => resizeTree(-.1));
+byId("larger").addEventListener("click", () => resizeTree(.1));
+window.addEventListener("hashchange", () => {const genreId = location.hash.slice(1); if (genres.has(genreId) && genreId !== selected) showNode(genreId);});
+showNode(selected, false);
+</script>
+</body>
+</html>

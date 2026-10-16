@@ -6,10 +6,28 @@ en VS Code, o consulta este archivo en GitHub.
 
 ## Diagrama entidad-relacion
 
-Las lineas discontinuas representan relaciones logicas usadas por la aplicacion:
-**no hay restricciones FOREIGN KEY en las migraciones actuales**. Las
-cardinalidades muestran el modelo esperado, no garantias de integridad de la base.
+Las lineas discontinuas representan relaciones logicas usadas por la aplicacion.
+El catalogo y los proveedores no tienen restricciones FOREIGN KEY; la taxonomia
+local si las utiliza. Las cardinalidades del catalogo muestran el modelo esperado,
+no garantias de integridad de la base.
 Las tablas de control aparecen sin relaciones porque no referencian entidades.
+
+## Taxonomia local
+
+La migracion `0007_genre_taxonomy` incorpora:
+
+- `genres`: ID estable, nombre, procedencia de alta y fecha.
+- `genre_relations`: clave compuesta padre/hijo, ambas con FK a `genres`,
+  procedencia y prohibicion de autorrelaciones. Permite varios padres.
+- `genre_label_mappings`: clave compuesta fuente/campo/etiqueta normalizada,
+  FK opcional a `genres`, estado (`pending`, `approved`, `excluded`), procedencia
+  y fecha. Solo `approved` exige un genero; los otros estados deben carecer de el.
+
+Las etiquetas originales permanecen en los JSONB del proveedor. El importador
+valida ciclos en el grafo combinado dentro de una transaccion serializada mediante
+`pg_advisory_xact_lock(1936748392)`; las FK no impiden ciclos de varios nodos.
+La semilla inicial no sobrescribe nombres, equivalencias aprobadas ni exclusiones.
+No se crea ninguna copia de las escuchas ni se modifican las tablas de Spotify.
 
 ```mermaid
 erDiagram

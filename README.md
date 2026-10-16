@@ -8,7 +8,7 @@ python -m venv venv
 .\venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-This editable installation includes the eight `spoty-*` console commands listed
+This editable installation includes the nine `spoty-*` console commands listed
 below. Start the web app with:
 
 ```powershell
@@ -36,7 +36,72 @@ them.
 The installed commands are `spoty-register`, `spoty-currently-playing`,
 `spoty-sync-liked`, `spoty-enrich`, `spoty-print-summary`, and
 `spoty-print-liked`, plus `spoty-import-smarterplaylists` and
-`spoty-refresh-smarterplaylists`.
+`spoty-refresh-smarterplaylists`, plus `spoty-genres`.
+
+### Local genre taxonomy
+
+The initial, editable classification lives in
+[services/genre_taxonomy_seed.json](services/genre_taxonomy_seed.json). It is a
+small editorial starting point, not an official Spotify hierarchy. PostgreSQL
+is the operational authority after import; provider metadata is never rewritten.
+Only artist `genres` reported by SmarterPlaylists are mapped in this first version.
+
+The seed now includes an explicit editorial review of the 482 initially pending
+labels. Musical, regional and contextual families are intentionally separate;
+grouped regional labels are not claimed to be synonyms. All original labels
+remain in provider metadata. See the generated
+[family and subgenre diagrams](GENRE_TAXONOMY.md) for every relationship and mapping.
+For a readable, navigable view, open the standalone
+[interactive taxonomy viewer](GENRE_TAXONOMY.html). It works offline without a
+server, with collapsible branches, label search, direct parents/children,
+cross-family navigation and adjustable tree size.
+
+```powershell
+.\venv\Scripts\python.exe -m register.migrations
+.\venv\Scripts\python.exe -m services.genre_taxonomy import
+.\venv\Scripts\python.exe -m services.genre_taxonomy import --apply
+.\venv\Scripts\python.exe -m services.genre_taxonomy discover
+.\venv\Scripts\python.exe -m services.genre_taxonomy discover --apply
+.\venv\Scripts\python.exe -m services.genre_taxonomy diagram --output GENRE_TAXONOMY.md
+.\venv\Scripts\python.exe -m services.genre_taxonomy viewer --output GENRE_TAXONOMY.html
+```
+
+`spoty-genres` accepts the same arguments after installation. Import without
+`--apply` validates the seed offline; discovery without `--apply` reads unknown
+labels without writing. Import adds missing genres and relationships and approves
+pending labels explicitly listed in the seed. Existing names, approved mappings
+and exclusions are preserved. Repeat imports are idempotent; removals from the
+file do not delete database rows. New relationships may change historical family
+totals, so seed changes should be reviewed before applying.
+
+To expand the classification, add canonical genres with stable `id`, display
+`name`, a `parents` list and exact `labels`, then validate and explicitly import.
+Use `--seed path/to/seed.json` for another seed. Version `1` identifies the file
+format. Multiple parents are allowed; cycles, unknown parents and duplicate
+normalized labels are rejected. The importer also validates the combined stored
+and incoming graph under a transaction lock. Future graph editors must use the
+same validation and lock; foreign keys alone do not prevent multi-node cycles.
+
+Summary offers **Etiquetas** (unchanged original view) and **Familias** (approved
+labels grouped by root ancestors). A listen counts once per family even across
+multiple artists or descendants. Families may overlap and percentages can sum
+above 100%; percentages use listens with at least one resolved family. The
+coverage numerator therefore differs between modes. Pending and excluded labels
+do not contribute to family totals. Genre attribution is inherited from artists,
+not inferred from the audio of each song.
+
+Discovery is an explicit local operation; run it again after metadata refreshes.
+The diagram command works offline and regenerates a family overview, one Mermaid
+diagram per root and the associated source labels directly from the JSON. It does
+not read or write PostgreSQL. Regenerate it whenever the seed changes; database-only
+edits are not reflected in this seed diagram.
+The viewer command also works offline and embeds the same seed in a single HTML
+file, with no CDN, Mermaid renderer, database connection or external assets. It
+uses a lazily expanded tree rather than drawing every relationship at once;
+multiple parents remain available in the selected genre's detail panel.
+No scheduled job or automatic musical classification is added. Reviewing existing
+pending labels in the UI, richer audit history and materialized aggregates are
+future extensions, not prerequisites for this first version.
 
 Run one bounded metadata-enrichment batch for a specific source:
 
