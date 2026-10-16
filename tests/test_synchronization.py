@@ -170,6 +170,18 @@ class SynchronizationServiceTest(unittest.TestCase):
         self.assertEqual(result.status, SyncStatus.FAILED)
         database.apply_liked_track_snapshot.assert_not_called()
 
+    def test_liked_sync_reports_missing_key_without_hiding_its_name(self):
+        """Include a safe missing-field name in liked-sync failure diagnostics."""
+        service, _, database = self._liked_service([])
+        database.reserve_liked_track_sync.side_effect = KeyError("generation")
+
+        result = service.sync_liked_tracks()
+
+        self.assertEqual(result.status, SyncStatus.FAILED)
+        self.assertEqual(
+            result.message, "Synchronization failed (missing field 'generation')."
+        )
+
     def test_liked_sync_marks_missing_track_id_partial(self):
         """Verify Liked sync marks missing track id partial."""
         page = {
