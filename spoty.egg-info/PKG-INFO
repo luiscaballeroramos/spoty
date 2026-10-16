@@ -55,28 +55,107 @@ The installed commands are `spoty-register`, `spoty-currently-playing`,
 `spoty-print-liked`, plus `spoty-import-smarterplaylists` and
 `spoty-refresh-smarterplaylists`.
 
-Run one bounded metadata-enrichment batch with:
+Run one bounded metadata-enrichment batch for a specific source:
 
 ```powershell
-spoty-enrich --limit 50
+spoty-enrich --provider lastfm --limit 50
+spoty-enrich --provider musicbrainz --limit 50
+spoty-enrich --provider acousticbrainz --limit 50
+spoty-enrich --provider smarterplaylists --limit 50
 ```
 
-The repository defines three independent GitHub Actions workflows:
+Only the selected provider's adapter is constructed, pending rows are filtered
+for that source, and other providers are not called or written. Explicit Last.fm
+requires `LASTFM_API_KEY`. AcousticBrainz uses already-matched MusicBrainz IDs in
+the database; it does not call MusicBrainz or trigger its workflow. Tracks without
+a matched ID remain pending until a future run.
+`spoty-enrich --limit 50` runs all configured sources through the same procedure
+(equivalent to `--provider all`). Last.fm is skipped without its key; Smarter
+Playlists is skipped without `SMARTERPLAYLISTS_SESSION_COOKIE`,
+`SMARTERPLAYLISTS_SESSION_FILE` or `--session-file`. Skips are explicit in the
+result, not authentication successes. Explicit source selection never invokes
+another source. Summary also uses this shared procedure with a bounded batch.
 
-| Workflow | Daily Schedule (UTC) | Manual Trigger |
+All four sources support the same execution options:
+
+```powershell
+spoty-enrich --provider musicbrainz --all --batch-size 50
+spoty-enrich --provider smarterplaylists --all --batch-size 50 --max-minutes 300
+spoty-enrich --provider all --all --dry-run
+```
+
+`--all` scans an initial snapshot of eligible IDs in bounded batches, without
+repeatedly selecting failed IDs during that run. `--dry-run` reads pending counts
+without HTTP or writes. `--limit` and `--all` are mutually exclusive. The time
+budget is shared across selected sources; a later source is reported as not
+started if time is exhausted. In combined execution, MusicBrainz is persisted
+before AcousticBrainz selects its candidates. A failed source does not prevent
+the other configured sources from being attempted, subject to that budget.
+
+Results use operation `metadata_enrichment`, source identity, status, entity
+candidate counts, saved records, safe error categories, scope and dry-run flag.
+Combined results include `provider_results` and `skipped_providers`; aggregated
+candidates count provider/entity pairs, not distinct songs. Transient errors keep
+status `partial` with exit 0; permanent/unknown errors, denied authentication,
+missing migrations and unfinished bulk runs return nonzero. Partial results
+remain visible in the UI even when retryable errors do not fail an Action.
+
+Sources retain their adapters, tables, validation and provenance. This does not
+merge MusicBrainz recordings with artist tags reported by Smarter Playlists or
+give unspecified audio features an invented upstream source. Missing-only
+selection remains the policy for Last.fm/MusicBrainz/AcousticBrainz; freshness
+and backoff remain specific to Smarter Playlists. No schema/data migration is
+required for the unified execution contract.
+
+### External cron coordinators
+
+The external daily cron triggers the **Daily** workflow in
+`.github/workflows/daily.yml` through `repository_dispatch`:
+
+```json
+{"event_type": "run-daily"}
+```
+
+Send this body to `POST https://api.github.com/repos/luiscaballeroramos/spoty/dispatches`
+using the existing external cron's GitHub authentication. The old event
+`run-liked-tracks` is also accepted by Daily, so the current cron continues to work
+without changing its request. It now runs the entire daily sequence, not just
+liked tracks. Rename the external cron to `cronDaily` and optionally switch its
+body to `run-daily`; do not create a second daily cron alongside the existing one.
+Publish these workflow changes to the default branch before switching the event.
+
+Daily calls reusable workflows consecutively in this order:
+
+| Order | Workflow | Standalone Trigger |
 | --- | --- | --- |
-| Liked Tracks | 04:00 | `workflow_dispatch` / `run-liked-tracks` |
-| Metadata Enrichment | 04:20 | `workflow_dispatch` / `run-metadata-enrichment` |
-| Smarter Playlists Metadata | 04:40 | `workflow_dispatch` / `run-smarterplaylists` |
+| 1 | Liked Tracks | `workflow_dispatch` |
+| 2 | Last.fm Metadata | `workflow_dispatch` / `run-lastfm-enrichment` |
+| 3 | MusicBrainz Metadata | `workflow_dispatch` / `run-musicbrainz-enrichment` |
+| 4 | AcousticBrainz Metadata | `workflow_dispatch` / `run-acousticbrainz-enrichment` |
+| 5 | Smarter Playlists Metadata | `workflow_dispatch` / `run-smarterplaylists` |
 
-Each has its own concurrency group, timeout and credentials, without `needs`
-dependencies. Schedules only become active after publishing the workflows to the
-default branch and configuring their secrets. Existing provider enrichment scans
-missing metadata; Smarter Playlists also revisits expired captures.
+Each task retains its own timeout, credentials and concurrency group, including
+standalone runs. A failed or timed-out task does not prevent subsequent tasks from
+running, but the daily run still reports failure. Cancelling Daily stops the chain.
+Daily also has its own concurrency group to prevent overlapping daily runs.
+GitHub concurrency keeps at most one running and one pending run per group; newer
+requests can replace pending requests, so this is not a durable cron backlog.
+Individual native GitHub schedules are removed to avoid duplicate daily runs.
+
+The separate external cron every 30 minutes still sends `run-registration` and
+runs Registration independently. It can overlap with Daily: the daily sequence
+is not a global Spotify API lock and does not replace rate-limit handling.
+To add a daily task, expose it with `workflow_call` and add a job to Daily using
+`needs`, `if: ${{ !cancelled() }}` and `secrets: inherit`, following its existing
+jobs. To change its frequency, move its call to the corresponding coordinator
+and reconnect the dependency chains; each coordinator needs its own external cron.
+
+Existing provider enrichment scans missing metadata; Smarter Playlists also
+revisits expired captures. Configure each task's required repository secrets.
 The Summary page also has a manual provider-enrichment action
-for batches of 1 to 100 tracks. Before using either, apply the metadata schema
-migration explicitly with the command below. Until the migration exists, the
-scheduled job reports enrichment as deferred and leaves liked-song sync intact.
+for batches of 1 to 100 tracks. Before using enrichment, apply the metadata schema
+migration explicitly with the command below. Missing tables are reported as
+deferred failures of that source; Daily continues the other tasks as configured.
 
 ## Smarter Playlists capture imports
 
@@ -120,24 +199,44 @@ each field. Popularity and followers from different sources remain separate.
 ## Daily Smarter Playlists Refresh
 
 `0004_smarterplaylists_refresh_state` adds per-entity retry state. With an
-authorized private session file, run a bounded refresh:
+authorized private session file, scan all due entities in bounded batches:
 
 ```powershell
-.\venv\Scripts\python.exe -m _smarterplaylists_refresh --limit 10 --session-file .secrets/smarterplaylists-session.json
+.\venv\Scripts\python.exe -m _enrichment --provider smarterplaylists --all --batch-size 50 --session-file .secrets/smarterplaylists-session.json
 ```
 
-`--limit` applies separately to tracks, artists and albums (default: 10 each).
-`--refresh-hours` defaults to 20 to tolerate daily schedule jitter; it accepts
-1 to 168 hours. New entities precede expired ones, so initial backfill of a large
-library takes multiple batches. `--dry-run` inspects due counts with database
-read access, without HTTP or writes.
+The daily Action uses `--all`: no total entity cap. It snapshots all due IDs,
+then processes at most 50 entities of each type per batch without repeating IDs
+within that execution. The snapshot is read before HTTP, not inside a long DB
+transaction. Manual Actions runs expose batch size (1..100) and refresh age.
+Batch size is not the total number of entities checked.
+
+`--refresh-hours` defaults to 20 to tolerate daily schedule jitter (1..168 hours).
+New entities precede expired ones. Already-fresh metadata and retry-backoff IDs
+are skipped, so this is a complete scan of eligible pending/expired entities,
+not a forced refetch of every row regardless of age. `--all --dry-run` reports
+the full eligible counts without HTTP or writes.
+
+Each batch emits progress JSON. The default `--max-minutes 300` gives the bulk
+process a five-hour budget; Actions has a 330-minute timeout. Budget exhaustion
+reports `incomplete` and remaining unattempted counts with a nonzero exit. Saved
+results are retained and another execution resumes from due database state.
+Expired authentication or global rate limits stop subsequent batches. There is
+no guarantee that a large library will finish within one provider/time budget.
+
+For a deliberately small test, use `--limit 10`. The unified command defaults to
+50 entities per type without `--all`. The old `spoty-refresh-smarterplaylists`
+and `python -m _smarterplaylists_refresh` delegate to the unified command, retaining
+their historical default of 10 only for compatibility. There is no separate CLI
+error policy or authentication procedure in those aliases.
 
 The process closes database connections before HTTP, uses three marked programs
 named `Spoty Daily Metadata track/artist/album`, requests `save=false`, and refuses
 to overwrite unmarked programs. Missing/invalid responses never erase existing
 data or prove `not_found`. Failures have backoff from 15 minutes to 24 hours;
-successful partial/complete responses reset failures. Expired sessions or partial
-batches return nonzero exits with sanitized JSON, not silent success.
+successful partial/complete responses reset failures. The common policy reports
+transient errors as partial with exit 0, but expired sessions, permanent failures
+and incomplete bulk snapshots fail visibly with sanitized JSON.
 
 For Actions, configure repository secrets `DATABASE_URL` and
 `SMARTERPLAYLISTS_SESSION_COOKIE`. The cookie is the private Smarter Playlists

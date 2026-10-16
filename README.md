@@ -44,6 +44,7 @@ Run one bounded metadata-enrichment batch for a specific source:
 spoty-enrich --provider lastfm --limit 50
 spoty-enrich --provider musicbrainz --limit 50
 spoty-enrich --provider acousticbrainz --limit 50
+spoty-enrich --provider smarterplaylists --limit 50
 ```
 
 Only the selected provider's adapter is constructed, pending rows are filtered
@@ -51,8 +52,43 @@ for that source, and other providers are not called or written. Explicit Last.fm
 requires `LASTFM_API_KEY`. AcousticBrainz uses already-matched MusicBrainz IDs in
 the database; it does not call MusicBrainz or trigger its workflow. Tracks without
 a matched ID remain pending until a future run.
-The manual combined command `spoty-enrich --limit 50` remains available (equivalent
-to `--provider all`); Summary keeps its existing combined manual action.
+`spoty-enrich --limit 50` runs all configured sources through the same procedure
+(equivalent to `--provider all`). Last.fm is skipped without its key; Smarter
+Playlists is skipped without `SMARTERPLAYLISTS_SESSION_COOKIE`,
+`SMARTERPLAYLISTS_SESSION_FILE` or `--session-file`. Skips are explicit in the
+result, not authentication successes. Explicit source selection never invokes
+another source. Summary also uses this shared procedure with a bounded batch.
+
+All four sources support the same execution options:
+
+```powershell
+spoty-enrich --provider musicbrainz --all --batch-size 50
+spoty-enrich --provider smarterplaylists --all --batch-size 50 --max-minutes 300
+spoty-enrich --provider all --all --dry-run
+```
+
+`--all` scans an initial snapshot of eligible IDs in bounded batches, without
+repeatedly selecting failed IDs during that run. `--dry-run` reads pending counts
+without HTTP or writes. `--limit` and `--all` are mutually exclusive. The time
+budget is shared across selected sources; a later source is reported as not
+started if time is exhausted. In combined execution, MusicBrainz is persisted
+before AcousticBrainz selects its candidates. A failed source does not prevent
+the other configured sources from being attempted, subject to that budget.
+
+Results use operation `metadata_enrichment`, source identity, status, entity
+candidate counts, saved records, safe error categories, scope and dry-run flag.
+Combined results include `provider_results` and `skipped_providers`; aggregated
+candidates count provider/entity pairs, not distinct songs. Transient errors keep
+status `partial` with exit 0; permanent/unknown errors, denied authentication,
+missing migrations and unfinished bulk runs return nonzero. Partial results
+remain visible in the UI even when retryable errors do not fail an Action.
+
+Sources retain their adapters, tables, validation and provenance. This does not
+merge MusicBrainz recordings with artist tags reported by Smarter Playlists or
+give unspecified audio features an invented upstream source. Missing-only
+selection remains the policy for Last.fm/MusicBrainz/AcousticBrainz; freshness
+and backoff remain specific to Smarter Playlists. No schema/data migration is
+required for the unified execution contract.
 
 ### External cron coordinators
 
@@ -101,8 +137,8 @@ Existing provider enrichment scans missing metadata; Smarter Playlists also
 revisits expired captures. Configure each task's required repository secrets.
 The Summary page also has a manual provider-enrichment action
 for batches of 1 to 100 tracks. Before using enrichment, apply the metadata schema
-migration explicitly with the command below. Until the migration exists, the
-scheduled job reports enrichment as deferred and leaves liked-song sync intact.
+migration explicitly with the command below. Missing tables are reported as
+deferred failures of that source; Daily continues the other tasks as configured.
 
 ## Smarter Playlists capture imports
 
@@ -149,7 +185,7 @@ each field. Popularity and followers from different sources remain separate.
 authorized private session file, scan all due entities in bounded batches:
 
 ```powershell
-.\venv\Scripts\python.exe -m _smarterplaylists_refresh --all --batch-size 50 --session-file .secrets/smarterplaylists-session.json
+.\venv\Scripts\python.exe -m _enrichment --provider smarterplaylists --all --batch-size 50 --session-file .secrets/smarterplaylists-session.json
 ```
 
 The daily Action uses `--all`: no total entity cap. It snapshots all due IDs,
@@ -171,15 +207,19 @@ results are retained and another execution resumes from due database state.
 Expired authentication or global rate limits stop subsequent batches. There is
 no guarantee that a large library will finish within one provider/time budget.
 
-For a deliberately small test, the original `--limit 10` mode remains available
-(10 per type by default when `--all` is absent). It cannot be combined with `--all`.
+For a deliberately small test, use `--limit 10`. The unified command defaults to
+50 entities per type without `--all`. The old `spoty-refresh-smarterplaylists`
+and `python -m _smarterplaylists_refresh` delegate to the unified command, retaining
+their historical default of 10 only for compatibility. There is no separate CLI
+error policy or authentication procedure in those aliases.
 
 The process closes database connections before HTTP, uses three marked programs
 named `Spoty Daily Metadata track/artist/album`, requests `save=false`, and refuses
 to overwrite unmarked programs. Missing/invalid responses never erase existing
 data or prove `not_found`. Failures have backoff from 15 minutes to 24 hours;
-successful partial/complete responses reset failures. Expired sessions or partial
-batches return nonzero exits with sanitized JSON, not silent success.
+successful partial/complete responses reset failures. The common policy reports
+transient errors as partial with exit 0, but expired sessions, permanent failures
+and incomplete bulk snapshots fail visibly with sanitized JSON.
 
 For Actions, configure repository secrets `DATABASE_URL` and
 `SMARTERPLAYLISTS_SESSION_COOKIE`. The cookie is the private Smarter Playlists

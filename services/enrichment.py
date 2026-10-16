@@ -9,6 +9,7 @@ from metadata_sources.acousticbrainz import AcousticBrainzAdapter
 from metadata_sources.lastfm import LastFmAPIError, LastFmAdapter
 from metadata_sources.musicbrainz import MusicBrainzAdapter
 from register.enrichment import MetadataRepository
+from services.enrichment_contract import EnrichmentReport
 
 
 PROVIDERS = ("all", "lastfm", "musicbrainz", "acousticbrainz")
@@ -27,23 +28,23 @@ class EnrichmentResult:
 
     @property
     def exit_code(self) -> int:
-        return 1 if any(self.provider_errors.values()) else 0
+        return self.to_report().exit_code
+
+    def to_report(self) -> EnrichmentReport:
+        errors = {provider: dict(details) for provider, details in self.provider_error_details.items()}
+        for provider, count in self.provider_errors.items():
+            details = errors.setdefault(provider, {})
+            unknown = count - sum(details.values())
+            if unknown > 0:
+                details["unclassified_error"] = unknown
+        return EnrichmentReport(self.provider,
+            "partial" if any(self.provider_errors.values()) else "completed",
+            {"track": self.candidate_tracks}, self.records_saved, errors,
+            {"matched": self.matched, "not_found": self.not_found,
+             "ambiguous_musicbrainz": self.ambiguous_musicbrainz})
 
     def to_json(self) -> str:
-        import json
-
-        return json.dumps({
-            "operation": "metadata_enrichment",
-            "provider": self.provider,
-            "status": "partial" if self.exit_code else "completed",
-            "candidate_tracks": self.candidate_tracks,
-            "records_saved": self.records_saved,
-            "matched": self.matched,
-            "not_found": self.not_found,
-            "ambiguous_musicbrainz": self.ambiguous_musicbrainz,
-            "provider_errors": self.provider_errors,
-            "provider_error_details": self.provider_error_details,
-        }, sort_keys=True)
+        return self.to_report().to_json()
 
 
 def _error_category(error: Exception) -> str:
@@ -219,7 +220,7 @@ class EnrichmentService:
         self._musicbrainz_factory = musicbrainz_factory or MusicBrainzAdapter
         self._acousticbrainz_factory = acousticbrainz_factory or AcousticBrainzAdapter
 
-    def enrich_pending(self, limit: int = 50, *, provider: str = "all") -> EnrichmentResult:
+    def _selection(self, provider):
         if provider not in PROVIDERS:
             raise ValueError("Unknown metadata provider.")
         if provider == "lastfm" and not self._lastfm_api_key:
@@ -227,13 +228,24 @@ class EnrichmentService:
         include_lastfm = provider in ("all", "lastfm") and bool(self._lastfm_api_key)
         include_musicbrainz = provider in ("all", "musicbrainz")
         include_acousticbrainz = provider in ("all", "acousticbrainz")
-        candidates = self._repository.get_candidates(
+        return include_lastfm, include_musicbrainz, include_acousticbrainz
+
+    def get_candidates(self, limit: int | None = 50, *, provider: str = "all"):
+        include_lastfm, include_musicbrainz, include_acousticbrainz = self._selection(provider)
+        return self._repository.get_candidates(
             self._database_url,
             limit,
             include_lastfm=include_lastfm,
             include_musicbrainz=include_musicbrainz,
             include_acousticbrainz=include_acousticbrainz,
         )
+
+    def enrich_pending(self, limit: int = 50, *, provider: str = "all") -> EnrichmentResult:
+        candidates = self.get_candidates(limit, provider=provider)
+        return self.enrich_candidates(candidates, provider=provider)
+
+    def enrich_candidates(self, candidates, *, provider: str = "all") -> EnrichmentResult:
+        include_lastfm, include_musicbrainz, include_acousticbrainz = self._selection(provider)
         if not candidates:
             return EnrichmentResult(0, 0, provider=provider)
 

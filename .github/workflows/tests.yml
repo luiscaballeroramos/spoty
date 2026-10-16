@@ -66,6 +66,7 @@ jobs:
             import _print
             import _print_summary
             import _registration
+            import _enrichment
             import _smarterplaylists
             import _smarterplaylists_refresh
             import app_views.reproduction
@@ -74,6 +75,8 @@ jobs:
             import metadata_sources.smarterplaylists
             import register.smarterplaylists
             import services.smarterplaylists_refresh
+            import services.enrichment_contract
+            import services.metadata_enrichment
             import spotifyapi.spotifyclient
             import streamlit_lab.renderer
 

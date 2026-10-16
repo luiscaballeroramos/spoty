@@ -360,19 +360,22 @@ class CaptureImportTest(unittest.TestCase):
         """Forward bulk options and report time-budget stops as incomplete, not success."""
         from _smarterplaylists_refresh import main
 
+        from services.enrichment_contract import EnrichmentReport
+
         service = Mock()
-        service.refresh_all.return_value = {"status": "incomplete", "records_saved": 5}
+        service.run.return_value = EnrichmentReport("smarterplaylists", "incomplete", {}, 5)
         output = StringIO()
         with patch("config.require_database_url", return_value="unused"), patch(
-            "_smarterplaylists_refresh.SmarterPlaylistsRefreshService", return_value=service
+            "_enrichment.MetadataEnrichmentService", return_value=service
         ):
             with redirect_stdout(output), self.assertRaises(SystemExit) as raised:
                 main(["--all", "--batch-size", "25", "--max-minutes", "10"])
         self.assertEqual(raised.exception.code, 1)
         self.assertEqual(json.loads(output.getvalue())["status"], "incomplete")
-        self.assertEqual(service.refresh_all.call_args.args, (25, 20, False))
-        self.assertEqual(service.refresh_all.call_args.kwargs["max_seconds"], 600)
-        service.refresh.assert_not_called()
+        self.assertEqual(service.run.call_args.args, ("smarterplaylists",))
+        self.assertEqual(service.run.call_args.kwargs["batch_size"], 25)
+        self.assertEqual(service.run.call_args.kwargs["max_minutes"], 10)
+        self.assertTrue(service.run.call_args.kwargs["all_due"])
 
     def test_dry_run_and_cli_defaults_never_connect_or_request_network(self):
         """Validate files and default CLI invocation without config, DB or HTTP calls."""

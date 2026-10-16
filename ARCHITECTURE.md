@@ -14,7 +14,10 @@ flowchart LR
         VIEWS --> RS[ReproductionService]
         VIEWS --> QS[SummaryQueryService]
         VIEWS --> SY[SynchronizationService]
-        VIEWS --> ENR[EnrichmentService]
+        VIEWS --> META[MetadataEnrichmentService]
+        META --> REPORT[EnrichmentReport: contrato comun]
+        META --> ENR[EnrichmentService: Last.fm, MusicBrainz, AcousticBrainz]
+        META --> SPLREF[SmarterPlaylistsRefreshService]
         ENR --> MREP[MetadataRepository]
         ENR --> LFM[Last.fm adapter]
         ENR --> MBM[MusicBrainz adapter]
@@ -32,15 +35,15 @@ flowchart LR
         MIG[register.migrations] --> DB
 
     SYCLI[CLI: registro y sincronizacion de favoritos] --> SY
-    ENCLI[CLI: spoty-enrich] --> ENR
+    ENCLI[CLI: spoty-enrich: cuatro fuentes] --> META
     DBCLI[CLI: resumen y consultas locales] --> DBL
     PLAYCLI[CLI: reproduccion actual] --> SC
     GHJ[GitHub Actions: sincronizacion diaria de favoritos] --> SYCLI
     GHLFM[GitHub Actions: Last.fm] --> ENCLI
     GHMB[GitHub Actions: MusicBrainz] --> ENCLI
     GHAB[GitHub Actions: AcousticBrainz] --> ENCLI
-    GHS[GitHub Actions: Smarter Playlists independiente] --> SPLCLI[CLI refresco Smarter Playlists]
-    SPLCLI --> SPLREF[SmarterPlaylistsRefreshService]
+    GHS[GitHub Actions: Smarter Playlists] --> ENCLI
+    SPLCLI[CLI anterior: alias compatible] --> ENCLI
     SPLREF --> SPLAD[SmarterPlaylistsAdapter]
     SPLAD --> SPLWEB[API interna Smarter Playlists]
     SPLREF --> SPLREP[SmarterPlaylistsRepository]
@@ -60,7 +63,15 @@ flowchart LR
 - `SynchronizationService` comparte registro y reconciliacion de favoritos
   entre Streamlit, CLI y los jobs de Actions. `SimpleDB` gestiona conexiones y
   transacciones; las migraciones solo se ejecutan de forma explicita.
-- `EnrichmentService` lee tracks pendientes mediante `MetadataRepository`, cierra
+- `MetadataEnrichmentService` es la fachada publica de las cuatro fuentes para
+  CLI, interfaz y workflows. Comparte opciones, seleccion por proveedor, modo
+  masivo por instantanea, simulacion, presupuesto, progreso y resultado
+  `EnrichmentReport`. El modo conjunto ejecuta solo fuentes configuradas y
+  conserva resultados y errores independientes. Las credenciales opcionales
+  ausentes se reflejan como fuentes omitidas; elegir una fuente explicitamente
+  no dispara otras. Los contadores conjuntos cuentan pares fuente/entidad.
+- `EnrichmentService` es el motor especifico de Last.fm, MusicBrainz y
+  AcousticBrainz. Lee tracks pendientes mediante `MetadataRepository`, cierra
   la conexion antes de consultar proveedores y guarda cada fuente en tablas
   independientes. Normaliza tags e imagenes de Last.fm, generos y fechas de
   MusicBrainz, y los analisis `low-level` y `high-level` de AcousticBrainz.
@@ -82,6 +93,13 @@ flowchart LR
   valida previa. El adaptador solo modifica programas marcados como propios,
   usa `save=false` y rechaza redirecciones, sesiones denegadas e IDs inesperados.
   La cookie procede de un secreto o archivo privado, no del OAuth de Spotify.
+- `services.enrichment_contract` unifica estados, JSON y politica de salida:
+  errores transitorios mantienen `partial` y exit 0; errores permanentes o
+  desconocidos, autenticacion, migraciones ausentes y ejecuciones incompletas
+  fallan. La UI muestra incidencias aunque exit sea 0. Las CLI anteriores de
+  Smarter Playlists delegan en `spoty-enrich --provider smarterplaylists`.
+  Adaptadores, persistencia, caducidad, backoff y procedencia siguen siendo
+  propios de cada recurso, sin mezclar datos o inventar fuentes originales.
 - Los scripts de analisis consultan PostgreSQL sin requerir credenciales de
   Spotify. Los graficos se escriben en `outputs/chart/`.
 - `streamlit_lab` contiene modelos, controles y renderizado reutilizables. La
@@ -90,16 +108,13 @@ flowchart LR
   Spotify se validan al crear el cliente, no al importar los modulos.
 - `pyproject.toml` publica los modulos, paquetes, entrypoints y el extra `ui`;
   `requirements.txt` instala el proyecto con la interfaz incluida.
-- Los workflows diarios son independientes: favoritos 04:00 UTC, Last.fm 04:10,
-  MusicBrainz 04:20, AcousticBrainz 04:30 y Smarter Playlists 04:40 UTC.
-  `spoty-enrich --provider` filtra pendientes y solo construye/consulta el
-  adaptador elegido. AcousticBrainz depende de MBID ya guardados, no de llamadas
-  ni de la ejecucion correcta de otro workflow; los pendientes esperan otra
-  ejecucion. El modo conjunto manual y Summary conservan compatibilidad.
-  No hay `needs` entre workflows;
-  horarios, concurrencia, timeouts y disparadores manuales son independientes.
-  Deben publicarse en la rama por defecto y configurarse sus secretos para que
-  se ejecuten remotamente. Summary mantiene su disparador por lote.
+- El coordinador `Daily`, disparado por cron externo, llama secuencialmente a
+  favoritos, Last.fm, MusicBrainz, AcousticBrainz y Smarter Playlists mediante
+  `workflow_call`. Conserva los `needs` y `if: !cancelled()` existentes para que
+  un fallo no impida las siguientes fuentes. Cada tarea mantiene concurrencia,
+  secretos, timeout y ejecucion manual propios; no se restauran horarios nativos
+  duplicados. Las cuatro tareas de metadata usan el mismo `spoty-enrich`.
+  AcousticBrainz solo usa MBID ya persistidos. Registro sigue en su cron separado.
 
 ## Propuestas
 

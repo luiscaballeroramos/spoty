@@ -3,6 +3,8 @@
 from collections.abc import Callable
 from typing import Any
 from urllib.parse import quote
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 import time
 
 import requests
@@ -22,17 +24,21 @@ class MusicBrainzAdapter:
         sleep: Callable[[float], None] | None = None,
         min_request_interval: float = 1.1,
         timeout: float = 10,
+        max_retries: int = 3,
     ):
         if not user_agent.strip():
             raise ValueError("A meaningful MusicBrainz User-Agent is required.")
         if min_request_interval < 1:
             raise ValueError("MusicBrainz requests must be at least one second apart.")
+        if not 0 <= max_retries <= 5:
+            raise ValueError("MusicBrainz retries must be between zero and five.")
         self._user_agent = user_agent
         self._request_get = request_get or requests.get
         self._monotonic = monotonic or time.monotonic
         self._sleep = sleep or time.sleep
         self._min_request_interval = min_request_interval
         self._timeout = timeout
+        self._max_retries = max_retries
         self._last_request_at: float | None = None
 
     def find_recordings_by_isrc(self, isrc: str) -> dict[str, Any]:
@@ -104,22 +110,45 @@ class MusicBrainzAdapter:
         expected_list: str | None = None,
         not_found_empty: bool = False,
     ) -> dict[str, Any]:
-        now = self._monotonic()
-        if self._last_request_at is not None:
-            delay = self._min_request_interval - (now - self._last_request_at)
-            if delay > 0:
+        for attempt in range(self._max_retries + 1):
+            now = self._monotonic()
+            if self._last_request_at is not None:
+                delay = self._min_request_interval - (now - self._last_request_at)
+                if delay > 0:
+                    self._sleep(delay)
+            self._last_request_at = self._monotonic()
+            try:
+                response = self._request_get(
+                    f"{self._API_URL}{path}", params=params,
+                    headers={"User-Agent": self._user_agent}, timeout=self._timeout,
+                )
+                if not_found_empty and response.status_code == 404:
+                    return {expected_list: []} if expected_list else {}
+                response.raise_for_status()
+            except (requests.Timeout, requests.ConnectionError, requests.HTTPError) as error:
+                failed_response = getattr(error, "response", None)
+                status = getattr(failed_response, "status_code", None)
+                transient = isinstance(error, (requests.Timeout, requests.ConnectionError)) or status in {
+                    429, 500, 502, 503, 504,
+                }
+                if not transient or attempt == self._max_retries:
+                    raise
+                delay = float(2 ** (attempt + 1))
+                retry_after = failed_response.headers.get("Retry-After") if failed_response is not None else None
+                if isinstance(retry_after, str):
+                    try:
+                        requested = float(retry_after)
+                    except ValueError:
+                        try:
+                            requested = (parsedate_to_datetime(retry_after) - datetime.now(timezone.utc)).total_seconds()
+                        except (ValueError, TypeError, OverflowError):
+                            requested = 0
+                    delay = max(delay, requested)
+                if delay > 60:
+                    raise
                 self._sleep(delay)
-        self._last_request_at = self._monotonic()
-
-        response = self._request_get(
-            f"{self._API_URL}{path}",
-            params=params,
-            headers={"User-Agent": self._user_agent},
-            timeout=self._timeout,
-        )
-        if not_found_empty and response.status_code == 404:
-            return {expected_list: []} if expected_list else {}
-        response.raise_for_status()
+            else:
+                break
         try:
             payload = response.json()
         except ValueError as error:
