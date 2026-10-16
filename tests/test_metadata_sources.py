@@ -223,6 +223,36 @@ class AcousticBrainzAdapterTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             adapter.get_analysis("recording-id", "high-level")
 
+    def test_get_analysis_retries_timeout_before_returning_success(self):
+        """Retry a temporary timeout and return the later AcousticBrainz response."""
+        import requests
+        from metadata_sources.acousticbrainz import AcousticBrainzAdapter
+
+        response = Mock(status_code=200)
+        response.json.return_value = {"lowlevel": {"rhythm": {"bpm": 120}}}
+        request_get = Mock(side_effect=[requests.Timeout(), response])
+        sleep = Mock()
+        adapter = AcousticBrainzAdapter(request_get=request_get, sleep=sleep)
+
+        result = adapter.get_analysis("recording-id", "low-level")
+
+        self.assertEqual(result, response.json.return_value)
+        self.assertEqual(request_get.call_count, 2)
+        sleep.assert_called_once_with(2.0)
+
+    def test_get_analysis_stops_after_retry_budget(self):
+        """Keep repeated AcousticBrainz timeouts bounded and propagate the final error."""
+        import requests
+        from metadata_sources.acousticbrainz import AcousticBrainzAdapter
+
+        request_get = Mock(side_effect=requests.Timeout())
+        adapter = AcousticBrainzAdapter(request_get=request_get, sleep=Mock())
+
+        with self.assertRaises(requests.Timeout):
+            adapter.get_analysis("recording-id", "low-level")
+
+        self.assertEqual(request_get.call_count, 4)
+
 
 if __name__ == "__main__":
     unittest.main()

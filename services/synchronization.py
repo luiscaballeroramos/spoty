@@ -290,6 +290,13 @@ class SynchronizationService:
             )
         except SpotifyError as exc:
             return self._result("liked_tracks", SyncStatus.FAILED, counters, str(exc))
+        except KeyError as exc:
+            missing_key = exc.args[0] if len(exc.args) == 1 else None
+            if isinstance(missing_key, str) and missing_key.isidentifier():
+                message = f"Synchronization failed (missing field '{missing_key}')."
+            else:
+                message = "Synchronization failed (KeyError)."
+            return self._result("liked_tracks", SyncStatus.FAILED, counters, message)
         except Exception as exc:
             return self._result(
                 "liked_tracks",
