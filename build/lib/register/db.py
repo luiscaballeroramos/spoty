@@ -47,7 +47,7 @@ class SimpleDB:
                 raise RuntimeError(
                     "Liked-track sync state is missing; run register.migrations first."
                 )
-            return int(row[0]), int(row[1])
+            return int(row["generation"]), int(row["local_revision"])
 
     def apply_liked_track_snapshot(
         self,
@@ -68,9 +68,9 @@ class SimpleDB:
                     "Liked-track sync state is missing; run register.migrations first."
                 )
             if (
-                int(row[0]) != generation
-                or int(row[1]) != local_revision
-                or int(row[2]) >= generation
+                int(row["generation"]) != generation
+                or int(row["local_revision"]) != local_revision
+                or int(row["applied_generation"]) >= generation
             ):
                 return False, 0, []
 

@@ -72,29 +72,31 @@ def run_registration_with_feedback():
 def run_metadata_enrichment(limit: int = 50):
     """Enrich one bounded batch using the shared optional metadata service."""
     from config import DATABASE_URL
-    from services.enrichment import EnrichmentService
+    from services.metadata_enrichment import MetadataEnrichmentService
 
-    service = EnrichmentService(
+    service = MetadataEnrichmentService(
         DATABASE_URL,
         lastfm_api_key=os.getenv("LASTFM_API_KEY"),
         musicbrainz_user_agent=os.getenv(
             "MUSICBRAINZ_USER_AGENT", "Spoty/0.1.0 (metadata enrichment via Streamlit)"
         ),
+        session_cookie=os.getenv("SMARTERPLAYLISTS_SESSION_COOKIE"),
+        session_file=os.getenv("SMARTERPLAYLISTS_SESSION_FILE"),
     )
-    return service.enrich_pending(limit=limit)
+    return service.run(limit=limit)
 
 
 def _render_metadata_enrichment_control():
     st.subheader("Metadatos externos")
     with st.form("metadata_enrichment_form"):
         limit = st.number_input(
-            "Tracks por lote",
+            "Entidades por fuente",
             min_value=1,
             max_value=100,
             value=50,
             step=10,
         )
-        submitted = st.form_submit_button("Enriquecer tracks pendientes")
+        submitted = st.form_submit_button("Enriquecer pendientes")
 
     if not submitted:
         return
@@ -116,21 +118,21 @@ def _render_metadata_enrichment_control():
             )
         return
 
-    if result.exit_code:
+    if result.exit_code or result.status != "completed":
         failed_providers = ", ".join(
             f"{provider}: {count}"
             for provider, count in result.provider_errors.items()
             if count
         )
-        st.warning(f"El lote terminó con errores de proveedor ({failed_providers}).")
+        st.warning(f"El lote terminó con incidencias ({failed_providers or result.status}).")
         return
 
     clear_incident(st.session_state, "summary_metadata_enrichment_error")
-    if result.candidate_tracks == 0:
-        st.info("No hay tracks pendientes de enriquecimiento.")
+    if not any(result.candidates.values()):
+        st.info("No hay entidades pendientes de enriquecimiento.")
     else:
         st.success(
-            f"Lote revisado: {result.candidate_tracks} tracks; "
+            f"Lote revisado: {sum(result.candidates.values())} comprobaciones; "
             f"{result.records_saved} registros nuevos guardados."
         )
 

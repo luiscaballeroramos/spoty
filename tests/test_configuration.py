@@ -53,18 +53,18 @@ else:
 
 @unittest.skipUnless(yaml, "Install the test extra to validate workflows")
 class WorkflowConfigurationTests(unittest.TestCase):
-    def test_daily_workflows_have_independent_schedules_and_concurrency(self):
-        """Keep liked tracks and each metadata source operationally independent."""
+    def test_daily_workflows_are_reusable_with_independent_concurrency(self):
+        """Preserve external Daily coordination and standalone per-source executions."""
         folder = Path(__file__).resolve().parents[1] / ".github/workflows"
         groups = set()
-        schedules = set()
         workflows = ("liked_tracks.yml", "metadata_lastfm.yml", "metadata_musicbrainz.yml",
                  "metadata_acousticbrainz.yml", "smarterplaylists.yml")
         for name in workflows:
             with self.subTest(workflow=name):
                 workflow = yaml.load((folder / name).read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
                 self.assertIn("workflow_dispatch", workflow["on"])
-                schedules.add(workflow["on"]["schedule"][0]["cron"])
+                self.assertIn("workflow_call", workflow["on"])
+                self.assertNotIn("schedule", workflow["on"])
                 groups.add(workflow["concurrency"]["group"])
                 self.assertEqual(workflow["permissions"]["contents"], "read")
                 self.assertEqual(len(workflow["jobs"]), 1)
@@ -72,8 +72,18 @@ class WorkflowConfigurationTests(unittest.TestCase):
                     self.assertNotIn("needs", job)
                     self.assertIn("timeout-minutes", job)
         self.assertEqual(len(groups), 5)
-        self.assertEqual(len(schedules), 5)
         self.assertFalse((folder / "metadata_enrichment.yml").exists())
+
+    def test_daily_coordinator_preserves_failure_independent_source_order(self):
+        """Run later source tasks after failures without reviving duplicate native schedules."""
+        path = Path(__file__).resolve().parents[1] / ".github/workflows/daily.yml"
+        workflow = yaml.load(path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+        jobs = workflow["jobs"]
+        names = ("liked-tracks", "lastfm", "musicbrainz", "acousticbrainz", "smarterplaylists")
+        self.assertEqual(tuple(jobs), names)
+        for previous, name in zip(names, names[1:]):
+            self.assertEqual(jobs[name]["needs"], previous)
+            self.assertEqual(jobs[name]["if"], "${{ !cancelled() }}")
 
     def test_each_metadata_workflow_selects_only_its_source(self):
         """Run provider-specific commands without supplying other sources' secrets."""
@@ -103,6 +113,7 @@ class WorkflowConfigurationTests(unittest.TestCase):
         job = workflow["jobs"]["smarterplaylists"]
         step = job["steps"][-1]
         self.assertIn("--all", step["run"])
+        self.assertIn("spoty-enrich --provider smarterplaylists", step["run"])
         self.assertNotIn("--limit", step["run"])
         self.assertIn("--max-minutes 300", step["run"])
         self.assertGreater(int(job["timeout-minutes"]), 300)

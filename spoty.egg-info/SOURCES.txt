@@ -30,7 +30,9 @@ register/smarterplaylists.py
 register/spotify_data.py
 register/track.py
 services/enrichment.py
+services/enrichment_contract.py
 services/errors.py
+services/metadata_enrichment.py
 services/playback.py
 services/reproduction.py
 services/smarterplaylists.py

@@ -21,13 +21,13 @@ class MetadataRepository:
     def get_candidates(
         self,
         database_url: str,
-        limit: int,
+        limit: int | None,
         *,
         include_lastfm: bool,
         include_musicbrainz: bool,
         include_acousticbrainz: bool,
     ) -> list[dict[str, Any]]:
-        if limit < 1:
+        if limit is not None and limit < 1:
             raise ValueError("Candidate limit must be positive.")
         if not any((include_lastfm, include_musicbrainz, include_acousticbrainz)):
             return []

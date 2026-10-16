@@ -62,5 +62,5 @@ jobs:
           BATCH_SIZE: ${{ inputs.batch_size || '50' }}
           REFRESH_HOURS: ${{ inputs.refresh_hours || '20' }}
         run: >-
-          python -m _smarterplaylists_refresh --all
+          spoty-enrich --provider smarterplaylists --all
           --batch-size "$BATCH_SIZE" --refresh-hours "$REFRESH_HOURS" --max-minutes 300
