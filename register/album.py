@@ -10,9 +10,7 @@ class Album:
                  artists: List[str],
                  tracks: List[str],
                  total_tracks: int,
-                 disc_number: Optional[int] = None,
                  images: Optional[List[str]] = None,
-                 popularity: Optional[int] = None,
                  release_date: Optional[str] = None,
                  release_date_precision: Optional[str] = None):
         self.id = id
@@ -20,9 +18,7 @@ class Album:
         self.artists = artists
         self.tracks = tracks
         self.total_tracks = total_tracks
-        self.disc_number = disc_number
         self.images = images if images is not None else []
-        self.popularity = popularity
         _date=self.__getyear(release_date, release_date_precision)
         self.release_year = _date if _date else None
 
@@ -58,9 +54,7 @@ class Album:
              artists: Optional[List[str]] = None,
              tracks: Optional[List[str]] = None,
              total_tracks: Optional[int] = None,
-             disc_number: Optional[int] = None,
              images: Optional[List[str]] = None,
-             popularity: Optional[int] = None,
              release_date: Optional[str] = None,
              release_date_precision: Optional[str] = None):
         # check id exist in db
@@ -73,11 +67,9 @@ class Album:
                 "artists": json.dumps(artists) if artists is not None else json.dumps(self.artists),
                 "tracks": json.dumps(tracks) if tracks is not None else json.dumps(self.tracks),
                 "total_tracks": total_tracks if total_tracks is not None else self.total_tracks,
-                "disc_number": disc_number if disc_number is not None else self.disc_number,
                 "images": json.dumps(images) if images is not None else json.dumps(self.images),
-                "popularity": popularity if popularity is not None else self.popularity,
                 "release_year": _release_year
-            }, print_columns=["id", "name", "total_tracks", "popularity", "release_year"])
+            }, print_columns=["id", "name", "total_tracks", "release_year"])
 
     def save(self, db, print_only_insert=False):
         return db.insert("albums", {
@@ -86,9 +78,7 @@ class Album:
             "artists": json.dumps(self.artists),
             "tracks": json.dumps(self.tracks),
             "total_tracks": self.total_tracks,
-            "disc_number": self.disc_number,
             "images": json.dumps(self.images),
-            "popularity": self.popularity,
             "release_year": self.release_year
         }, print_only_insert=print_only_insert,
-        print_columns=["id", "name", "total_tracks", "popularity", "release_year"])
+        print_columns=["id", "name", "total_tracks", "release_year"])

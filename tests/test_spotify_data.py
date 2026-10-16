@@ -147,6 +147,7 @@ class SpotifyDataMappingTest(unittest.TestCase):
             "name": "Track",
             "duration_ms": 180000,
             "track_number": 2,
+            "disc_number": 3,
             "artists": [{"id": "track-artist", "name": "Track Artist"}],
             "album": {
                 "id": "album-id",
@@ -160,6 +161,7 @@ class SpotifyDataMappingTest(unittest.TestCase):
 
         self.assertEqual(track.id, "track-id")
         self.assertEqual(track.popularity, None)
+        self.assertEqual(track.disc_number, 3)
         self.assertEqual(track.artists_ids, ["track-artist"])
         self.assertEqual(album.artists, ["album-artist"])
         self.assertEqual(album.images, [])

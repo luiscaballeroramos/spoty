@@ -20,6 +20,7 @@ def models_from_spotify_track(
         duration_ms=track_data["duration_ms"],
         album_id=album_data["id"],
         album_track=track_data.get("track_number"),
+        disc_number=track_data.get("disc_number"),
         artists_ids=[artist["id"] for artist in track_artists],
         explicit=track_data.get("explicit"),
         popularity=track_data.get("popularity"),
@@ -33,7 +34,6 @@ def models_from_spotify_track(
         images=[image["url"] for image in album_data.get("images", [])],
         release_date=album_data.get("release_date"),
         release_date_precision=album_data.get("release_date_precision"),
-        popularity=album_data.get("popularity"),
     )
     artists = [
         Artist(id=artist["id"], name=artist["name"])

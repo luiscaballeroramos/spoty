@@ -52,6 +52,14 @@ def main() -> None:
         audio_features = track_source.get("audio_features") or {}
         if not isinstance(audio_features, dict):
             audio_features = {}
+        audio_feature_values = {
+            field: audio_features.get(field, track_source.get(field))
+            for field in (
+                "acousticness", "danceability", "energy", "instrumentalness",
+                "key", "liveness", "loudness", "mode", "speechiness", "tempo",
+                "time_signature", "valence",
+            )
+        }
 
         track_name = track_source.get("name")
         duration_ms = track_source.get("duration_ms")
@@ -65,33 +73,10 @@ def main() -> None:
                 duration_ms=duration_ms,
                 album_id=album_id,
                 album_track=track_source.get("track_number"),
+                disc_number=track_source.get("disc_number"),
                 artists_ids=artists_ids,
-                acousticness=audio_features.get(
-                    "acousticness", track_source.get("acousticness")
-                ),
-                danceability=audio_features.get(
-                    "danceability", track_source.get("danceability")
-                ),
-                energy=audio_features.get("energy", track_source.get("energy")),
                 explicit=track_source.get("explicit"),
-                genres=genres,
-                images=images,
-                instrumentalness=audio_features.get(
-                    "instrumentalness", track_source.get("instrumentalness")
-                ),
-                key=audio_features.get("key", track_source.get("key")),
-                liveness=audio_features.get("liveness", track_source.get("liveness")),
-                loudness=audio_features.get("loudness", track_source.get("loudness")),
-                mode=audio_features.get("mode", track_source.get("mode")),
                 popularity=track_source.get("popularity"),
-                speechiness=audio_features.get(
-                    "speechiness", track_source.get("speechiness")
-                ),
-                tempo=audio_features.get("tempo", track_source.get("tempo")),
-                time_signature=audio_features.get(
-                    "time_signature", track_source.get("time_signature")
-                ),
-                valence=audio_features.get("valence", track_source.get("valence")),
             )
             track_data = {
                 "id": track_model.id,
@@ -99,28 +84,18 @@ def main() -> None:
                 "duration_ms": track_model.duration_ms,
                 "album_id": track_model.album_id,
                 "album_track": track_model.album_track,
+                "disc_number": track_model.disc_number,
                 "artists": artists_names,
                 "artists_ids": track_model.artists_ids,
-                "acousticness": track_model.acousticness,
-                "danceability": track_model.danceability,
-                "energy": track_model.energy,
                 "explicit": track_model.explicit,
-                "genres": track_model.genres,
-                "images": track_model.images,
-                "instrumentalness": track_model.instrumentalness,
-                "key": track_model.key,
-                "liveness": track_model.liveness,
-                "loudness": track_model.loudness,
-                "mode": track_model.mode,
+                "genres": genres,
+                "images": images,
                 "popularity": track_model.popularity,
-                "speechiness": track_model.speechiness,
-                "tempo": track_model.tempo,
-                "time_signature": track_model.time_signature,
-                "valence": track_model.valence,
                 "album": album_data.get("name"),
                 "external_url": track_source.get("external_urls", {}).get("spotify"),
                 "preview_url": track_source.get("preview_url"),
                 "progress_ms": payload.get("progress_ms"),
+                **audio_feature_values,
             }
         else:
             snapshot = {

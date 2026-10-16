@@ -18,11 +18,6 @@ erDiagram
     artists {
         TEXT id PK "NOT NULL"
         TEXT name "NOT NULL"
-        INTEGER end_year
-        INTEGER followers
-        TEXT images
-        INTEGER popularity
-        INTEGER start_year
     }
 
     albums {
@@ -31,9 +26,7 @@ erDiagram
         TEXT artists "NOT NULL; lista de IDs"
         TEXT tracks "Lista de IDs"
         INTEGER total_tracks "NOT NULL"
-        INTEGER disc_number
         TEXT images
-        INTEGER popularity
         INTEGER release_year
     }
 
@@ -43,23 +36,10 @@ erDiagram
         INTEGER duration_ms "NOT NULL"
         TEXT album_id "NOT NULL; referencia logica"
         INTEGER album_track
+        INTEGER disc_number
         TEXT artists_ids "NOT NULL; lista de IDs"
-        REAL acousticness
-        REAL danceability
-        REAL energy
         INTEGER explicit
-        TEXT genres
-        TEXT images
-        REAL instrumentalness
-        INTEGER key
-        REAL liveness
-        REAL loudness
-        INTEGER mode
         INTEGER popularity
-        REAL speechiness
-        REAL tempo
-        INTEGER time_signature
-        REAL valence
     }
 
       lastfm_track_metadata {
@@ -183,7 +163,14 @@ erDiagram
   serializadas en columnas `TEXT`, no tablas intermedias ni arrays PostgreSQL.
   `albums.tracks` complementa la relacion logica de `tracks.album_id`; no es
   una restriccion adicional ni garantiza una lista completa.
-- `images` y `genres` tambien usan `TEXT`; `explicit` usa `INTEGER`, no `BOOLEAN`.
+- `albums.images` usa `TEXT`; las imagenes pertenecen al album, no a la pista.
+  `explicit` usa `INTEGER`, no `BOOLEAN`.
+- `tracks.disc_number` identifica el disco al que pertenece esa pista; se obtiene
+  de la pista de Spotify y por eso no está en `albums`.
+- La sincronizacion principal no guarda caracteristicas de audio ni metricas de
+  perfil de artista: sus columnas estaban vacias y esos campos quedan en las
+  tablas de metadata por proveedor. Los años del artista, popularidad de album,
+  generos e imagenes de pista tampoco forman parte de estas entidades core.
 - `liked_tracks` guarda la pertenencia actual a favoritos; no contiene una
   fecha de incorporacion.
 - `liked_sync_state` admite como maximo una fila, con `singleton_id = 1`.
@@ -202,6 +189,10 @@ erDiagram
   y las tres tablas de enriquecimiento de `0002_metadata_enrichment`.
   `0003_smarterplaylists_metadata` agrega cuatro tablas y tres vistas optativas.
   `0004_smarterplaylists_refresh_state` agrega el estado de actualizacion diaria.
+  `0005_remove_non_spotify_core_columns` elimina campos vacios que no pertenecen
+  al catalogo principal y actualiza la vista de detalles de album.
+  `0006_prune_empty_catalog_columns` elimina las columnas vacias adicionales,
+  mueve `disc_number` de `albums` a `tracks` y actualiza las vistas de metadata.
 
 ## Smarter Playlists
 
@@ -250,13 +241,13 @@ fallo, el backoff crece de 15 minutos a 24 horas. No cambia favoritos ni escucha
 
 Vistas optativas:
 
-- `smarterplaylists_track_features`: audio tipado con preferencia por el recurso
-  y fallback al nucleo. Cada campo lleva procedencia; los valores del nucleo
-  tienen antiguedad desconocida. Las dos popularidades se devuelven separadas.
+- `smarterplaylists_track_features`: audio tipado desde metadata de Smarter
+  Playlists, con procedencia por campo y popularidad del nucleo separada de la
+  popularidad del recurso.
 - `smarterplaylists_artist_details`: seguidores BIGINT y popularidad del recurso,
-  separados de los del nucleo, junto a JSONB y procedencia.
+  junto a JSONB y procedencia; el catálogo principal ya no duplica esos campos.
 - `smarterplaylists_album_details`: fecha TEXT (admite precision de ano/mes/dia),
-  sello, total de pistas, popularidades separadas y metadata JSONB.
+  sello, total de pistas, popularidad del recurso y metadata JSONB.
 
 No se unifican automaticamente los generos de Spotify, MusicBrainz, Last.fm ni
 los analisis de AcousticBrainz. Los campos del recurso son observaciones del
