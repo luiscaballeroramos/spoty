@@ -14,12 +14,13 @@ NAVIGATION_STYLE = BlockStyle(
 NAVIGATION_BLOCKS = (
     Block("summary", height=None, style=NAVIGATION_STYLE),
     Block("reproduction", height=None, style=NAVIGATION_STYLE),
+    Block("pulse", height=None, style=NAVIGATION_STYLE),
     Block("metadata", height=None, style=NAVIGATION_STYLE),
 )
 NAVIGATION_GROUP = Group(
     "top-navigation",
-    ("summary", "reproduction", "metadata"),
-    Layout(rows=1, columns=3, gap_px=8, padding=0, parent_gap_px=0),
+    ("summary", "reproduction", "pulse", "metadata"),
+    Layout(rows=1, columns=4, gap_px=8, padding=0, parent_gap_px=0),
 )
 
 
@@ -28,6 +29,7 @@ def render_top_navigation(
     on_summary_click,
     on_reproduction_click,
     on_metadata_click,
+    on_pulse_click=None,
 ):
     st.markdown(
         """
@@ -60,6 +62,10 @@ def render_top_navigation(
             label = ":material/headphones:"
             key = "top_nav_reproduction"
             on_click = on_reproduction_click
+        elif block.key == "pulse":
+            label = ":material/graphic_eq:"
+            key = "top_nav_pulse"
+            on_click = on_pulse_click
         else:
             label = ":material/database:"
             key = "top_nav_metadata"
@@ -67,7 +73,8 @@ def render_top_navigation(
 
         if st.button(
             label, key=key, type="secondary", use_container_width=True,
-            help={"summary": "Resumen", "reproduction": "Reproduccion", "metadata": "Metadatos"}[block.key],
+            help={"summary": "Resumen", "reproduction": "Reproduccion", "pulse": "Pulso", "metadata": "Metadatos"}[block.key],
+            disabled=on_click is None,
         ):
             on_click()
 

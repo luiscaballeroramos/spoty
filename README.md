@@ -82,8 +82,10 @@ normalized labels are rejected. The importer also validates the combined stored
 and incoming graph under a transaction lock. Future graph editors must use the
 same validation and lock; foreign keys alone do not prevent multi-node cycles.
 
-Summary offers **Etiquetas** (unchanged original view) and **Familias** (approved
-labels grouped by root ancestors). A listen counts once per family even across
+Summary defaults to **Generos** (approved labels grouped by root ancestors),
+shown on the left of the selector. **Subgeneros** preserves the original label
+view. The percentage of included listens appears to the right of the selector;
+the included/total counts are available on hover. A listen counts once per family even across
 multiple artists or descendants. Families may overlap and percentages can sum
 above 100%; percentages use listens with at least one resolved family. The
 coverage numerator therefore differs between modes. Pending and excluded labels

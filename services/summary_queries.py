@@ -39,6 +39,26 @@ class SummaryQueryService:
                     cursor.execute(query, parameters)
                 return cursor.fetchall()
 
+    def recent_audio_history(
+        self, current_id: str, now: float, hours: int = 2, current_started_at: float | None = None,
+    ) -> list[dict]:
+        return self._query("""
+            SELECT 'history' AS kind, e.track_id, e.played_at, t.name,
+                COALESCE(m.normalized_data, '{}'::jsonb) AS audio
+            FROM listening_events e
+            LEFT JOIN tracks t ON t.id = e.track_id
+            LEFT JOIN smarterplaylists_track_metadata m ON m.spotify_track_id = e.track_id
+            WHERE e.played_at >= %s AND e.played_at <= %s
+                AND NOT (e.track_id = %s AND e.played_at >= %s)
+            UNION ALL
+            SELECT 'current', %s, NULL, t.name, COALESCE(m.normalized_data, '{}'::jsonb)
+            FROM (SELECT %s::text AS id) current_track
+            LEFT JOIN tracks t ON t.id = current_track.id
+            LEFT JOIN smarterplaylists_track_metadata m ON m.spotify_track_id = current_track.id
+        """, (now - hours * 3600, now, current_id,
+              current_started_at if current_started_at is not None else now,
+              current_id, current_id))
+
     def dashboard_signature(self) -> tuple[str, int, int, int, int, int, int]:
         rows = self._query("""
             WITH latest_event AS (
