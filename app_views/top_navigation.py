@@ -27,6 +27,22 @@ def render_top_navigation(
     on_summary_click,
     on_reproduction_click,
 ):
+    st.markdown(
+        """
+        <style>
+        [data-testid="stMainBlockContainer"] {
+            padding-top: 0 !important;
+        }
+        .st-key-lab-group-top-navigation {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: #ffffff;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
     def render_navigation_block(block: Block):
         if block.key == "summary":
