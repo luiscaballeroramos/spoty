@@ -1,0 +1,42 @@
+name: Daily
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [run-daily, run-liked-tracks]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily
+  cancel-in-progress: false
+
+jobs:
+  liked-tracks:
+    uses: ./.github/workflows/liked_tracks.yml
+    secrets: inherit
+
+  lastfm:
+    needs: liked-tracks
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/metadata_lastfm.yml
+    secrets: inherit
+
+  musicbrainz:
+    needs: lastfm
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/metadata_musicbrainz.yml
+    secrets: inherit
+
+  acousticbrainz:
+    needs: musicbrainz
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/metadata_acousticbrainz.yml
+    secrets: inherit
+
+  smarterplaylists:
+    needs: acousticbrainz
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/smarterplaylists.yml
+    secrets: inherit

@@ -1,8 +1,16 @@
 name: Smarter Playlists Metadata
 
 on:
-  schedule:
-    - cron: "40 4 * * *"
+  workflow_call:
+    inputs:
+      batch_size:
+        description: Entities per type in each batch, not a total limit (1-100)
+        type: number
+        default: 50
+      refresh_hours:
+        description: Minimum capture age to refresh (1-168 hours)
+        type: number
+        default: 20
   workflow_dispatch:
     inputs:
       batch_size:

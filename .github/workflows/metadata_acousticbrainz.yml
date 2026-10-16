@@ -1,8 +1,7 @@
 name: AcousticBrainz Metadata
 
 on:
-  schedule:
-    - cron: "30 4 * * *"
+  workflow_call:
   workflow_dispatch:
   repository_dispatch:
     types: [run-acousticbrainz-enrichment]
