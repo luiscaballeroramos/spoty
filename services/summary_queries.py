@@ -40,24 +40,34 @@ class SummaryQueryService:
                 return cursor.fetchall()
 
     def recent_audio_history(
-        self, current_id: str, now: float, hours: int = 2, current_started_at: float | None = None,
+        self, current_id: str, now: float, hours: int | None = 2,
+        current_started_at: float | None = None,
     ) -> list[dict]:
-        return self._query("""
+        time_filter = "e.played_at <= %s"
+        parameters: list[Any] = [now]
+        if hours is not None:
+            time_filter = "e.played_at >= %s AND " + time_filter
+            parameters.insert(0, now - hours * 3600)
+        parameters.extend((
+            current_id,
+            current_started_at if current_started_at is not None else now,
+            current_id,
+            current_id,
+        ))
+        return self._query(f"""
             SELECT 'history' AS kind, e.track_id, e.played_at, t.name,
-                COALESCE(m.normalized_data, '{}'::jsonb) AS audio
+                COALESCE(m.normalized_data, '{{}}'::jsonb) AS audio
             FROM listening_events e
             LEFT JOIN tracks t ON t.id = e.track_id
             LEFT JOIN smarterplaylists_track_metadata m ON m.spotify_track_id = e.track_id
-            WHERE e.played_at >= %s AND e.played_at <= %s
+            WHERE {time_filter}
                 AND NOT (e.track_id = %s AND e.played_at >= %s)
             UNION ALL
-            SELECT 'current', %s, NULL, t.name, COALESCE(m.normalized_data, '{}'::jsonb)
+            SELECT 'current', %s, NULL, t.name, COALESCE(m.normalized_data, '{{}}'::jsonb)
             FROM (SELECT %s::text AS id) current_track
             LEFT JOIN tracks t ON t.id = current_track.id
             LEFT JOIN smarterplaylists_track_metadata m ON m.spotify_track_id = current_track.id
-        """, (now - hours * 3600, now, current_id,
-              current_started_at if current_started_at is not None else now,
-              current_id, current_id))
+        """, tuple(parameters))
 
     def dashboard_signature(self) -> tuple[str, int, int, int, int, int, int]:
         rows = self._query("""

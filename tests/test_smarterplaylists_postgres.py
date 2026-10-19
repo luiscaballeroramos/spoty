@@ -74,6 +74,9 @@ class PostgreSQLCaptureTest(unittest.TestCase):
                     VALUES (%s,%s,%s,%s,%s,%s)""",
                     (values["track"]["id"], values["track"]["name"], values["track"]["duration_ms"],
                      values["album"]["id"], 1, json.dumps([values["artist"]["id"]])))
+                failed_track_id = "Z" * 22
+                connection.execute("INSERT INTO tracks (id, name) VALUES (%s, %s)",
+                                   (failed_track_id, "Previously attempted"))
 
                 class Database:
                     def __enter__(self):
@@ -89,8 +92,17 @@ class PostgreSQLCaptureTest(unittest.TestCase):
                 repository = SmarterPlaylistsRepository(lambda _url: Database())
                 due = repository.get_refresh_candidates("unused", limit=1)
                 self.assertEqual(due["track"][0]["id"], values["track"]["id"])
+                never_attempted = repository.get_refresh_candidates(
+                    "unused", limit=None, only_unattempted=True)
+                self.assertEqual({row["id"] for row in never_attempted["track"]},
+                                 {values["track"]["id"], failed_track_id})
                 self.assertEqual(repository.import_batch("unused", batch)["records_saved"], 3)
                 self.assertEqual(repository.import_batch("unused", batch)["status"], "already_imported")
+                repository.record_refresh_outcome(
+                    "unused", "track", failed_track_id, "error", error_code="test_error")
+                remaining_never_attempted = repository.get_refresh_candidates(
+                    "unused", limit=None, only_unattempted=True)
+                self.assertEqual(remaining_never_attempted["track"], [])
                 feature = connection.execute("SELECT energy, energy_provenance FROM smarterplaylists_track_features").fetchone()
                 self.assertAlmostEqual(feature[0], values["track"]["energy"])
                 self.assertEqual(feature[1]["resource"], "smarterplaylists")
@@ -136,6 +148,8 @@ class PostgreSQLCaptureTest(unittest.TestCase):
                 repository.record_refresh_outcome("unused", "track", values["track"]["id"], "partial")
                 self.assertEqual(connection.execute("SELECT consecutive_failures FROM smarterplaylists_refresh_state").fetchone()[0], 0)
                 self.assertEqual(repository.get_refresh_candidates("unused", limit=1)["track"], [])
+                self.assertEqual(repository.get_refresh_candidates(
+                    "unused", limit=1, only_unattempted=True)["track"], [])
                 raise psycopg.Rollback()
             self.assertIsNone(connection.execute("SELECT to_regnamespace(%s)", (schema,)).fetchone()[0])
 

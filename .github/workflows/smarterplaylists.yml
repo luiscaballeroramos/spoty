@@ -23,6 +23,8 @@ on:
         default: 20
   repository_dispatch:
     types: [run-smarterplaylists]
+  schedule:
+    - cron: "0 3 * * 0"
 
 permissions:
   contents: read

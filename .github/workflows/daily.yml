@@ -38,5 +38,5 @@ jobs:
   smarterplaylists:
     needs: acousticbrainz
     if: ${{ !cancelled() }}
-    uses: ./.github/workflows/smarterplaylists.yml
+    uses: ./.github/workflows/smarterplaylists_initial.yml
     secrets: inherit

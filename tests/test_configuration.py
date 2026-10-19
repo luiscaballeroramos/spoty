@@ -54,17 +54,21 @@ else:
 @unittest.skipUnless(yaml, "Install the test extra to validate workflows")
 class WorkflowConfigurationTests(unittest.TestCase):
     def test_daily_workflows_are_reusable_with_independent_concurrency(self):
-        """Preserve external Daily coordination and standalone per-source executions."""
+        """Preserve Daily coordination and serialize the two Smarter Playlists workflows."""
         folder = Path(__file__).resolve().parents[1] / ".github/workflows"
         groups = set()
         workflows = ("liked_tracks.yml", "metadata_lastfm.yml", "metadata_musicbrainz.yml",
-                 "metadata_acousticbrainz.yml", "smarterplaylists.yml")
+                 "metadata_acousticbrainz.yml", "smarterplaylists.yml",
+                 "smarterplaylists_initial.yml")
         for name in workflows:
             with self.subTest(workflow=name):
                 workflow = yaml.load((folder / name).read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
                 self.assertIn("workflow_dispatch", workflow["on"])
                 self.assertIn("workflow_call", workflow["on"])
-                self.assertNotIn("schedule", workflow["on"])
+                if name == "smarterplaylists.yml":
+                    self.assertEqual(workflow["on"]["schedule"][0]["cron"], "0 3 * * 0")
+                else:
+                    self.assertNotIn("schedule", workflow["on"])
                 groups.add(workflow["concurrency"]["group"])
                 self.assertEqual(workflow["permissions"]["contents"], "read")
                 self.assertEqual(len(workflow["jobs"]), 1)
@@ -72,6 +76,12 @@ class WorkflowConfigurationTests(unittest.TestCase):
                     self.assertNotIn("needs", job)
                     self.assertIn("timeout-minutes", job)
         self.assertEqual(len(groups), 5)
+        self.assertEqual(
+            yaml.load((folder / "smarterplaylists.yml").read_text(encoding="utf-8"),
+                      Loader=yaml.BaseLoader)["concurrency"]["group"],
+            yaml.load((folder / "smarterplaylists_initial.yml").read_text(encoding="utf-8"),
+                      Loader=yaml.BaseLoader)["concurrency"]["group"],
+        )
         self.assertFalse((folder / "metadata_enrichment.yml").exists())
 
     def test_daily_coordinator_preserves_failure_independent_source_order(self):
@@ -84,6 +94,10 @@ class WorkflowConfigurationTests(unittest.TestCase):
         for previous, name in zip(names, names[1:]):
             self.assertEqual(jobs[name]["needs"], previous)
             self.assertEqual(jobs[name]["if"], "${{ !cancelled() }}")
+        self.assertEqual(
+            jobs["smarterplaylists"]["uses"],
+            "./.github/workflows/smarterplaylists_initial.yml",
+        )
 
     def test_each_metadata_workflow_selects_only_its_source(self):
         """Run provider-specific commands without supplying other sources' secrets."""
@@ -118,3 +132,13 @@ class WorkflowConfigurationTests(unittest.TestCase):
         self.assertIn("--max-minutes 300", step["run"])
         self.assertGreater(int(job["timeout-minutes"]), 300)
         self.assertIn("batch_size", workflow["on"]["workflow_dispatch"]["inputs"])
+
+    def test_smarterplaylists_initial_workflow_only_selects_unattempted_entities(self):
+        folder = Path(__file__).resolve().parents[1] / ".github/workflows"
+        workflow = yaml.load((folder / "smarterplaylists_initial.yml").read_text(encoding="utf-8"),
+                             Loader=yaml.BaseLoader)
+        self.assertIn("workflow_call", workflow["on"])
+        self.assertIn("workflow_dispatch", workflow["on"])
+        run = workflow["jobs"]["smarterplaylists-initial"]["steps"][-1]["run"]
+        self.assertIn("--provider smarterplaylists --all --only-unattempted", run)
+        self.assertNotIn("--refresh-hours", run)
