@@ -103,6 +103,70 @@ class SynchronizationServiceTest(unittest.TestCase):
         )
         self.assertEqual(spotify.get_liked_songs.call_count, 2)
 
+    def test_liked_sync_restarts_snapshot_when_library_changes(self):
+        """Restart pagination and only apply the stable library snapshot."""
+        pages = [
+            {
+                "items": [{"track": {"id": "old-first"}}],
+                "offset": 0, "limit": 1, "total": 2, "next": "next-page",
+            },
+            {
+                "items": [{"track": {"id": "stale-second"}}],
+                "offset": 1, "limit": 1, "total": 3, "next": "next-page",
+            },
+            {
+                "items": [{"track": {"id": "first"}}],
+                "offset": 0, "limit": 1, "total": 2, "next": "next-page",
+            },
+            {
+                "items": [{"track": {"id": "second"}}],
+                "offset": 1, "limit": 1, "total": 2, "next": None,
+            },
+        ]
+        service, spotify, database = self._liked_service(pages, (True, 2, []))
+        service._delay = Mock(return_value=0)
+
+        result = service.sync_liked_tracks(limit=1)
+
+        self.assertEqual(result.status, SyncStatus.COMPLETED)
+        self.assertEqual(result.counters["snapshot_retries"], 1)
+        self.assertEqual(result.counters["downloaded_items"], 2)
+        self.assertEqual(result.counters["pages"], 2)
+        database.apply_liked_track_snapshot.assert_called_once_with(
+            4, 2, ["first", "second"]
+        )
+        self.assertEqual(spotify.get_liked_songs.call_count, 4)
+
+    def test_liked_sync_does_not_apply_snapshot_if_library_keeps_changing(self):
+        """Leave a repeatedly changing library unapplied after the bounded retry."""
+        pages = [
+            {
+                "items": [{"track": {"id": "first"}}],
+                "offset": 0, "limit": 1, "total": 2, "next": "next-page",
+            },
+            {
+                "items": [{"track": {"id": "second"}}],
+                "offset": 1, "limit": 1, "total": 3, "next": "next-page",
+            },
+            {
+                "items": [{"track": {"id": "first"}}],
+                "offset": 0, "limit": 1, "total": 2, "next": "next-page",
+            },
+            {
+                "items": [{"track": {"id": "second"}}],
+                "offset": 1, "limit": 1, "total": 3, "next": "next-page",
+            },
+        ]
+        service, _, database = self._liked_service(pages)
+        service._delay = Mock(return_value=0)
+
+        result = service.sync_liked_tracks(limit=1)
+
+        self.assertEqual(result.status, SyncStatus.PARTIAL)
+        self.assertEqual(result.counters["snapshot_retries"], 1)
+        self.assertEqual(result.message, "Spotify library changed during pagination.")
+        database.apply_liked_track_snapshot.assert_not_called()
+
     def test_liked_sync_accepts_verified_empty_library(self):
         """Verify Liked sync accepts verified empty library."""
         page = {"items": [], "offset": 0, "limit": 50, "total": 0, "next": None}
