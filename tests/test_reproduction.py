@@ -674,6 +674,7 @@ class ReproductionTest(unittest.TestCase):
         self.assertIn("background: transparent !important", css)
         self.assertIn("pointer-events: none", css)
         self.assertIn("color: #ffffff !important", css)
+        self.assertIn("border-radius: 0 !important", css)
         self.assertIn("margin-left: 48px", css)
         self.assertIn("top: 0", css)
         self.assertIn("left: 0", css)

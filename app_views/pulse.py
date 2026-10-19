@@ -291,7 +291,8 @@ def _render_live_pulse(hours: int | None, expanded: bool) -> None:
         elif lookup_status[1] == "no_audio":
             st.caption("SmarterPlaylists respondió, pero no incluyó parámetros de audio.")
     _render_chart(analysis)
-    st.caption("SmarterPlaylists · Semivida: 30 min · Historial: caché 45 s · Actualización: 15 s")
+    weighting = "Todas las escuchas pesan igual" if hours is None else "Semivida: 30 min"
+    st.caption(f"SmarterPlaylists · {weighting} · Historial: caché 45 s · Actualización: 15 s")
 
 
 def render_pulse_page() -> None:
