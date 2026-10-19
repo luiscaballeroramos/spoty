@@ -1,5 +1,6 @@
 """Bounded refresh orchestration; no database transaction remains open during HTTP."""
 
+import re
 import time
 
 from metadata_sources.smarterplaylists import SmarterPlaylistsError
@@ -16,6 +17,30 @@ class SmarterPlaylistsRefreshService:
     def refresh(self, limit=10, refresh_hours=20, dry_run=False):
         candidates = self._repository.get_refresh_candidates(self._database_url, limit, refresh_hours)
         return self._refresh_candidates(candidates, refresh_hours, dry_run)
+
+    def lookup_track(self, spotify_id):
+        if not isinstance(spotify_id, str) or not re.fullmatch(r"[A-Za-z0-9]{22}", spotify_id):
+            raise ValueError("Invalid Spotify track ID.")
+        adapter = self._adapter_factory()
+        try:
+            adapter.authenticate()
+            reports, _missing_ids = adapter.capture("track", [{"id": spotify_id}])
+        finally:
+            adapter.close()
+
+        if not reports:
+            return {"status": "not_found", "audio": {}}
+        batch = normalize_capture(reports[0])
+        if len(batch.records) != 1:
+            raise ValueError("Unexpected single-track lookup response.")
+        record = batch.records[0]
+        if record.entity != "track" or record.spotify_id != spotify_id:
+            raise ValueError("Unexpected track in single-track lookup response.")
+        return {
+            "status": "completed",
+            "audio": record.normalized_data,
+            "missing_fields": record.missing_requested,
+        }
 
     def refresh_all(self, batch_size=50, refresh_hours=20, dry_run=False, *,
                     only_unattempted=False, max_seconds=18000, clock=time.monotonic,

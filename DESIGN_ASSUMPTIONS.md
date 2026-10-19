@@ -10,6 +10,7 @@ medido tiempos, consumo de memoria ni planes de ejecucion de PostgreSQL.
 ## Estado de las decisiones
 
 - Confirmado por el usuario: una sola persona y una sola cuenta Spotify por ahora.
+- Confirmado por el usuario: los botones de la UI no muestran ayudas emergentes al pasar el cursor; no pasar texto mediante `help` en componentes Streamlit.
 - Observado en el codigo: Streamlit, scripts CLI y GitHub Actions consumen Spotify
   y PostgreSQL; existen analisis con pandas y scripts exploratorios de metadatos.
 - Propuesto, pendiente de aprobacion: monolito modular en un unico repositorio,

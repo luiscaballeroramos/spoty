@@ -1,16 +1,25 @@
 """Listening audio profile and live current-track markers."""
 
+import os
+import queue
+import threading
 import time
 from html import escape
+from pathlib import Path
 
 import streamlit as st
 
 from app_views.error_feedback import render_incident_notice
 from app_views.reproduction import _get_playback, _get_spotify_client
 from app_views.summary import run_registration_with_feedback
-from services.pulse import build_pulse
+from services.pulse import EXTRA_PARAMETERS, PARAMETERS, audio_value, build_pulse
 from services.summary_queries import SummaryQueryService
 from spotifyapi.streamlit_auth import has_spotify_auth_available
+
+
+_CURRENT_TRACK_ENRICHMENT_KEY = "pulse_current_track_enrichment_v2"
+_CURRENT_TRACK_AUDIO_KEY = "pulse_current_track_audio"
+_CURRENT_TRACK_LOOKUP_STATUS_KEY = "pulse_current_track_lookup_status"
 
 
 @st.cache_data(ttl=45, show_spinner=False)
@@ -18,6 +27,122 @@ def _load_history(current_id: str, hours: int | None, _started_bucket: int, _tim
     return SummaryQueryService().recent_audio_history(
         current_id, _time_bucket * 15, hours, _started_bucket * 15,
     )
+
+
+def _refresh_current_track_metadata(track_id: str, result_queue) -> None:
+    try:
+        from metadata_sources.smarterplaylists import (
+            SmarterPlaylistsAdapter,
+            load_session_cookie,
+        )
+        from services.smarterplaylists_refresh import SmarterPlaylistsRefreshService
+
+        cookie, session_file = _smarterplaylists_session()
+        cookie = load_session_cookie(value=cookie, path=session_file)
+        service = SmarterPlaylistsRefreshService(
+            None,
+            lambda: SmarterPlaylistsAdapter(cookie),
+        )
+        result_queue.put(("result", service.lookup_track(track_id)))
+    except Exception as error:
+        result_queue.put(("error", error))
+
+
+def _smarterplaylists_session() -> tuple[str | None, str | None]:
+    configured_file = os.getenv("SMARTERPLAYLISTS_SESSION_FILE", "").strip()
+    if configured_file:
+        return None, configured_file
+
+    cookie = os.getenv("SMARTERPLAYLISTS_SESSION_COOKIE", "").strip()
+    if cookie:
+        return cookie, None
+
+    default_file = Path(__file__).resolve().parents[1] / ".secrets" / "smarterplaylists-session.json"
+    return (None, str(default_file)) if default_file.is_file() else (None, None)
+
+
+def _start_current_track_enrichment(track_id: str, audio: dict, state) -> bool:
+    if (
+        not track_id
+        or _has_all_primary_audio(audio)
+        or state.get(_CURRENT_TRACK_ENRICHMENT_KEY) == track_id
+    ):
+        return False
+
+    cookie, session_file = _smarterplaylists_session()
+    if not cookie and not session_file:
+        return False
+
+    state[_CURRENT_TRACK_ENRICHMENT_KEY] = track_id
+    result_queue = queue.Queue(maxsize=1)
+    threading.Thread(
+        target=_refresh_current_track_metadata,
+        args=(track_id, result_queue),
+        daemon=True,
+        name="pulse-track-metadata",
+    ).start()
+    state[f"{_CURRENT_TRACK_ENRICHMENT_KEY}_pending"] = (track_id, result_queue)
+    return True
+
+
+def _has_current_audio(audio: dict) -> bool:
+    return any(
+        audio_value(audio, parameter) is not None
+        for parameter in PARAMETERS + EXTRA_PARAMETERS
+    )
+
+
+def _has_all_primary_audio(audio: dict) -> bool:
+    return all(audio_value(audio, parameter) is not None for parameter in PARAMETERS)
+
+
+def _collect_current_track_enrichment(track_id: str, state) -> None:
+    pending = state.get(f"{_CURRENT_TRACK_ENRICHMENT_KEY}_pending")
+    if not pending or pending[0] != track_id:
+        return
+    try:
+        result_type, result = pending[1].get_nowait()
+    except queue.Empty:
+        return
+
+    state.pop(f"{_CURRENT_TRACK_ENRICHMENT_KEY}_pending", None)
+    if result_type == "error":
+        render_incident_notice(
+            "pulse_current_track_metadata_error",
+            result,
+            "No se pudieron consultar los parámetros de audio de la canción actual.",
+        )
+    elif result.get("status") == "completed" and isinstance(result.get("audio"), dict):
+        state[_CURRENT_TRACK_AUDIO_KEY] = (track_id, result["audio"])
+        state[_CURRENT_TRACK_LOOKUP_STATUS_KEY] = (
+            track_id,
+            "completed" if _has_current_audio(result["audio"]) else "no_audio",
+        )
+    elif result.get("status") == "not_found":
+        state[_CURRENT_TRACK_LOOKUP_STATUS_KEY] = (track_id, "not_found")
+    elif result.get("status") != "not_found":
+        error = RuntimeError(
+            "La consulta de metadatos de la canción actual no se completó."
+        )
+        error.action = "refresh current track metadata"
+        render_incident_notice(
+            "pulse_current_track_metadata_error",
+            error,
+            "No se pudieron consultar los parámetros de audio de la canción actual.",
+        )
+
+
+def _attach_current_track_audio(rows: list[dict], track_id: str, state) -> dict:
+    current_row = next((row for row in rows if row.get("kind") == "current"), None)
+    current_audio = (current_row.get("audio") or {}) if current_row else {}
+    cached_audio = state.get(_CURRENT_TRACK_AUDIO_KEY)
+    if cached_audio and cached_audio[0] == track_id:
+        current_audio = {**cached_audio[1], **current_audio}
+        if current_row:
+            current_row["audio"] = current_audio
+        elif track_id:
+            rows.append({"kind": "current", "audio": current_audio})
+    return current_audio
 
 
 def _format_value(value: float | None, key: str) -> str:
@@ -98,12 +223,18 @@ def _render_live_pulse(hours: int | None, expanded: bool) -> None:
             render_incident_notice("pulse_playback_error", error, "No se pudo consultar la canción actual.")
     item = playback.get("item") or {}
     current_id = item.get("id") or ""
+    _collect_current_track_enrichment(current_id, st.session_state)
     started_at = now - max(0, playback.get("progress_ms") or 0) / 1000 - 5
     try:
         rows = _load_history(current_id, hours, int(started_at // 15), int(now // 15))
     except Exception as error:
         render_incident_notice("pulse_history_error", error, "No se pudo cargar el historial sonoro.")
         return
+    current_audio = _attach_current_track_audio(rows, current_id, st.session_state)
+    smarterplaylists_configured = any(_smarterplaylists_session())
+    enrichment_started = _start_current_track_enrichment(
+        current_id, current_audio, st.session_state,
+    )
     analysis = build_pulse(rows, now, hours, expanded)
     images = (item.get("album") or {}).get("images") or []
     image_url = next((image.get("url") for image in images if
@@ -124,6 +255,19 @@ def _render_live_pulse(hours: int | None, expanded: bool) -> None:
         st.info("No hay escuchas registradas en el periodo seleccionado.")
     elif not any(band["samples"] for band in analysis["bands"]):
         st.info("Las escuchas del periodo seleccionado aún no tienen parámetros de audio disponibles.")
+    if current_id and not _has_current_audio(current_audio) and not smarterplaylists_configured:
+        st.caption("SmarterPlaylists no está configurado; no se ha podido consultar esta canción.")
+    if enrichment_started or (
+        st.session_state.get(f"{_CURRENT_TRACK_ENRICHMENT_KEY}_pending", (None,))[0]
+        == current_id
+    ):
+        st.caption("Consultando una vez los parámetros de audio de esta canción…")
+    lookup_status = st.session_state.get(_CURRENT_TRACK_LOOKUP_STATUS_KEY)
+    if current_id and lookup_status and lookup_status[0] == current_id:
+        if lookup_status[1] == "not_found":
+            st.caption("SmarterPlaylists no devolvió datos para esta canción.")
+        elif lookup_status[1] == "no_audio":
+            st.caption("SmarterPlaylists respondió, pero no incluyó parámetros de audio.")
     _render_chart(analysis)
     st.caption("SmarterPlaylists · Semivida: 30 min · Historial: caché 45 s · Actualización: 15 s")
 
@@ -138,6 +282,18 @@ def render_pulse_page() -> None:
         background:#d5eee3 !important; border-color:#448269 !important;
     }
     .st-key-pulse_sync button { min-width:42px; }
+    .st-key-pulse_expanded label > span:has(> input[role="switch"]) + div {
+        background:#fff !important; border:1px solid #111 !important;
+    }
+    .st-key-pulse_expanded label > span:has(> input[role="switch"]) + div > div {
+        background:#111 !important;
+    }
+    .st-key-pulse_expanded label:has(> span > input[role="switch"]:checked) > span + div {
+        background:#888 !important; border-color:#666 !important;
+    }
+    .st-key-pulse_expanded label:has(> span > input[role="switch"]:checked) > span + div > div {
+        background:#fff !important;
+    }
     .pulse-overview { display:grid; grid-template-columns:200px minmax(0,1fr); gap:24px; align-items:center; margin:20px 0; }
     .pulse-now { display:flex; gap:18px; align-items:center; min-width:0; }
     .pulse-now img { width:76px; height:76px; object-fit:cover; border-radius:4px; flex-shrink:0; }
@@ -184,7 +340,7 @@ def render_pulse_page() -> None:
             key="pulse_hours", label_visibility="collapsed", wrap=False,
         )
         expanded = st.toggle("All metadata", key="pulse_expanded", wrap=False)
-        if st.button(":material/sync:", key="pulse_sync", help="Sincronizar escuchas"):
+        if st.button(":material/sync:", key="pulse_sync"):
             run_registration_with_feedback()
             _load_history.clear()
     hours = {"1h": 1, "6h": 6, "1d": 24, "∞": None}.get(interval, 24)

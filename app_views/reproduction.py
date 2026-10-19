@@ -417,7 +417,6 @@ def _render_like_button(
             "♪",
             key=key,
             style=REPRODUCTION_CORNER_ACTION_STYLE,
-            help="Retirar de Liked Songs" if is_track_liked else "Añadir a Liked Songs",
             disabled=not track_id,
         ) and track_id:
             st.session_state["pending_library_action"] = {
