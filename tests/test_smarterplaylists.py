@@ -181,6 +181,22 @@ class CaptureRepositoryTest(unittest.TestCase):
         self.assertTrue(any("FOR KEY SHARE" in query for query in statements))
         self.assertFalse(any("UPDATE tracks" in query for query in statements))
 
+    def test_live_track_lookup_can_persist_metadata_before_catalog_registration(self):
+        database = self.database([None, None])
+        repository = SmarterPlaylistsRepository(lambda _url: database)
+
+        result = repository.import_batch(
+            "unused",
+            normalize_capture(capture()),
+            allow_unregistered_tracks=True,
+        )
+
+        self.assertEqual(result["records_saved"], 1)
+        statements = [str(call.args[0]) for call in database.cursor.execute.call_args_list]
+        self.assertFalse(any("FOR KEY SHARE" in query for query in statements))
+        self.assertTrue(any("INSERT INTO" in query and "smarterplaylists_track_metadata" in query
+                            for query in statements))
+
     def test_unknown_local_entity_and_repeated_import_do_not_write(self):
         """Reject unknown IDs and skip captures already committed successfully."""
         for rows, expected in (([None, None], "unknown"), ([{"capture_id": "existing"}], "duplicate")):
@@ -263,15 +279,45 @@ class CaptureRefreshTest(unittest.TestCase):
     def test_lookup_track_queries_only_the_requested_track_and_returns_audio(self):
         adapter = Mock()
         adapter.capture.return_value = ([capture()], [])
-        service = SmarterPlaylistsRefreshService("unused", lambda: adapter, Mock())
+        repository = Mock()
+        service = SmarterPlaylistsRefreshService("unused", lambda: adapter, repository)
 
         result = service.lookup_track(TRACK_ID)
 
         self.assertEqual(result["status"], "completed")
         self.assertAlmostEqual(result["audio"]["energy"], 0.918)
+        self.assertFalse(result["persisted"])
         adapter.authenticate.assert_called_once()
         adapter.capture.assert_called_once_with("track", [{"id": TRACK_ID}])
         adapter.close.assert_called_once()
+        repository.import_batch.assert_not_called()
+
+    def test_lookup_track_persists_normalized_metadata_even_without_catalog_row(self):
+        adapter = Mock()
+        adapter.capture.return_value = ([capture()], [])
+        repository = Mock()
+        repository.import_batch.return_value = {"records_saved": 1}
+        service = SmarterPlaylistsRefreshService("database", lambda: adapter, repository)
+
+        result = service.lookup_track(TRACK_ID, persist=True)
+
+        self.assertTrue(result["persisted"])
+        self.assertEqual(result["records_saved"], 1)
+        args, kwargs = repository.import_batch.call_args
+        self.assertEqual(args[0], "database")
+        self.assertEqual(args[1].records[0].spotify_id, TRACK_ID)
+        self.assertTrue(kwargs["allow_unregistered_tracks"])
+
+    def test_lookup_track_requires_database_when_persistence_requested(self):
+        adapter = Mock()
+        adapter.capture.return_value = ([capture()], [])
+        repository = Mock()
+        service = SmarterPlaylistsRefreshService(None, lambda: adapter, repository)
+
+        with self.assertRaises(ValueError):
+            service.lookup_track(TRACK_ID, persist=True)
+
+        repository.import_batch.assert_not_called()
 
     def test_lookup_track_rejects_invalid_spotify_ids_before_requests(self):
         factory = Mock()

@@ -55,7 +55,8 @@ class SummaryQueryService:
             current_id,
         ))
         return self._query(f"""
-            SELECT 'history' AS kind, e.track_id, e.played_at, t.name,
+            SELECT 'history' AS kind, e.track_id, e.played_at,
+                COALESCE(t.name, m.normalized_data ->> 'name') AS name,
                 COALESCE(m.normalized_data, '{{}}'::jsonb) AS audio
             FROM listening_events e
             LEFT JOIN tracks t ON t.id = e.track_id
@@ -63,7 +64,9 @@ class SummaryQueryService:
             WHERE {time_filter}
                 AND NOT (e.track_id = %s AND e.played_at >= %s)
             UNION ALL
-            SELECT 'current', %s, NULL, t.name, COALESCE(m.normalized_data, '{{}}'::jsonb)
+            SELECT 'current', %s, NULL,
+                COALESCE(t.name, m.normalized_data ->> 'name'),
+                COALESCE(m.normalized_data, '{{}}'::jsonb)
             FROM (SELECT %s::text AS id) current_track
             LEFT JOIN tracks t ON t.id = current_track.id
             LEFT JOIN smarterplaylists_track_metadata m ON m.spotify_track_id = current_track.id

@@ -68,6 +68,7 @@ class PulseTest(unittest.TestCase):
         query, parameters = service._query.call_args.args
         self.assertEqual(parameters, (2800, 10000, "track", 9900, "track", "track"))
         self.assertIn("LEFT JOIN smarterplaylists_track_metadata", query)
+        self.assertEqual(query.count("COALESCE(t.name, m.normalized_data ->> 'name')"), 2)
         self.assertIn("UNION ALL", query)
 
     def test_query_infinite_range_has_no_lower_time_bound(self):
@@ -215,11 +216,25 @@ class PulseTest(unittest.TestCase):
         with patch.dict(os.environ, {
             "SMARTERPLAYLISTS_SESSION_COOKIE": "",
             "SMARTERPLAYLISTS_SESSION_FILE": "",
-        }), patch("app_views.pulse.Path.is_file", return_value=True):
+        }), patch("app_views.pulse._streamlit_secret", return_value=None), patch(
+            "app_views.pulse.Path.is_file", return_value=True,
+        ):
             cookie, session_file = _smarterplaylists_session()
 
         self.assertIsNone(cookie)
         self.assertTrue(session_file.endswith(".secrets\\smarterplaylists-session.json"))
+
+    def test_reads_smarterplaylists_cookie_from_streamlit_cloud_secrets(self):
+        from app_views.pulse import _smarterplaylists_session
+
+        with patch.dict(os.environ, {
+            "SMARTERPLAYLISTS_SESSION_COOKIE": "",
+            "SMARTERPLAYLISTS_SESSION_FILE": "",
+        }), patch(
+            "app_views.pulse._streamlit_secret",
+            side_effect=lambda key: "cloud-cookie" if key.endswith("_COOKIE") else None,
+        ):
+            self.assertEqual(_smarterplaylists_session(), ("cloud-cookie", None))
 
     def test_completed_current_track_lookup_caches_audio_for_current_track(self):
         from app_views.pulse import (
