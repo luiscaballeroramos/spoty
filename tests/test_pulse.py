@@ -119,6 +119,29 @@ class PulseTest(unittest.TestCase):
             self.assertFalse(app.exception)
             self.assertIsNone(load.call_args.args[1])
 
+    def test_page_does_not_show_notice_when_current_track_has_no_audio_data(self):
+        """Keep the chart visible without a text notice for missing current-track data."""
+        from streamlit.testing.v1 import AppTest
+
+        playback = {
+            "item": {"id": "track", "name": "Song", "artists": []},
+            "progress_ms": 0,
+            "is_playing": True,
+        }
+        rows = [{"kind": "current", "audio": {}}]
+        with patch("app_views.pulse.has_spotify_auth_available", return_value=True), patch(
+            "app_views.pulse._get_playback", return_value=playback,
+        ), patch("app_views.pulse._get_spotify_client"), patch(
+            "app_views.pulse._load_history", return_value=rows,
+        ):
+            app = AppTest.from_string("from app_views.pulse import render_pulse_page\nrender_pulse_page()").run()
+
+        self.assertFalse(app.exception)
+        self.assertFalse(any(
+            "La canción actual aún no tiene parámetros de audio disponibles." in element.value
+            for element in app.caption
+        ))
+
     def test_history_failure_shows_incident_without_fake_chart(self):
         """Surface database failures rather than displaying an empty successful profile."""
         from streamlit.testing.v1 import AppTest
@@ -147,6 +170,23 @@ class PulseTest(unittest.TestCase):
             self.assertIn("BPM</span>", chart)
             self.assertNotIn("0%</span>", chart)
             self.assertNotIn("escuchas</small>", chart)
+
+    def test_chart_caps_visible_markers_but_keeps_full_coverage(self):
+        from app_views.pulse import _render_chart
+
+        history = [
+            {"kind": "history", "played_at": 100 - age, "name": f"track-{age}",
+             "audio": {"energy": 0.4}}
+            for age in range(400)
+        ]
+        analysis = build_pulse(history, 100, hours=None)
+        with patch("app_views.pulse.st.markdown") as markdown:
+            _render_chart(analysis)
+        chart = markdown.call_args.args[0]
+        self.assertIn("(400/400 100%)", chart)
+        self.assertEqual(chart.count('class="pulse-tick"'), 250)
+        self.assertEqual(analysis["bands"][0]["sample_count"], 400)
+        self.assertEqual(len(analysis["bands"][0]["samples"]), 250)
 
     def test_pulse_navigation_is_third_and_calls_callback(self):
         """Insert the live profile before metadata and wire its navigation callback."""

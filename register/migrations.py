@@ -278,6 +278,9 @@ MIGRATIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
                 OR (status IN ('pending', 'excluded') AND genre_id IS NULL))
         )""",
     )),
+    ("0008_listening_events_time_index", (
+        "CREATE INDEX IF NOT EXISTS listening_events_played_at_idx ON listening_events (played_at)",
+    )),
 )
 
 EXPECTED_COLUMNS = {

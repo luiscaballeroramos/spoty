@@ -13,10 +13,10 @@ from services.summary_queries import SummaryQueryService
 from spotifyapi.streamlit_auth import has_spotify_auth_available
 
 
-@st.cache_data(ttl=20, show_spinner=False)
-def _load_history(current_id: str, hours: int | None, started_bucket: int, time_bucket: int):
+@st.cache_data(ttl=45, show_spinner=False)
+def _load_history(current_id: str, hours: int | None, _started_bucket: int, _time_bucket: int):
     return SummaryQueryService().recent_audio_history(
-        current_id, time_bucket * 15, hours, started_bucket * 15,
+        current_id, _time_bucket * 15, hours, _started_bucket * 15,
     )
 
 
@@ -61,7 +61,7 @@ def _render_chart(analysis: dict) -> None:
                 f'<span class="pulse-marker" style="left:{band["current_position"] * 100:.3f}%" '
                 f'title="Ahora: {_format_value(band["current"], parameter.key)}"></span>'
             )
-        count = len(band["samples"])
+        count = band.get("sample_count", len(band["samples"]))
         total = analysis["history_count"]
         coverage = 100 * count / total if total else 0
         scale = ""
@@ -124,10 +124,8 @@ def _render_live_pulse(hours: int | None, expanded: bool) -> None:
         st.info("No hay escuchas registradas en el periodo seleccionado.")
     elif not any(band["samples"] for band in analysis["bands"]):
         st.info("Las escuchas del periodo seleccionado aún no tienen parámetros de audio disponibles.")
-    if current_id and not any(band["current"] is not None for band in analysis["bands"]):
-        st.caption("La canción actual aún no tiene parámetros de audio disponibles.")
     _render_chart(analysis)
-    st.caption("SmarterPlaylists · Semivida: 30 min · Actualización: 15 s")
+    st.caption("SmarterPlaylists · Semivida: 30 min · Historial: caché 45 s · Actualización: 15 s")
 
 
 def render_pulse_page() -> None:
