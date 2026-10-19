@@ -1,4 +1,4 @@
-"""Recent listening audio profile and live current-track markers."""
+"""Listening audio profile and live current-track markers."""
 
 import time
 from html import escape
@@ -14,7 +14,7 @@ from spotifyapi.streamlit_auth import has_spotify_auth_available
 
 
 @st.cache_data(ttl=20, show_spinner=False)
-def _load_history(current_id: str, hours: int, started_bucket: int, time_bucket: int):
+def _load_history(current_id: str, hours: int | None, started_bucket: int, time_bucket: int):
     return SummaryQueryService().recent_audio_history(
         current_id, time_bucket * 15, hours, started_bucket * 15,
     )
@@ -88,7 +88,7 @@ def _render_chart(analysis: dict) -> None:
 
 
 @st.fragment(run_every="15s")
-def _render_live_pulse(hours: int, expanded: bool) -> None:
+def _render_live_pulse(hours: int | None, expanded: bool) -> None:
     now = time.time()
     playback = {}
     if has_spotify_auth_available():
@@ -121,9 +121,9 @@ def _render_live_pulse(hours: int, expanded: bool) -> None:
         unsafe_allow_html=True,
     )
     if not analysis["history_count"]:
-        st.info("No hay escuchas registradas en este intervalo.")
+        st.info("No hay escuchas registradas en el periodo seleccionado.")
     elif not any(band["samples"] for band in analysis["bands"]):
-        st.info("Las escuchas de este intervalo aún no tienen parámetros de audio disponibles.")
+        st.info("Las escuchas del periodo seleccionado aún no tienen parámetros de audio disponibles.")
     if current_id and not any(band["current"] is not None for band in analysis["bands"]):
         st.caption("La canción actual aún no tiene parámetros de audio disponibles.")
     _render_chart(analysis)
@@ -181,12 +181,13 @@ def render_pulse_page() -> None:
     </style>
     """, unsafe_allow_html=True)
     with st.container(horizontal=True, wrap=False, vertical_alignment="center", key="pulse_toolbar"):
-        hours = st.segmented_control(
-            "Intervalo", [1, 2, 6, 24], default=2, format_func=lambda value: f"{value} h",
+        interval = st.segmented_control(
+            "Intervalo", ["1h", "6h", "1d", "∞"], default="1d",
             key="pulse_hours", label_visibility="collapsed", wrap=False,
         )
         expanded = st.toggle("All metadata", key="pulse_expanded", wrap=False)
         if st.button(":material/sync:", key="pulse_sync", help="Sincronizar escuchas"):
             run_registration_with_feedback()
             _load_history.clear()
-    _render_live_pulse(hours or 2, expanded)
+    hours = {"1h": 1, "6h": 6, "1d": 24, "∞": None}.get(interval, 24)
+    _render_live_pulse(hours, expanded)

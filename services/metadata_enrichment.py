@@ -35,10 +35,13 @@ class MetadataEnrichmentService:
             self._smarter_service = SmarterPlaylistsRefreshService(self._database_url, adapter_factory)
         return self._smarter_service
 
-    def run(self, provider="all", *, limit=50, all_due=False, batch_size=50,
+    def run(self, provider="all", *, limit=50, all_due=False, only_unattempted=False,
+            batch_size=50,
             refresh_hours=20, dry_run=False, max_minutes=300, progress=None):
         if provider not in ("all", *METADATA_PROVIDERS):
             raise ValueError("Unknown metadata provider.")
+        if only_unattempted and (provider != "smarterplaylists" or not all_due):
+            raise ValueError("Only-unattempted selection requires bulk Smarter Playlists enrichment.")
         if (not 1 <= limit <= 100 or not 1 <= batch_size <= 100
                 or not 1 <= refresh_hours <= 168 or not 1 <= max_minutes <= 300):
             raise ValueError("Invalid enrichment batch or execution budget.")
@@ -55,8 +58,8 @@ class MetadataEnrichmentService:
                     details={"stop_reason": "time_budget", "not_started": True}))
                 continue
             try:
-                report = self._run_provider(name, limit, all_due, batch_size, refresh_hours,
-                                            dry_run, deadline, progress)
+                report = self._run_provider(name, limit, all_due, only_unattempted,
+                                            batch_size, refresh_hours, dry_run, deadline, progress)
             except Exception as error:
                 if getattr(error, "sqlstate", None) == "42P01":
                     report = EnrichmentReport(name, "deferred", {}, 0,
@@ -66,16 +69,18 @@ class MetadataEnrichmentService:
                     report = EnrichmentReport(name, "failed", {}, 0, {name: {category: 1}})
             reports.append(report)
         result = combine_reports(reports, skipped) if provider == "all" else reports[0]
+        scope = "never_attempted" if only_unattempted else "all_due" if all_due else "batch"
         return replace(result, details={**result.details, "dry_run": dry_run,
-            "scope": "all_due" if all_due else "batch",
+            "scope": scope,
             "batch_size": batch_size if all_due else limit})
 
-    def _run_provider(self, provider, limit, all_due, batch_size, refresh_hours,
+    def _run_provider(self, provider, limit, all_due, only_unattempted, batch_size, refresh_hours,
                       dry_run, deadline, progress):
         if provider == "smarterplaylists":
             service = self._smarter()
             if all_due:
                 payload = service.refresh_all(batch_size, refresh_hours, dry_run,
+                    only_unattempted=only_unattempted,
                     max_seconds=max(0.001, deadline - self._clock()), clock=self._clock,
                     progress=self._progress(provider, progress))
             else:

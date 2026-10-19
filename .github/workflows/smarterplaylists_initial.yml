@@ -1,0 +1,55 @@
+name: Smarter Playlists Initial Metadata
+
+on:
+  workflow_call:
+    inputs:
+      batch_size:
+        description: Entities per type in each batch, not a total limit (1-100)
+        type: number
+        default: 50
+  workflow_dispatch:
+    inputs:
+      batch_size:
+        description: Entities per type in each batch, not a total limit (1-100)
+        type: number
+        default: 50
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smarterplaylists-metadata
+  cancel-in-progress: false
+
+jobs:
+  smarterplaylists-initial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Check required secrets
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SMARTERPLAYLISTS_SESSION_COOKIE: ${{ secrets.SMARTERPLAYLISTS_SESSION_COOKIE }}
+        run: |
+          test -n "$DATABASE_URL"
+          test -n "$SMARTERPLAYLISTS_SESSION_COOKIE"
+
+      - name: Fetch metadata for never-attempted entities
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SMARTERPLAYLISTS_SESSION_COOKIE: ${{ secrets.SMARTERPLAYLISTS_SESSION_COOKIE }}
+          BATCH_SIZE: ${{ inputs.batch_size || '50' }}
+        run: >-
+          spoty-enrich --provider smarterplaylists --all --only-unattempted
+          --batch-size "$BATCH_SIZE" --max-minutes 300

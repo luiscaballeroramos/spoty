@@ -128,6 +128,23 @@ class UnifiedMetadataServiceTest(unittest.TestCase):
         self.assertTrue(result.details["dry_run"])
         self.assertEqual(result.details["scope"], "all_due")
 
+    def test_smarterplaylists_initial_mode_reaches_repository_selection(self):
+        smarter = Mock()
+        smarter.refresh_all.return_value = {
+            "status": "completed",
+            "candidates": {"track": 0, "artist": 0, "album": 0},
+            "records_saved": 0,
+            "errors": {},
+            "scope": "never_attempted",
+        }
+
+        result = MetadataEnrichmentService("unused", smarter_service=smarter).run(
+            "smarterplaylists", all_due=True, only_unattempted=True)
+
+        smarter.refresh_all.assert_called_once()
+        self.assertTrue(smarter.refresh_all.call_args.kwargs["only_unattempted"])
+        self.assertEqual(result.details["scope"], "never_attempted")
+
 
 class MemoryMetadataRepository:
     def __init__(self, candidate):
@@ -613,6 +630,22 @@ class EnrichmentServiceAndCliTest(unittest.TestCase):
         self.assertEqual(raised.exception.code, 0)
         run.assert_called_once_with(limit=5, provider="musicbrainz")
         self.assertEqual(json.loads(output.getvalue())["provider"], "musicbrainz")
+
+    def test_cli_forwards_only_unattempted_bulk_selection(self):
+        from _enrichment import main
+
+        result = EnrichmentReport("smarterplaylists", "completed", {}, 0)
+        output = StringIO()
+        with patch("_enrichment.run_enrichment", return_value=result) as run:
+            with redirect_stdout(output), self.assertRaises(SystemExit) as raised:
+                main(["--provider", "smarterplaylists", "--all", "--only-unattempted"])
+
+        self.assertEqual(raised.exception.code, 0)
+        run.assert_called_once()
+        self.assertEqual(run.call_args.kwargs["provider"], "smarterplaylists")
+        self.assertTrue(run.call_args.kwargs["all_due"])
+        self.assertTrue(run.call_args.kwargs["only_unattempted"])
+        self.assertEqual(json.loads(output.getvalue())["status"], "completed")
 
     def test_cli_defers_cleanly_when_metadata_migration_is_missing(self):
         """Report missing enrichment tables as deferred without failing liked sync."""

@@ -15,6 +15,7 @@ def run_enrichment(
     *,
     provider: str = "all",
     all_due: bool = False,
+    only_unattempted: bool = False,
     batch_size: int = 50,
     refresh_hours: int = 20,
     max_minutes: int = 300,
@@ -35,7 +36,8 @@ def run_enrichment(
         session_cookie=os.getenv("SMARTERPLAYLISTS_SESSION_COOKIE"),
         session_file=session_file or os.getenv("SMARTERPLAYLISTS_SESSION_FILE"),
     )
-    return service.run(provider, limit=limit, all_due=all_due, batch_size=batch_size,
+    return service.run(provider, limit=limit, all_due=all_due,
+                       only_unattempted=only_unattempted, batch_size=batch_size,
                        refresh_hours=refresh_hours, max_minutes=max_minutes,
                        dry_run=dry_run, progress=progress)
 
@@ -52,6 +54,8 @@ def main(argv: list[str] | None = None) -> None:
         help="Maximum number of tracks to inspect in this run (default: 50).",
     )
     mode.add_argument("--all", dest="all_due", action="store_true", help="Process every eligible entity in batches")
+    parser.add_argument("--only-unattempted", action="store_true",
+                        help="In bulk Smarter Playlists mode, include only IDs with no metadata or attempt record")
     parser.add_argument("--batch-size", type=int, default=50)
     parser.add_argument("--refresh-hours", type=int, default=20)
     parser.add_argument("--max-minutes", type=int, default=300)
@@ -61,13 +65,16 @@ def main(argv: list[str] | None = None) -> None:
     if (not 1 <= args.limit <= 100 or not 1 <= args.batch_size <= 100
             or not 1 <= args.refresh_hours <= 168 or not 1 <= args.max_minutes <= 300):
         parser.error("limit/batch-size must be 1..100, refresh-hours 1..168 and max-minutes 1..300")
+    if args.only_unattempted and (not args.all_due or args.provider != "smarterplaylists"):
+        parser.error("--only-unattempted requires --provider smarterplaylists --all")
 
     try:
         options = {"limit": args.limit}
         if args.provider != "all":
             options["provider"] = args.provider
-        if args.all_due or args.dry_run or args.session_file:
-            options.update(all_due=args.all_due, dry_run=args.dry_run, session_file=args.session_file,
+        if args.all_due or args.dry_run or args.session_file or args.only_unattempted:
+            options.update(all_due=args.all_due, only_unattempted=args.only_unattempted,
+                           dry_run=args.dry_run, session_file=args.session_file,
                            batch_size=args.batch_size, refresh_hours=args.refresh_hours,
                            max_minutes=args.max_minutes)
         else:

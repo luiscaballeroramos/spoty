@@ -282,8 +282,20 @@ class CaptureRefreshTest(unittest.TestCase):
         self.assertEqual(result["records_saved"], 126)
         self.assertEqual(result["batches"], 3)
         self.assertFalse(any(result["remaining"].values()))
-        repository.get_refresh_candidates.assert_called_once_with("unused", None, 20)
+        repository.get_refresh_candidates.assert_called_once_with(
+            "unused", None, 20, only_unattempted=False)
         self.assertEqual(progress.call_count, 3)
+
+    def test_bulk_refresh_can_select_only_never_attempted_entities(self):
+        repository = Mock()
+        repository.get_refresh_candidates.return_value = {"track": [], "artist": [], "album": []}
+        service = SmarterPlaylistsRefreshService("unused", Mock(), repository)
+
+        result = service.refresh_all(only_unattempted=True, dry_run=True)
+
+        self.assertEqual(result["scope"], "never_attempted")
+        repository.get_refresh_candidates.assert_called_once_with(
+            "unused", None, 20, only_unattempted=True)
 
     def test_bulk_preview_and_time_budget_do_not_start_requests(self):
         """Preview all pending counts and report interruption without pretending completion."""

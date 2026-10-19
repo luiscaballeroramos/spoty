@@ -18,12 +18,15 @@ class SmarterPlaylistsRefreshService:
         return self._refresh_candidates(candidates, refresh_hours, dry_run)
 
     def refresh_all(self, batch_size=50, refresh_hours=20, dry_run=False, *,
-                    max_seconds=18000, clock=time.monotonic, progress=None):
+                    only_unattempted=False, max_seconds=18000, clock=time.monotonic,
+                    progress=None):
         if not 1 <= batch_size <= 100 or max_seconds <= 0:
             raise ValueError("Invalid bulk batch size or time budget.")
         started = clock()
-        candidates = self._repository.get_refresh_candidates(self._database_url, None, refresh_hours)
-        result = {"operation": "smarterplaylists_refresh", "scope": "all_due",
+        candidates = self._repository.get_refresh_candidates(
+            self._database_url, None, refresh_hours, only_unattempted=only_unattempted)
+        scope = "never_attempted" if only_unattempted else "all_due"
+        result = {"operation": "smarterplaylists_refresh", "scope": scope,
                   "status": "completed", "dry_run": dry_run,
                   "candidates": {entity: len(rows) for entity, rows in candidates.items()},
                   "attempted": {entity: 0 for entity in candidates},

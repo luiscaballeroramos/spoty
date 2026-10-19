@@ -84,7 +84,8 @@ class SmarterPlaylistsRepository:
             row = database.cursor.fetchone()
         return dict(row) if row is not None else None
 
-    def get_refresh_candidates(self, database_url, limit=10, refresh_hours=20):
+    def get_refresh_candidates(self, database_url, limit=10, refresh_hours=20, *,
+                               only_unattempted=False):
         if (limit is not None and not 1 <= limit <= 100) or not 1 <= refresh_hours <= 168:
             raise ValueError("Invalid refresh batch size or interval.")
         candidates = {}
@@ -97,6 +98,7 @@ class SmarterPlaylistsRepository:
                         ON s.entity_type = %s AND s.spotify_id = t.id
                     WHERE (m.{} IS NULL OR m.captured_at <= NOW() - %s)
                         AND (s.next_attempt_at IS NULL OR s.next_attempt_at <= NOW())
+                        AND (NOT %s OR (m.{} IS NULL AND s.spotify_id IS NULL))
                         AND t.id ~ '^[A-Za-z0-9]{{22}}$'
                     ORDER BY (m.{} IS NOT NULL), s.last_attempt_at ASC NULLS FIRST,
                         m.captured_at ASC NULLS FIRST, t.id
@@ -104,8 +106,10 @@ class SmarterPlaylistsRepository:
                         sql.Identifier(f"smarterplaylists_{entity}_metadata"),
                         sql.Identifier(f"spotify_{entity}_id"),
                         sql.Identifier(f"spotify_{entity}_id"),
+                        sql.Identifier(f"spotify_{entity}_id"),
                         sql.Identifier(f"spotify_{entity}_id"))
-                database.cursor.execute(query, (entity, timedelta(hours=refresh_hours), limit))
+                database.cursor.execute(query, (entity, timedelta(hours=refresh_hours),
+                                                only_unattempted, limit))
                 candidates[entity] = [dict(row) for row in database.cursor.fetchall()]
         return candidates
 

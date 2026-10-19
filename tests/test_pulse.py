@@ -14,6 +14,16 @@ class PulseTest(unittest.TestCase):
         self.assertEqual([sample["weight"] for sample in band["samples"]], [1, 0.5, 0.25])
         self.assertEqual(max(band["heat"]), 1)
 
+    def test_infinite_range_includes_all_past_events_only(self):
+        rows = [
+            {"kind": "history", "played_at": 10000 - age, "audio": {"energy": 0.4}}
+            for age in (0, 86400, 86400 * 365)
+        ]
+        rows.append({"kind": "history", "played_at": 10001, "audio": {"energy": 0.4}})
+        result = build_pulse(rows, 10000, hours=None)
+        self.assertEqual(result["history_count"], 3)
+        self.assertEqual(len(result["bands"][0]["samples"]), 3)
+
     def test_current_is_separate_and_missing_is_not_zero(self):
         """Preserve real zeroes without adding current playback to the heat."""
         result = build_pulse([
@@ -58,6 +68,15 @@ class PulseTest(unittest.TestCase):
         self.assertIn("LEFT JOIN smarterplaylists_track_metadata", query)
         self.assertIn("UNION ALL", query)
 
+    def test_query_infinite_range_has_no_lower_time_bound(self):
+        service = SummaryQueryService()
+        service._query = MagicMock(return_value=[])
+        service.recent_audio_history("track", 10000, None, 9900)
+        query, parameters = service._query.call_args.args
+        self.assertEqual(parameters, (10000, "track", 9900, "track", "track"))
+        self.assertNotIn("e.played_at >=", query.split("AND NOT", maxsplit=1)[0])
+        self.assertIn("e.played_at <= %s", query)
+
     def test_page_renders_markers_and_expanded_controls(self):
         """Render escaped track names, current markers, windows and all nine optional bands."""
         from streamlit.testing.v1 import AppTest
@@ -74,6 +93,7 @@ class PulseTest(unittest.TestCase):
             self.assertFalse(app.exception)
             self.assertEqual(len(app.subheader), 0)
             self.assertEqual(app.segmented_control(key="pulse_hours").proto.label_visibility.value, 2)
+            self.assertEqual(load.call_args.args[1], 24)
             self.assertEqual(app.toggle(key="pulse_expanded").label, "All metadata")
             overview = next(element.value for element in app.markdown if 'class="pulse-overview"' in element.value)
             self.assertLess(overview.index('class="pulse-total"'), overview.index('class="pulse-now"'))
@@ -89,9 +109,15 @@ class PulseTest(unittest.TestCase):
             self.assertFalse(app.exception)
             chart = next(element.value for element in app.markdown if 'aria-label="Perfil sonoro reciente"' in element.value)
             self.assertEqual(chart.count('class="pulse-row"'), 9)
-            app.segmented_control(key="pulse_hours").set_value(6).run()
+            app.segmented_control(key="pulse_hours").set_value("1h").run()
+            self.assertFalse(app.exception)
+            self.assertEqual(load.call_args.args[1], 1)
+            app.segmented_control(key="pulse_hours").set_value("6h").run()
             self.assertFalse(app.exception)
             self.assertEqual(load.call_args.args[1], 6)
+            app.segmented_control(key="pulse_hours").set_value("∞").run()
+            self.assertFalse(app.exception)
+            self.assertIsNone(load.call_args.args[1])
 
     def test_history_failure_shows_incident_without_fake_chart(self):
         """Surface database failures rather than displaying an empty successful profile."""

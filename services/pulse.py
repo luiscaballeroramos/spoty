@@ -38,12 +38,13 @@ def audio_value(data: dict, parameter: AudioParameter) -> float | None:
     return float(value)
 
 
-def build_pulse(rows: list[dict], now: float, hours: int = 2, expanded: bool = False) -> dict:
+def build_pulse(rows: list[dict], now: float, hours: int | None = 2, expanded: bool = False) -> dict:
     current = next((row for row in rows if row.get("kind") == "current"), {})
     history = [
         row for row in rows
         if row.get("kind") == "history"
-        and 0 <= now - row["played_at"] <= hours * 3600
+        and 0 <= now - row["played_at"]
+        and (hours is None or now - row["played_at"] <= hours * 3600)
     ]
     bands = []
     for parameter in PARAMETERS + (EXTRA_PARAMETERS if expanded else ()):

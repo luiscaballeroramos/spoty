@@ -182,7 +182,11 @@ Daily calls reusable workflows consecutively in this order:
 | 2 | Last.fm Metadata | `workflow_dispatch` / `run-lastfm-enrichment` |
 | 3 | MusicBrainz Metadata | `workflow_dispatch` / `run-musicbrainz-enrichment` |
 | 4 | AcousticBrainz Metadata | `workflow_dispatch` / `run-acousticbrainz-enrichment` |
-| 5 | Smarter Playlists Metadata | `workflow_dispatch` / `run-smarterplaylists` |
+| 5 | Smarter Playlists Initial Metadata | `workflow_call` from Daily |
+
+The complete `Smarter Playlists Metadata` workflow remains independently
+available through `workflow_dispatch` and `run-smarterplaylists`; it also runs
+weekly on Sunday at 03:00 UTC to refresh existing captures.
 
 Liked Tracks downloads the full library before reconciling the database. It
 retries rate-limited pages and restarts the scan once if the library changes
@@ -194,7 +198,9 @@ running, but the daily run still reports failure. Cancelling Daily stops the cha
 Daily also has its own concurrency group to prevent overlapping daily runs.
 GitHub concurrency keeps at most one running and one pending run per group; newer
 requests can replace pending requests, so this is not a durable cron backlog.
-Individual native GitHub schedules are removed to avoid duplicate daily runs.
+Individual native GitHub schedules are removed from the Daily tasks to avoid
+duplicate daily runs. The complete Smarter Playlists workflow has its own weekly
+schedule, separate from Daily's first-attempt-only check.
 
 The separate external cron every 30 minutes still sends `run-registration` and
 runs Registration independently. It can overlap with Daily: the daily sequence
@@ -250,26 +256,37 @@ new metadata without changing existing analysis queries. Audio values in the
 track view prefer this resource and fall back to core data, with provenance for
 each field. Popularity and followers from different sources remain separate.
 
-## Daily Smarter Playlists Refresh
+## Smarter Playlists metadata workflows
 
 `0004_smarterplaylists_refresh_state` adds per-entity retry state. With an
-authorized private session file, scan all due entities in bounded batches:
+authorized private session file, the complete refresh scans all due entities in
+bounded batches:
 
 ```powershell
 .\venv\Scripts\python.exe -m _enrichment --provider smarterplaylists --all --batch-size 50 --session-file .secrets/smarterplaylists-session.json
 ```
 
-The daily Action uses `--all`: no total entity cap. It snapshots all due IDs,
-then processes at most 50 entities of each type per batch without repeating IDs
-within that execution. The snapshot is read before HTTP, not inside a long DB
-transaction. Manual Actions runs expose batch size (1..100) and refresh age.
-Batch size is not the total number of entities checked.
+The complete `Smarter Playlists Metadata` Action uses `--all`: no total entity
+cap. It snapshots all due IDs, including entities with no metadata and entities
+whose captures are expired or eligible for retry, then processes at most 50
+entities of each type per batch without repeating IDs within that execution.
+The snapshot is read before HTTP, not inside a long DB transaction. Manual
+Actions runs expose batch size (1..100) and refresh age. Batch size is not the
+total number of entities checked.
 
-`--refresh-hours` defaults to 20 to tolerate daily schedule jitter (1..168 hours).
-New entities precede expired ones. Already-fresh metadata and retry-backoff IDs
-are skipped, so this is a complete scan of eligible pending/expired entities,
-not a forced refetch of every row regardless of age. `--all --dry-run` reports
-the full eligible counts without HTTP or writes.
+Daily uses the separate `Smarter Playlists Initial Metadata` Action. It also
+processes all eligible IDs in bounded batches, but only entities with neither a
+metadata row nor a refresh-attempt row. Entities with prior failed attempts and
+entities with existing captures are left for the complete Action; this daily
+check does not retry failures or refresh existing metadata. Both Actions share
+the same concurrency group to prevent overlapping provider runs.
+
+`--refresh-hours` defaults to 20 to tolerate schedule jitter (1..168 hours).
+The complete Action selects new entities before expired ones. Already-fresh
+metadata and retry-backoff IDs are skipped, so this is a complete scan of
+eligible pending/expired entities, not a forced refetch of every row regardless
+of age. `--all --dry-run` reports the full eligible counts without HTTP or writes;
+add `--only-unattempted` to preview only entities with no metadata or attempt.
 
 Each batch emits progress JSON. The default `--max-minutes 300` gives the bulk
 process a five-hour budget; Actions has a 330-minute timeout. Budget exhaustion
