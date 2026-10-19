@@ -10,6 +10,7 @@ from spotifyapi.timestamps import parse_spotify_timestamp
 
 
 MAX_LIKED_TRACK_RATE_LIMIT_RETRIES = 3
+MAX_LIKED_TRACK_SNAPSHOT_RETRIES = 1
 
 
 class SyncStatus(Enum):
@@ -200,6 +201,7 @@ class SynchronizationService:
             "saved_count": 0,
             "removed_count": 0,
             "pages": 0,
+            "snapshot_retries": 0,
         }
         if offset != 0:
             return self._result(
@@ -214,73 +216,89 @@ class SynchronizationService:
                 generation, local_revision = database.reserve_liked_track_sync()
 
             page_size = max(1, limit)
-            current_offset = 0
-            expected_total = None
-            current_ids = []
             while True:
-                rate_limit_retries = 0
+                current_offset = 0
+                expected_total = None
+                current_ids = []
+                snapshot_changed = False
                 while True:
-                    try:
-                        response = spotify.get_liked_songs(
-                            limit=page_size, offset=current_offset
+                    rate_limit_retries = 0
+                    while True:
+                        try:
+                            response = spotify.get_liked_songs(
+                                limit=page_size, offset=current_offset
+                            )
+                            break
+                        except SpotifyRateLimitError as exc:
+                            if rate_limit_retries >= MAX_LIKED_TRACK_RATE_LIMIT_RETRIES:
+                                raise
+                            self._sleep(max(1.0, exc.retry_after))
+                            rate_limit_retries += 1
+                    items = response["items"]
+                    response_offset = response.get("offset")
+                    response_limit = response.get("limit")
+                    response_total = response.get("total")
+                    next_page = response.get("next")
+                    if (
+                        type(response_offset) is not int
+                        or response_offset != current_offset
+                        or type(response_limit) is not int
+                        or response_limit <= 0
+                        or type(response_total) is not int
+                        or response_total < 0
+                        or len(items) > response_limit
+                    ):
+                        return self._result(
+                            "liked_tracks", SyncStatus.FAILED, counters,
+                            "Spotify returned invalid pagination metadata.",
                         )
+                    if expected_total is None:
+                        expected_total = response_total
+                    elif expected_total != response_total:
+                        snapshot_changed = True
                         break
-                    except SpotifyRateLimitError as exc:
-                        if rate_limit_retries >= MAX_LIKED_TRACK_RATE_LIMIT_RETRIES:
-                            raise
-                        self._sleep(max(1.0, exc.retry_after))
-                        rate_limit_retries += 1
-                items = response["items"]
-                response_offset = response.get("offset")
-                response_limit = response.get("limit")
-                response_total = response.get("total")
-                next_page = response.get("next")
-                if (
-                    type(response_offset) is not int
-                    or response_offset != current_offset
-                    or type(response_limit) is not int
-                    or response_limit <= 0
-                    or type(response_total) is not int
-                    or response_total < 0
-                    or len(items) > response_limit
-                    or response_offset + len(items) > response_total
-                ):
-                    return self._result(
-                        "liked_tracks", SyncStatus.FAILED, counters,
-                        "Spotify returned invalid pagination metadata.",
-                    )
-                if expected_total is None:
-                    expected_total = response_total
-                elif expected_total != response_total:
+
+                    if response_offset + len(items) > response_total:
+                        return self._result(
+                            "liked_tracks", SyncStatus.FAILED, counters,
+                            "Spotify returned invalid pagination metadata.",
+                        )
+                    next_offset = current_offset + len(items)
+                    has_more = next_offset < response_total
+                    if (has_more and (not isinstance(next_page, str) or not next_page)) or (
+                        not has_more and next_page is not None
+                    ) or (has_more and not items):
+                        return self._result(
+                            "liked_tracks", SyncStatus.FAILED, counters,
+                            "Spotify returned invalid pagination metadata.",
+                        )
+
+                    for item in items:
+                        track = item.get("track")
+                        track_id = track.get("id") if isinstance(track, dict) else None
+                        if not isinstance(track_id, str) or not track_id:
+                            return self._result(
+                                "liked_tracks", SyncStatus.PARTIAL, counters,
+                                "Spotify returned an item without a track ID.",
+                            )
+                        current_ids.append(track_id)
+                    counters["downloaded_items"] += len(items)
+                    counters["pages"] += 1
+                    if not has_more:
+                        break
+                    current_offset = next_offset
+                    self._sleep(self._delay(10, 15))
+
+                if not snapshot_changed:
+                    break
+                if counters["snapshot_retries"] >= MAX_LIKED_TRACK_SNAPSHOT_RETRIES:
                     return self._result(
                         "liked_tracks", SyncStatus.PARTIAL, counters,
                         "Spotify library changed during pagination.",
                     )
-
-                next_offset = current_offset + len(items)
-                has_more = next_offset < response_total
-                if (has_more and (not isinstance(next_page, str) or not next_page)) or (
-                    not has_more and next_page is not None
-                ) or (has_more and not items):
-                    return self._result(
-                        "liked_tracks", SyncStatus.FAILED, counters,
-                        "Spotify returned invalid pagination metadata.",
-                    )
-
-                for item in items:
-                    track = item.get("track")
-                    track_id = track.get("id") if isinstance(track, dict) else None
-                    if not isinstance(track_id, str) or not track_id:
-                        return self._result(
-                            "liked_tracks", SyncStatus.PARTIAL, counters,
-                            "Spotify returned an item without a track ID.",
-                        )
-                    current_ids.append(track_id)
-                counters["downloaded_items"] += len(items)
-                counters["pages"] += 1
-                if not has_more:
-                    break
-                current_offset = next_offset
+                counters["snapshot_retries"] += 1
+                counters["downloaded_items"] = 0
+                counters["pages"] = 0
                 self._sleep(self._delay(10, 15))
 
             with self._get_database_factory()(database_url) as database:

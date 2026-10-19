@@ -184,6 +184,10 @@ Daily calls reusable workflows consecutively in this order:
 | 4 | AcousticBrainz Metadata | `workflow_dispatch` / `run-acousticbrainz-enrichment` |
 | 5 | Smarter Playlists Metadata | `workflow_dispatch` / `run-smarterplaylists` |
 
+Liked Tracks downloads the full library before reconciling the database. It
+retries rate-limited pages and restarts the scan once if the library changes
+during pagination; a repeatedly changing or incomplete scan is never applied.
+
 Each task retains its own timeout, credentials and concurrency group, including
 standalone runs. A failed or timed-out task does not prevent subsequent tasks from
 running, but the daily run still reports failure. Cancelling Daily stops the chain.
