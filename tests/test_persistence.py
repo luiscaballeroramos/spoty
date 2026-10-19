@@ -280,7 +280,8 @@ class MigrationRunnerTest(unittest.TestCase):
             apply_migrations(connection),
             ["0001_initial_schema", "0002_metadata_enrichment", "0003_smarterplaylists_metadata",
                "0004_smarterplaylists_refresh_state", "0005_remove_non_spotify_core_columns",
-               "0006_prune_empty_catalog_columns", "0007_genre_taxonomy"],
+               "0006_prune_empty_catalog_columns", "0007_genre_taxonomy",
+               "0008_listening_events_time_index"],
         )
         migration_sql = "\n".join(connection.fake_cursor.statements)
         for statement in (
@@ -309,6 +310,10 @@ class MigrationRunnerTest(unittest.TestCase):
         ):
             self.assertIn(statement, migration_sql)
         self.assertNotIn("a.popularity AS core_popularity", migration_sql)
+        self.assertIn(
+            "CREATE INDEX IF NOT EXISTS listening_events_played_at_idx ON listening_events (played_at)",
+            migration_sql,
+        )
         creates_before_second_run = sum(
             "CREATE TABLE IF NOT EXISTS listening_events" in statement
             for statement in connection.fake_cursor.statements
@@ -322,4 +327,4 @@ class MigrationRunnerTest(unittest.TestCase):
         self.assertEqual(creates_before_second_run, 1)
         self.assertEqual(creates_after_second_run, 1)
         self.assertEqual(connection.transaction_count, 2)
-        self.assertEqual(len(MIGRATIONS), 7)
+        self.assertEqual(len(MIGRATIONS), 8)
