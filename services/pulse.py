@@ -1,4 +1,4 @@
-"""Build time-weighted audio distributions from listening events."""
+"""Build audio distributions from listening events."""
 
 import heapq
 import math
@@ -89,7 +89,7 @@ def build_pulse(rows: list[dict], now: float, hours: int | None = 2, expanded: b
             if value is None:
                 continue
             age_minutes = (now - row["played_at"]) / 60
-            weight = 2 ** (-age_minutes / 30)
+            weight = 1.0 if hours is None else 2 ** (-age_minutes / 30)
             sample_position = position(value)
             location = min(79.0, max(0.0, sample_position * 79))
             left = int(location)

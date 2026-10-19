@@ -25,6 +25,20 @@ class PulseTest(unittest.TestCase):
         result = build_pulse(rows, 10000, hours=None)
         self.assertEqual(result["history_count"], 3)
         self.assertEqual(len(result["bands"][0]["samples"]), 3)
+        self.assertEqual([sample["weight"] for sample in result["bands"][0]["samples"]], [1, 1, 1])
+
+    def test_infinite_range_heat_is_independent_of_listen_age(self):
+        rows = [
+            {"kind": "history", "played_at": 10000 - age, "audio": {"energy": value}}
+            for age, value in ((0, 0.2), (1800, 0.4), (3600, 0.8))
+        ]
+        recent = build_pulse(rows, 10000, hours=None)["bands"][0]["heat"]
+        reordered_ages = [
+            {"kind": "history", "played_at": 10000 - age, "audio": {"energy": value}}
+            for age, value in ((3600, 0.2), (1800, 0.4), (0, 0.8))
+        ]
+        historical = build_pulse(reordered_ages, 10000, hours=None)["bands"][0]["heat"]
+        self.assertEqual(recent, historical)
 
     def test_current_is_separate_and_missing_is_not_zero(self):
         """Preserve real zeroes without adding current playback to the heat."""

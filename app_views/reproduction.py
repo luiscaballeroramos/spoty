@@ -529,6 +529,9 @@ def _render_control_styles() -> None:
             z-index: 3;
             pointer-events: none;
         }}
+        .st-key-reproduction-controls [data-testid="stButton"] button {{
+            border-radius: 0 !important;
+        }}
         .st-key-reproduction-controls :is(
             .st-key-lab-reproduction-previous-title,
             .st-key-lab-reproduction-current-title,
