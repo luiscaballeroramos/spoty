@@ -132,15 +132,37 @@ class SynchronizationServiceTest(unittest.TestCase):
     def test_liked_sync_rate_limit_is_deferred_with_retry_after(self):
         """Verify Liked sync rate limit is deferred with retry after."""
         service, _, database = self._liked_service(
-            [SpotifyRateLimitError("get liked songs", 45)]
+            [SpotifyRateLimitError("get liked songs", 45)] * 4
         )
+        service._sleep = Mock()
 
         result = service.sync_liked_tracks()
 
         self.assertEqual(result.status, SyncStatus.DEFERRED)
         self.assertEqual(result.retry_after, 45)
         self.assertEqual(result.exit_code, 1)
+        self.assertEqual(service._sleep.call_count, 3)
+        service._sleep.assert_called_with(45)
         database.apply_liked_track_snapshot.assert_not_called()
+
+    def test_liked_sync_retries_rate_limit_before_resuming_same_page(self):
+        """Retry a rate-limited page after the provider cooldown without losing the snapshot."""
+        page = {"items": [], "offset": 0, "limit": 50, "total": 0, "next": None}
+        service, spotify, database = self._liked_service(
+            [SpotifyRateLimitError("get liked songs", 0), page], (True, 0, [])
+        )
+        service._sleep = Mock()
+
+        result = service.sync_liked_tracks()
+
+        self.assertEqual(result.status, SyncStatus.COMPLETED)
+        self.assertEqual(result.counters["pages"], 1)
+        spotify.get_liked_songs.assert_has_calls([
+            unittest.mock.call(limit=50, offset=0),
+            unittest.mock.call(limit=50, offset=0),
+        ])
+        service._sleep.assert_called_once_with(1.0)
+        database.apply_liked_track_snapshot.assert_called_once_with(4, 2, [])
 
     def test_liked_sync_with_superseded_snapshot_is_deferred(self):
         """Verify Liked sync with superseded snapshot is deferred."""

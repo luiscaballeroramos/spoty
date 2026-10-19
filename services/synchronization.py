@@ -9,6 +9,9 @@ from spotifyapi.errors import SpotifyError, SpotifyRateLimitError
 from spotifyapi.timestamps import parse_spotify_timestamp
 
 
+MAX_LIKED_TRACK_RATE_LIMIT_RETRIES = 3
+
+
 class SyncStatus(Enum):
     COMPLETED = "completed"
     PARTIAL = "partial"
@@ -215,9 +218,18 @@ class SynchronizationService:
             expected_total = None
             current_ids = []
             while True:
-                response = spotify.get_liked_songs(
-                    limit=page_size, offset=current_offset
-                )
+                rate_limit_retries = 0
+                while True:
+                    try:
+                        response = spotify.get_liked_songs(
+                            limit=page_size, offset=current_offset
+                        )
+                        break
+                    except SpotifyRateLimitError as exc:
+                        if rate_limit_retries >= MAX_LIKED_TRACK_RATE_LIMIT_RETRIES:
+                            raise
+                        self._sleep(max(1.0, exc.retry_after))
+                        rate_limit_retries += 1
                 items = response["items"]
                 response_offset = response.get("offset")
                 response_limit = response.get("limit")
