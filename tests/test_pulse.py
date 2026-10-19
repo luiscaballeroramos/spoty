@@ -1,3 +1,5 @@
+import os
+import queue
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -85,6 +87,12 @@ class PulseTest(unittest.TestCase):
             {"kind": "current", "audio": {"energy": 0.8, "tempo": 110}},
             {"kind": "history", "played_at": 9900, "name": '<Track "one">',
              "audio": {"energy": 0.3, "tempo": 100}},
+            {"kind": "history", "played_at": 10000 - 2 * 3600, "name": "two hours ago",
+             "audio": {"energy": 0.4, "tempo": 105}},
+            {"kind": "history", "played_at": 10000 - 12 * 3600, "name": "twelve hours ago",
+             "audio": {"energy": 0.5, "tempo": 115}},
+            {"kind": "history", "played_at": 10000 - 36 * 3600, "name": "thirty-six hours ago",
+             "audio": {"energy": 0.6, "tempo": 120}},
         ]
         with patch("app_views.pulse.time.time", return_value=10000), patch(
             "app_views.pulse.has_spotify_auth_available", return_value=False,
@@ -97,7 +105,7 @@ class PulseTest(unittest.TestCase):
             self.assertEqual(app.toggle(key="pulse_expanded").label, "All metadata")
             overview = next(element.value for element in app.markdown if 'class="pulse-overview"' in element.value)
             self.assertLess(overview.index('class="pulse-total"'), overview.index('class="pulse-now"'))
-            self.assertIn('<div class="pulse-total">1 escuchas</div>', overview)
+            self.assertIn('<div class="pulse-total">3 escuchas</div>', overview)
             self.assertNotIn("escuchas incluidas", overview)
             self.assertNotIn("Últimas", overview)
             self.assertNotIn("pulse-legend", overview)
@@ -105,6 +113,8 @@ class PulseTest(unittest.TestCase):
             self.assertEqual(chart.count('class="pulse-row"'), 6)
             self.assertEqual(chart.count('class="pulse-marker"'), 2)
             self.assertIn('&lt;Track &quot;one&quot;&gt;', chart)
+            self.assertIn("twelve hours ago", chart)
+            self.assertNotIn("thirty-six hours ago", chart)
             app.toggle(key="pulse_expanded").set_value(True).run()
             self.assertFalse(app.exception)
             chart = next(element.value for element in app.markdown if 'aria-label="Perfil sonoro reciente"' in element.value)
@@ -112,12 +122,35 @@ class PulseTest(unittest.TestCase):
             app.segmented_control(key="pulse_hours").set_value("1h").run()
             self.assertFalse(app.exception)
             self.assertEqual(load.call_args.args[1], 1)
+            overview = next(element.value for element in app.markdown if 'class="pulse-overview"' in element.value)
+            self.assertIn('<div class="pulse-total">1 escuchas</div>', overview)
+            chart = next(element.value for element in app.markdown if 'aria-label="Perfil sonoro reciente"' in element.value)
+            self.assertIn("(1/1 100%)", chart)
+            self.assertNotIn("two hours ago", chart)
             app.segmented_control(key="pulse_hours").set_value("6h").run()
             self.assertFalse(app.exception)
             self.assertEqual(load.call_args.args[1], 6)
+            overview = next(element.value for element in app.markdown if 'class="pulse-overview"' in element.value)
+            self.assertIn('<div class="pulse-total">2 escuchas</div>', overview)
+            chart = next(element.value for element in app.markdown if 'aria-label="Perfil sonoro reciente"' in element.value)
+            self.assertIn("(2/2 100%)", chart)
+            self.assertNotIn("twelve hours ago", chart)
+            app.segmented_control(key="pulse_hours").set_value("1d").run()
+            self.assertFalse(app.exception)
+            self.assertEqual(load.call_args.args[1], 24)
+            overview = next(element.value for element in app.markdown if 'class="pulse-overview"' in element.value)
+            self.assertIn('<div class="pulse-total">3 escuchas</div>', overview)
+            chart = next(element.value for element in app.markdown if 'aria-label="Perfil sonoro reciente"' in element.value)
+            self.assertIn("(3/3 100%)", chart)
+            self.assertIn("twelve hours ago", chart)
             app.segmented_control(key="pulse_hours").set_value("∞").run()
             self.assertFalse(app.exception)
             self.assertIsNone(load.call_args.args[1])
+            overview = next(element.value for element in app.markdown if 'class="pulse-overview"' in element.value)
+            self.assertIn('<div class="pulse-total">4 escuchas</div>', overview)
+            chart = next(element.value for element in app.markdown if 'aria-label="Perfil sonoro reciente"' in element.value)
+            self.assertIn("(4/4 100%)", chart)
+            self.assertIn("thirty-six hours ago", chart)
 
     def test_page_does_not_show_notice_when_current_track_has_no_audio_data(self):
         """Keep the chart visible without a text notice for missing current-track data."""
@@ -133,7 +166,7 @@ class PulseTest(unittest.TestCase):
             "app_views.pulse._get_playback", return_value=playback,
         ), patch("app_views.pulse._get_spotify_client"), patch(
             "app_views.pulse._load_history", return_value=rows,
-        ):
+        ), patch("app_views.pulse._start_current_track_enrichment", return_value=False):
             app = AppTest.from_string("from app_views.pulse import render_pulse_page\nrender_pulse_page()").run()
 
         self.assertFalse(app.exception)
@@ -141,6 +174,74 @@ class PulseTest(unittest.TestCase):
             "La canción actual aún no tiene parámetros de audio disponibles." in element.value
             for element in app.caption
         ))
+
+    def test_current_track_metadata_lookup_runs_once_per_track_change(self):
+        from app_views.pulse import _start_current_track_enrichment
+        from services.pulse import PARAMETERS
+
+        state = {}
+        with patch.dict(os.environ, {"SMARTERPLAYLISTS_SESSION_COOKIE": "test-cookie"}), patch(
+            "app_views.pulse.threading.Thread",
+        ) as thread:
+            self.assertTrue(_start_current_track_enrichment("A" * 22, {}, state))
+            self.assertFalse(_start_current_track_enrichment("A" * 22, {}, state))
+            self.assertTrue(_start_current_track_enrichment("B" * 22, {}, state))
+            self.assertFalse(_start_current_track_enrichment("B" * 22, {}, state))
+            self.assertTrue(_start_current_track_enrichment("C" * 22, {"name": "Song"}, state))
+            complete_audio = {parameter.key: 0.5 for parameter in PARAMETERS}
+            self.assertFalse(_start_current_track_enrichment("D" * 22, complete_audio, state))
+
+        self.assertEqual(thread.call_count, 3)
+        self.assertEqual(thread.return_value.start.call_count, 3)
+
+    def test_missing_session_does_not_block_a_later_lookup(self):
+        from app_views.pulse import _start_current_track_enrichment
+
+        state = {}
+        with patch("app_views.pulse._smarterplaylists_session", return_value=(None, None)):
+            self.assertFalse(_start_current_track_enrichment("A" * 22, {}, state))
+        self.assertNotIn("pulse_current_track_enrichment_v2", state)
+
+        with patch("app_views.pulse._smarterplaylists_session", return_value=("cookie", None)), patch(
+            "app_views.pulse.threading.Thread",
+        ) as thread:
+            self.assertTrue(_start_current_track_enrichment("A" * 22, {}, state))
+
+        thread.return_value.start.assert_called_once()
+
+    def test_uses_default_local_session_file_when_environment_is_not_set(self):
+        from app_views.pulse import _smarterplaylists_session
+
+        with patch.dict(os.environ, {
+            "SMARTERPLAYLISTS_SESSION_COOKIE": "",
+            "SMARTERPLAYLISTS_SESSION_FILE": "",
+        }), patch("app_views.pulse.Path.is_file", return_value=True):
+            cookie, session_file = _smarterplaylists_session()
+
+        self.assertIsNone(cookie)
+        self.assertTrue(session_file.endswith(".secrets\\smarterplaylists-session.json"))
+
+    def test_completed_current_track_lookup_caches_audio_for_current_track(self):
+        from app_views.pulse import (
+            _attach_current_track_audio,
+            _collect_current_track_enrichment,
+        )
+
+        result_queue = queue.Queue()
+        result_queue.put(("result", {"status": "completed", "audio": {"energy": 0.5}}))
+        state = {
+            "pulse_current_track_enrichment_v2_pending": ("A" * 22, result_queue),
+        }
+        _collect_current_track_enrichment("A" * 22, state)
+
+        self.assertNotIn("pulse_current_track_enrichment_v2_pending", state)
+        self.assertEqual(state["pulse_current_track_audio"], ("A" * 22, {"energy": 0.5}))
+        rows = [{"kind": "current", "audio": {"name": "Song"}}]
+        self.assertEqual(
+            _attach_current_track_audio(rows, "A" * 22, state),
+            {"energy": 0.5, "name": "Song"},
+        )
+        self.assertEqual(build_pulse(rows, 100)["bands"][0]["current"], 0.5)
 
     def test_history_failure_shows_incident_without_fake_chart(self):
         """Surface database failures rather than displaying an empty successful profile."""

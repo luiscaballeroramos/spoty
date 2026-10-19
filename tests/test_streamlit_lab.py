@@ -116,6 +116,7 @@ class StyleTests(unittest.TestCase):
             clicked = render_button(
                 "Play",
                 key="play-control",
+                help="Play this track",
                 style=ButtonStyle(
                     background_image="https://example.com/cover.jpg",
                     background_fit="contain",

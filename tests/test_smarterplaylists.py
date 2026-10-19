@@ -260,6 +260,27 @@ class CaptureAdapterTest(unittest.TestCase):
 
 
 class CaptureRefreshTest(unittest.TestCase):
+    def test_lookup_track_queries_only_the_requested_track_and_returns_audio(self):
+        adapter = Mock()
+        adapter.capture.return_value = ([capture()], [])
+        service = SmarterPlaylistsRefreshService("unused", lambda: adapter, Mock())
+
+        result = service.lookup_track(TRACK_ID)
+
+        self.assertEqual(result["status"], "completed")
+        self.assertAlmostEqual(result["audio"]["energy"], 0.918)
+        adapter.authenticate.assert_called_once()
+        adapter.capture.assert_called_once_with("track", [{"id": TRACK_ID}])
+        adapter.close.assert_called_once()
+
+    def test_lookup_track_rejects_invalid_spotify_ids_before_requests(self):
+        factory = Mock()
+        service = SmarterPlaylistsRefreshService("unused", factory, Mock())
+
+        with self.assertRaises(ValueError):
+            service.lookup_track("not-a-spotify-id")
+
+        factory.assert_not_called()
     def test_bulk_refresh_visits_every_snapshot_candidate_once(self):
         """Process all due rows in bounded batches rather than stopping at the batch size."""
         repository = Mock()

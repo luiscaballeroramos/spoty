@@ -162,7 +162,7 @@ def render_button(
         label,
         key=key,
         type=type,
-        help=help,
+        help=None,
         disabled=disabled,
         use_container_width=use_container_width,
         icon=icon,

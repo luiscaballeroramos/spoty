@@ -73,7 +73,6 @@ def render_top_navigation(
 
         if st.button(
             label, key=key, type="secondary", use_container_width=True,
-            help={"summary": "Resumen", "reproduction": "Reproduccion", "pulse": "Pulso", "metadata": "Metadatos"}[block.key],
             disabled=on_click is None,
         ):
             on_click()
