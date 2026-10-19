@@ -20,7 +20,13 @@ class SmarterPlaylistsRepository:
 
         return SimpleDB
 
-    def import_batch(self, database_url: str, batch: CaptureBatch) -> dict[str, Any]:
+    def import_batch(
+        self,
+        database_url: str,
+        batch: CaptureBatch,
+        *,
+        allow_unregistered_tracks: bool = False,
+    ) -> dict[str, Any]:
         with self._factory()(database_url) as database:
             with database.transaction():
                 cursor = database.cursor
@@ -33,6 +39,8 @@ class SmarterPlaylistsRepository:
                     return {"status": "already_imported", "capture_id": batch.capture_id,
                             "records_saved": 0}
                 for record in batch.records:
+                    if allow_unregistered_tracks and record.entity == "track":
+                        continue
                     cursor.execute(sql.SQL("SELECT id FROM {} WHERE id = %s FOR KEY SHARE").format(
                         sql.Identifier({"track": "tracks", "artist": "artists", "album": "albums"}[record.entity])
                     ), (record.spotify_id,))

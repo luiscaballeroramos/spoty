@@ -8,6 +8,7 @@ from html import escape
 from pathlib import Path
 
 import streamlit as st
+from streamlit.errors import StreamlitSecretNotFoundError
 
 from app_views.error_feedback import render_incident_notice
 from app_views.reproduction import _get_playback, _get_spotify_client
@@ -35,15 +36,16 @@ def _refresh_current_track_metadata(track_id: str, result_queue) -> None:
             SmarterPlaylistsAdapter,
             load_session_cookie,
         )
+        from config import require_database_url
         from services.smarterplaylists_refresh import SmarterPlaylistsRefreshService
 
         cookie, session_file = _smarterplaylists_session()
         cookie = load_session_cookie(value=cookie, path=session_file)
         service = SmarterPlaylistsRefreshService(
-            None,
+            require_database_url(),
             lambda: SmarterPlaylistsAdapter(cookie),
         )
-        result_queue.put(("result", service.lookup_track(track_id)))
+        result_queue.put(("result", service.lookup_track(track_id, persist=True)))
     except Exception as error:
         result_queue.put(("error", error))
 
@@ -57,8 +59,27 @@ def _smarterplaylists_session() -> tuple[str | None, str | None]:
     if cookie:
         return cookie, None
 
+    configured_file = _streamlit_secret("SMARTERPLAYLISTS_SESSION_FILE")
+    if configured_file:
+        return None, str(configured_file).strip()
+
+    cookie = _streamlit_secret("SMARTERPLAYLISTS_SESSION_COOKIE")
+    if cookie:
+        return str(cookie).strip(), None
+
     default_file = Path(__file__).resolve().parents[1] / ".secrets" / "smarterplaylists-session.json"
     return (None, str(default_file)) if default_file.is_file() else (None, None)
+
+
+def _streamlit_secret(key: str):
+    try:
+        value = st.secrets.get(key)
+        if value:
+            return value
+        section = st.secrets.get("smarterplaylists", {})
+        return section.get(key.removeprefix("SMARTERPLAYLISTS_").lower())
+    except StreamlitSecretNotFoundError:
+        return None
 
 
 def _start_current_track_enrichment(track_id: str, audio: dict, state) -> bool:
@@ -114,6 +135,7 @@ def _collect_current_track_enrichment(track_id: str, state) -> None:
         )
     elif result.get("status") == "completed" and isinstance(result.get("audio"), dict):
         state[_CURRENT_TRACK_AUDIO_KEY] = (track_id, result["audio"])
+        _load_history.clear()
         state[_CURRENT_TRACK_LOOKUP_STATUS_KEY] = (
             track_id,
             "completed" if _has_current_audio(result["audio"]) else "no_audio",

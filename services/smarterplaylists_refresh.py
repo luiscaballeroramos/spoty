@@ -18,7 +18,7 @@ class SmarterPlaylistsRefreshService:
         candidates = self._repository.get_refresh_candidates(self._database_url, limit, refresh_hours)
         return self._refresh_candidates(candidates, refresh_hours, dry_run)
 
-    def lookup_track(self, spotify_id):
+    def lookup_track(self, spotify_id, *, persist=False):
         if not isinstance(spotify_id, str) or not re.fullmatch(r"[A-Za-z0-9]{22}", spotify_id):
             raise ValueError("Invalid Spotify track ID.")
         adapter = self._adapter_factory()
@@ -36,10 +36,21 @@ class SmarterPlaylistsRefreshService:
         record = batch.records[0]
         if record.entity != "track" or record.spotify_id != spotify_id:
             raise ValueError("Unexpected track in single-track lookup response.")
+        saved = None
+        if persist:
+            if self._database_url is None:
+                raise ValueError("A database URL is required to persist a track lookup.")
+            saved = self._repository.import_batch(
+                self._database_url,
+                batch,
+                allow_unregistered_tracks=True,
+            )
         return {
             "status": "completed",
             "audio": record.normalized_data,
             "missing_fields": record.missing_requested,
+            "persisted": saved is not None,
+            "records_saved": saved["records_saved"] if saved else 0,
         }
 
     def refresh_all(self, batch_size=50, refresh_hours=20, dry_run=False, *,

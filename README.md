@@ -33,6 +33,22 @@ LASTFM_API_KEY=tu_api_key
 required only by operations that use Spotify; database analysis can run without
 them.
 
+Pulse's live lookup uses the optional SmarterPlaylists session. For a local
+checkout, set `SMARTERPLAYLISTS_SESSION_FILE` or keep the session file at
+`.secrets/smarterplaylists-session.json`. For Streamlit Community Cloud, add the
+cookie under **App settings → Secrets**; local files are not deployed:
+
+```toml
+SMARTERPLAYLISTS_SESSION_COOKIE = "your-authorized-session-cookie"
+```
+
+The cookie is private and expires; never commit it to the repository. Refresh it
+through an authorized SmarterPlaylists browser session when it expires.
+When Pulse successfully looks up a current track, it stores the normalized
+SmarterPlaylists metadata in PostgreSQL so later history queries can reuse it.
+This live lookup can persist metadata for a track before it exists in the local
+catalog; it does not create or modify core track, album, or artist rows.
+
 The installed commands are `spoty-register`, `spoty-currently-playing`,
 `spoty-sync-liked`, `spoty-enrich`, `spoty-print-summary`, and
 `spoty-print-liked`, plus `spoty-import-smarterplaylists` and

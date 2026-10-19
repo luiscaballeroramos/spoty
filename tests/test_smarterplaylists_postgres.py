@@ -139,6 +139,32 @@ class PostgreSQLCaptureTest(unittest.TestCase):
                     repository.import_batch("unused", normalize_capture(conflict))
                 self.assertEqual(connection.execute("SELECT COUNT(*) FROM smarterplaylists_import_runs").fetchone()[0], before)
                 self.assertAlmostEqual(connection.execute("SELECT energy FROM tracks").fetchone()[0], 0.1)
+                live_track_id = "Y" * 22
+                live_capture = copy.deepcopy(payload)
+                live_capture["captured_at"] = "2026-10-19T00:00:00Z"
+                for row in live_capture["entities"]["track"]["raw"]["tracks"]:
+                    row["id"] = live_track_id
+                    row["uri"] = f"spotify:track:{live_track_id}"
+                live_capture["entities"]["track"]["values"]["id"] = live_track_id
+                live_capture["entities"]["track"]["values"]["uri"] = f"spotify:track:{live_track_id}"
+                live_batch = normalize_capture({
+                    **live_capture,
+                    "entities": {"track": live_capture["entities"]["track"]},
+                })
+                self.assertEqual(
+                    repository.import_batch(
+                        "unused", live_batch, allow_unregistered_tracks=True,
+                    )["records_saved"],
+                    1,
+                )
+                self.assertIsNone(connection.execute(
+                    "SELECT id FROM tracks WHERE id = %s", (live_track_id,),
+                ).fetchone())
+                self.assertAlmostEqual(float(connection.execute(
+                    """SELECT normalized_data ->> 'energy'
+                       FROM smarterplaylists_track_metadata WHERE spotify_track_id = %s""",
+                    (live_track_id,),
+                ).fetchone()[0]), values["track"]["energy"])
                 repository.record_refresh_outcome("unused", "track", values["track"]["id"], "error", error_code="test_error")
                 state = connection.execute("""SELECT consecutive_failures, next_attempt_at > NOW()
                     FROM smarterplaylists_refresh_state WHERE entity_type='track'""").fetchone()
