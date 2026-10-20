@@ -675,16 +675,18 @@ class ReproductionTest(unittest.TestCase):
         self.assertIn("pointer-events: none", css)
         self.assertIn("color: #ffffff !important", css)
         self.assertIn("border-radius: 0 !important", css)
-        self.assertIn("margin-left: 48px", css)
+        self.assertIn("margin-left: 56px", css)
         self.assertIn("top: 0", css)
         self.assertIn("left: 0", css)
         self.assertIn("right: auto", css)
         self.assertIn("z-index: 4", css)
 
         style = reproduction.REPRODUCTION_CORNER_ACTION_STYLE
-        self.assertEqual(style.width, "48px")
+        self.assertEqual(style.width, "56px")
         self.assertEqual(style.height, "48px")
         self.assertEqual(style.min_height, "48px")
+        self.assertEqual(style.border_radius, "8px")
+        self.assertIsNone(style.aspect_ratio)
         self.assertIsNone(style.portrait)
 
     def test_track_separators_use_black_and_white_lines_in_both_orientations(self):
@@ -809,8 +811,8 @@ class ReproductionTest(unittest.TestCase):
             style_by_key["reproduction_corner_action"],
             reproduction.REPRODUCTION_CORNER_ACTION_STYLE,
         )
-        self.assertEqual(
-            style_by_key["reproduction_corner_action"].aspect_ratio, "1 / 1"
+        self.assertIsNone(
+            style_by_key["reproduction_corner_action"].aspect_ratio
         )
 
     def test_pause_then_resume_after_spotify_loses_playback(self):
