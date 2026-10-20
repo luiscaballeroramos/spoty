@@ -142,16 +142,16 @@ REPRODUCTION_CONTROL_STYLE = ButtonStyle(
 )
 REPRODUCTION_CORNER_ACTION_STYLE = ButtonStyle(
     color="white",
-    border="none",
-    border_radius="0",
+    border="1px solid rgba(255, 255, 255, 0.8)",
+    border_radius="8px",
     background="rgba(0, 0, 0, 0.5)",
     padding="0",
-    width="48px",
+    width="56px",
     height="48px",
-    aspect_ratio="1 / 1",
     min_height="48px",
-    font_size="1.25rem",
+    font_size="1.5rem",
     text_align="center",
+    box_shadow="0 4px 10px rgba(0, 0, 0, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.22), inset 0 -3px 0 rgba(0, 0, 0, 0.4)",
 )
 
 
@@ -533,6 +533,48 @@ def _render_control_styles() -> None:
             border-radius: 0 !important;
         }}
         .st-key-reproduction-controls :is(
+            .st-key-reproduction_previous,
+            .st-key-reproduction_play_pause,
+            .st-key-reproduction_next
+        ) [data-testid="stButton"] button {{
+            box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.18),
+                inset 0 -4px 0 rgba(0, 0, 0, 0.28);
+            transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+        }}
+        .st-key-reproduction-controls :is(
+            .st-key-reproduction_previous,
+            .st-key-reproduction_play_pause,
+            .st-key-reproduction_next
+        ) [data-testid="stButton"] button:hover:not(:disabled) {{
+            filter: brightness(1.06);
+        }}
+        .st-key-reproduction-controls :is(
+            .st-key-reproduction_previous,
+            .st-key-reproduction_play_pause,
+            .st-key-reproduction_next
+        ) [data-testid="stButton"] button:active:not(:disabled) {{
+            transform: translateY(2px) scale(0.99);
+            filter: brightness(0.82);
+            box-shadow: inset 0 5px 12px rgba(0, 0, 0, 0.55);
+        }}
+        .st-key-reproduction-controls :is(
+            .st-key-reproduction_previous,
+            .st-key-reproduction_play_pause,
+            .st-key-reproduction_next
+        ) [data-testid="stButton"] button:focus-visible {{
+            outline: 2px solid #ffffff;
+            outline-offset: -4px;
+        }}
+        @media (prefers-reduced-motion: reduce) {{
+            .st-key-reproduction-controls :is(
+                .st-key-reproduction_previous,
+                .st-key-reproduction_play_pause,
+                .st-key-reproduction_next
+            ) [data-testid="stButton"] button {{
+                transition: none;
+            }}
+        }}
+        .st-key-reproduction-controls :is(
             .st-key-lab-reproduction-previous-title,
             .st-key-lab-reproduction-current-title,
             .st-key-lab-reproduction-next-title
@@ -583,7 +625,7 @@ def _render_control_styles() -> None:
             .st-key-lab-reproduction-next-title
         )
         .reproduction-track-title {{
-            margin-left: 48px;
+            margin-left: 56px;
         }}
         .st-key-reproduction-controls :is(
             .st-key-reproduction_previous_corner_action,
@@ -595,7 +637,7 @@ def _render_control_styles() -> None:
             right: auto;
             left: 0;
             bottom: auto;
-            width: 48px !important;
+            width: 56px !important;
             height: 48px !important;
             z-index: 4;
         }}
@@ -669,36 +711,61 @@ def _render_reproduction_controls():
         .reproduction-track-details {
             display: grid;
             grid-row: 3;
-            grid-template-columns: 48px minmax(0, 1fr) 48px;
+            grid-template-columns: 56px minmax(0, 1fr) 56px;
+            grid-template-rows: repeat(2, minmax(0, 1fr));
             min-width: 0;
             align-items: stretch;
             background: rgba(0, 0, 0, 0.5);
         }
         .reproduction-track-metadata {
             display: grid;
+            grid-column: 2;
+            grid-row: 1 / span 2;
             grid-template-rows: repeat(2, minmax(0, 1fr));
             min-width: 0;
             padding: 0 0.5rem;
         }
         .st-key-reproduction-controls .reproduction-detail-button {
             box-sizing: border-box;
-            width: 48px;
-            height: 48px;
+            width: 100%;
+            height: 100%;
+            min-height: 0;
             padding: 0;
-            border: none;
-            border-radius: 0;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            border-radius: 8px;
             display: grid;
             place-items: center;
-            background: transparent;
+            background: linear-gradient(155deg, rgba(48, 48, 48, 0.96), rgba(0, 0, 0, 0.88));
             color: #ffffff !important;
             font-size: 1.5rem;
             line-height: 1;
             cursor: pointer;
             pointer-events: auto;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.55),
+                inset 0 1px 1px rgba(255, 255, 255, 0.25),
+                inset 0 -3px 0 rgba(0, 0, 0, 0.45);
+            transition: transform 100ms ease, filter 100ms ease, box-shadow 100ms ease;
+        }
+        .st-key-reproduction-controls .reproduction-detail-button:first-child {
+            grid-column: 1;
+            grid-row: 1 / span 2;
+        }
+        .st-key-reproduction-controls .reproduction-detail-button:last-child {
+            grid-column: 3;
+            grid-row: 1 / span 2;
+        }
+        .st-key-reproduction-controls .reproduction-detail-button:hover {
+            filter: brightness(1.25);
+        }
+        .st-key-reproduction-controls .reproduction-detail-button:active {
+            transform: translateY(3px) scale(0.92);
+            filter: brightness(0.72);
+            box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.75),
+                0 1px 2px rgba(0, 0, 0, 0.35);
         }
         .st-key-reproduction-controls .reproduction-detail-icon {
             font-family: "Material Symbols Rounded" !important;
-            font-size: 28px;
+            font-size: 22px;
             font-weight: 400;
             font-style: normal;
             font-feature-settings: "liga";
@@ -709,7 +776,12 @@ def _render_reproduction_controls():
         }
         .st-key-reproduction-controls .reproduction-detail-button:focus-visible {
             outline: 2px solid #ffffff;
-            outline-offset: -2px;
+            outline-offset: 2px;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .st-key-reproduction-controls .reproduction-detail-button {
+                transition: none;
+            }
         }
         .reproduction-track-artists,
         .reproduction-track-album {
@@ -813,9 +885,40 @@ def _render_reproduction_controls():
             align-items: center;
             justify-content: center;
             border-radius: 50%;
-            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.65);
+            background: linear-gradient(155deg, rgba(48, 48, 48, 0.96), rgba(0, 0, 0, 0.88));
             color: #ffffff !important;
             text-shadow: 0 2px 5px rgba(0, 0, 0, 0.95);
+            box-shadow: 0 5px 12px rgba(0, 0, 0, 0.6),
+                inset 0 1px 1px rgba(255, 255, 255, 0.3),
+                inset 0 -3px 0 rgba(0, 0, 0, 0.5);
+            transition: transform 100ms ease, filter 100ms ease, box-shadow 100ms ease;
+        }
+        .st-key-reproduction-controls :is(
+            .st-key-reproduction_previous,
+            .st-key-reproduction_play_pause,
+            .st-key-reproduction_next
+        ) [data-testid="stButton"] button:hover:not(:disabled) p {
+            filter: brightness(1.25);
+        }
+        .st-key-reproduction-controls :is(
+            .st-key-reproduction_previous,
+            .st-key-reproduction_play_pause,
+            .st-key-reproduction_next
+        ) [data-testid="stButton"] button:active:not(:disabled) p {
+            transform: translateY(3px) scale(0.92);
+            filter: brightness(0.72);
+            box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.75),
+                0 1px 2px rgba(0, 0, 0, 0.35);
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .st-key-reproduction-controls :is(
+                .st-key-reproduction_previous,
+                .st-key-reproduction_play_pause,
+                .st-key-reproduction_next
+            ) [data-testid="stButton"] button p {
+                transition: none;
+            }
         }
         .st-key-reproduction_play_pause [data-testid="stButton"] {
             display: flex;
@@ -875,13 +978,44 @@ def _render_reproduction_controls():
         .st-key-reproduction-controls [class*="st-key-reproduction-corner-action-"]
         [data-testid="stButton"] button {
             opacity: 1 !important;
-            border: none !important;
+            border-radius: 8px !important;
             text-shadow: none !important;
+            transition: transform 100ms ease, filter 100ms ease, box-shadow 100ms ease;
+        }
+        .st-key-reproduction-controls [class*="st-key-reproduction-corner-action-"]
+        [data-testid="stButton"] button:hover:not(:disabled) {
+            filter: brightness(1.2);
+        }
+        .st-key-reproduction-controls [class*="st-key-reproduction-corner-action-"]
+        [data-testid="stButton"] button:active:not(:disabled) {
+            transform: translateY(2px) scale(0.96);
+            filter: brightness(0.75);
+            box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.7),
+                0 1px 2px rgba(0, 0, 0, 0.35) !important;
+        }
+        .st-key-reproduction-controls [class*="st-key-reproduction-corner-action-"]
+        [data-testid="stButton"] button:focus-visible {
+            outline: 2px solid #ffffff;
+            outline-offset: 2px;
         }
         .st-key-reproduction-controls [class*="st-key-reproduction-corner-action-"]
         [data-testid="stButton"] button * {
             color: inherit !important;
             text-shadow: none !important;
+        }
+        .st-key-reproduction-controls [class*="st-key-reproduction-corner-action-"]
+        [data-testid="stButton"] button p {
+            display: grid;
+            place-items: center;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            border: 0;
+            border-radius: inherit;
+            background: transparent !important;
+            color: #ffffff !important;
+            font-size: 1.5rem;
+            box-shadow: none;
         }
         .st-key-reproduction-controls [class*="st-key-reproduction-corner-action-liked-"]
         :is(
@@ -891,7 +1025,7 @@ def _render_reproduction_controls():
         )
         [data-testid="stButton"] button {
             color: #000000 !important;
-            background: rgba(0, 0, 0, 0.5) !important;
+            background: #ffffff !important;
         }
         .st-key-reproduction-controls [class*="st-key-reproduction-corner-action-liked-"]
         :is(
@@ -900,19 +1034,22 @@ def _render_reproduction_controls():
             .st-key-reproduction_next_corner_action
         )
         [data-testid="stButton"] button p {
-            display: grid;
-            place-items: center;
-            width: 30px;
-            height: 30px;
-            margin: 0;
-            border-radius: 50%;
-            background: #ffffff !important;
+            background: transparent !important;
             color: #000000 !important;
+            box-shadow: none !important;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .st-key-reproduction-controls [class*="st-key-reproduction-corner-action-"]
+            [data-testid="stButton"] button,
+            .st-key-reproduction-controls [class*="st-key-reproduction-corner-action-"]
+            [data-testid="stButton"] button p {
+                transition: none;
+            }
         }
         .st-key-reproduction-controls [class*="st-key-reproduction-corner-action-unliked-"]
         [data-testid="stButton"] button {
             color: #ffffff !important;
-            background: rgba(0, 0, 0, 0.5) !important;
+            background: linear-gradient(155deg, rgba(48, 48, 48, 0.96), rgba(0, 0, 0, 0.88)) !important;
         }
         </style>
         """,
