@@ -10,6 +10,8 @@ from pathlib import Path
 import streamlit as st
 from streamlit.errors import StreamlitSecretNotFoundError
 
+from streamlit_lab import Block, BlockStyle, Group, Layout, PageStyle, Size
+from streamlit_lab.renderer import render_group, render_page_style
 from app_views.error_feedback import render_incident_notice
 from app_views.reproduction import _get_playback, _get_spotify_client
 from app_views.summary import run_registration_with_feedback
@@ -21,6 +23,15 @@ from spotifyapi.streamlit_auth import has_spotify_auth_available
 _CURRENT_TRACK_ENRICHMENT_KEY = "pulse_current_track_enrichment_v2"
 _CURRENT_TRACK_AUDIO_KEY = "pulse_current_track_audio"
 _CURRENT_TRACK_LOOKUP_STATUS_KEY = "pulse_current_track_lookup_status"
+PULSE_GROUP = Group(
+    "pulse-view",
+    ("toolbar", "live"),
+    Layout(rows=2, columns=1, gap_px=0, padding=0, height=Size(100, "dvh", offset_px=104)),
+)
+PULSE_BLOCKS = [
+    Block("toolbar", height=Size(9, "dvh"), style=BlockStyle(padding=0, overflow="hidden")),
+    Block("live", height=Size(91, "dvh", offset_px=104), style=BlockStyle(padding=0, overflow="hidden")),
+]
 
 
 @st.cache_data(ttl=45, show_spinner=False)
@@ -229,7 +240,8 @@ def _render_chart(analysis: dict) -> None:
             '</div>'
         )
     st.markdown(
-        '<section class="pulse-chart" aria-label="Perfil sonoro reciente">'
+        f'<section class="pulse-chart" aria-label="Perfil sonoro reciente" '
+        f'style="grid-template-rows:repeat({len(rows)},minmax(0,1fr))">'
         + "".join(rows) + '</section>', unsafe_allow_html=True,
     )
 
@@ -317,7 +329,7 @@ def render_pulse_page() -> None:
     .st-key-pulse_expanded label:has(> span > input[role="switch"]:checked) > span + div > div {
         background:#fff !important;
     }
-    .pulse-overview { display:grid; grid-template-columns:200px minmax(0,1fr); gap:24px; align-items:center; margin:20px 0; }
+    .pulse-overview { display:grid; grid-template-columns:200px minmax(0,1fr); gap:24px; align-items:center; margin:4px 0; }
     .pulse-now { display:flex; gap:18px; align-items:center; min-width:0; }
     .pulse-now img { width:76px; height:76px; object-fit:cover; border-radius:4px; flex-shrink:0; }
     .pulse-now-text { flex:1; min-width:0; }
@@ -325,15 +337,25 @@ def render_pulse_page() -> None:
     .pulse-now p { margin:0; font-size:14px; }
     .pulse-now small, .pulse-label small { display:block; font-size:12px; }
     .pulse-total { text-align:left; font-size:14px; white-space:nowrap; }
-    .pulse-chart { width:100%; }
-    .pulse-row { display:grid; grid-template-columns:145px minmax(0,1fr) 90px; gap:20px; align-items:start; padding:12px 0 4px; }
+    .st-key-lab-live { min-height:0 !important; overflow:hidden !important; }
+    .st-key-lab-live [data-testid="stVerticalBlock"] { height:100%; min-height:0; display:flex; flex-direction:column; gap:0 !important; }
+    .st-key-lab-live [data-testid="stLayoutWrapper"]:has(.pulse-chart) { height:100%; min-height:0; flex:1 1 0 !important; }
+    .st-key-lab-live [data-testid="stLayoutWrapper"]:has(.pulse-chart) > [data-testid="stVerticalBlock"] { height:100%; min-height:0; }
+    .st-key-lab-live [data-testid="stVerticalBlock"] > div:has(.pulse-chart) { flex:1 1 0; min-height:0; overflow:hidden; }
+    .st-key-lab-live [data-testid="stElementContainer"]:has(.pulse-chart) { flex:1 1 0; min-height:0; height:100%; }
+    .st-key-lab-live [data-testid="stElementContainer"]:has(.pulse-chart) [data-testid="stMarkdown"] { height:100%; min-height:0; display:flex; flex-direction:column; }
+    .st-key-lab-live [data-testid="stElementContainer"]:has(.pulse-chart) [data-testid="stMarkdown"] > div { height:100%; min-height:0; flex:1 1 auto; display:flex; flex-direction:column; }
+    .st-key-lab-live [data-testid="stElementContainer"]:has(.pulse-chart) [data-testid="stMarkdownContainer"] { height:100%; min-height:0; flex:1 1 auto; }
+    .pulse-chart { width:100%; height:100%; min-height:0; display:grid; overflow:hidden; }
+    .pulse-row { display:grid; grid-template-columns:145px minmax(0,1fr) 90px; gap:20px; align-items:center; min-height:0; padding:2px 0; }
     .pulse-label strong { font-size:14px; font-weight:600; }
     .pulse-label small { margin-top:2px; }
-    .pulse-lane { position:relative; height:28px; background:#eff4f3; }
-    .pulse-heat { display:grid; grid-template-columns:repeat(80,minmax(0,1fr)); height:100%; overflow:hidden; border-radius:3px; }
+    .pulse-lane { position:relative; height:28px; min-height:12px; background:#eff4f3; }
+    .pulse-heat { display:grid; grid-template-columns:repeat(80,minmax(0,1fr)); grid-template-rows:minmax(0,1fr); height:100%; overflow:hidden; border-radius:3px; }
+    .pulse-heat > span { display:block; height:100%; min-height:0; }
     .pulse-marker { position:absolute; top:-4px; bottom:-4px; width:4px; background:#111; border:1px solid #fff; transform:translateX(-50%); box-shadow:0 0 0 1px #111; border-radius:2px; }
     .pulse-marker::before { content:""; position:absolute; width:8px; height:8px; background:#111; border:2px solid white; border-radius:50%; top:-7px; left:50%; transform:translateX(-50%); }
-    .pulse-ticks { position:relative; height:9px; margin-top:6px; }
+    .pulse-ticks { position:relative; height:6px; margin-top:2px; }
     .pulse-tick { position:absolute; top:0; height:7px; width:2px; background:#283c34; transform:translateX(-50%); }
     .pulse-scale { display:flex; justify-content:space-between; font-size:11px; }
     .pulse-value { text-align:right; font-size:16px; font-variant-numeric:tabular-nums; padding-top:2px; }
@@ -357,14 +379,30 @@ def render_pulse_page() -> None:
     }
     </style>
     """, unsafe_allow_html=True)
-    with st.container(horizontal=True, wrap=False, vertical_alignment="center", key="pulse_toolbar"):
-        interval = st.segmented_control(
-            "Intervalo", ["1h", "6h", "1d", "∞"], default="1d",
-            key="pulse_hours", label_visibility="collapsed", wrap=False,
-        )
-        expanded = st.toggle("All metadata", key="pulse_expanded", wrap=False)
-        if st.button(":material/sync:", key="pulse_sync"):
-            run_registration_with_feedback()
-            _load_history.clear()
-    hours = {"1h": 1, "6h": 6, "1d": 24, "∞": None}.get(interval, 24)
-    _render_live_pulse(hours, expanded)
+    render_page_style(PageStyle(
+        content_padding=0,
+        content_overflow="hidden",
+        app_overflow_y="hidden",
+        vertical_gap_px=0,
+        horizontal_gap_px=0,
+        element_margin_px=0,
+    ))
+
+    def render_pulse_block(block: Block) -> None:
+        if block.key == "toolbar":
+            with st.container(horizontal=True, wrap=False, vertical_alignment="center", key="pulse_toolbar"):
+                st.segmented_control(
+                    "Intervalo", ["1h", "6h", "1d", "∞"], default="1d",
+                    key="pulse_hours", label_visibility="collapsed", wrap=False,
+                )
+                st.toggle("All metadata", key="pulse_expanded", wrap=False)
+                if st.button(":material/sync:", key="pulse_sync"):
+                    run_registration_with_feedback()
+                    _load_history.clear()
+            return
+
+        interval = st.session_state.get("pulse_hours", "1d")
+        hours = {"1h": 1, "6h": 6, "1d": 24, "∞": None}.get(interval, 24)
+        _render_live_pulse(hours, st.session_state.get("pulse_expanded", False))
+
+    render_group(PULSE_GROUP, PULSE_BLOCKS, render_pulse_block)

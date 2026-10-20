@@ -8,6 +8,18 @@ from services.summary_queries import SummaryQueryService
 
 
 class PulseTest(unittest.TestCase):
+    def test_page_layout_allocates_viewport_height_with_lab(self):
+        """Reserve proportional viewport height for the toolbar and live visualization."""
+        from app_views.pulse import PULSE_BLOCKS, PULSE_GROUP
+
+        self.assertEqual(PULSE_GROUP.layout.height.unit, "dvh")
+        self.assertEqual(PULSE_GROUP.layout.height.value, 100)
+        self.assertEqual(PULSE_GROUP.layout.height.offset_px, 104)
+        self.assertEqual([(block.height.value, block.height.unit) for block in PULSE_BLOCKS], [
+            (9, "dvh"), (91, "dvh"),
+        ])
+        self.assertEqual(PULSE_BLOCKS[1].height.offset_px, 104)
+
     def test_time_decay_and_repeat_listens(self):
         """Keep repeats and halve the weight every thirty real minutes."""
         rows = [{"kind": "history", "played_at": 10000 - age, "audio": {"energy": 0.4}}
