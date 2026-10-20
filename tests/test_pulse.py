@@ -18,6 +18,7 @@ class PulseTest(unittest.TestCase):
         self.assertEqual([(block.height.value, block.height.unit) for block in PULSE_BLOCKS], [
             (9, "dvh"), (91, "dvh"),
         ])
+        self.assertEqual([block.color for block in PULSE_BLOCKS], ["#ffffff", "#ffffff"])
         self.assertEqual(PULSE_BLOCKS[1].height.offset_px, 104)
 
     def test_time_decay_and_repeat_listens(self):

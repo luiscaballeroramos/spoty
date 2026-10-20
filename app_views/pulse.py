@@ -29,8 +29,8 @@ PULSE_GROUP = Group(
     Layout(rows=2, columns=1, gap_px=0, padding=0, height=Size(100, "dvh", offset_px=104)),
 )
 PULSE_BLOCKS = [
-    Block("toolbar", height=Size(9, "dvh"), style=BlockStyle(padding=0, overflow="hidden")),
-    Block("live", height=Size(91, "dvh", offset_px=104), style=BlockStyle(padding=0, overflow="hidden")),
+    Block("toolbar", color="#ffffff", height=Size(9, "dvh"), style=BlockStyle(padding=0, overflow="hidden")),
+    Block("live", color="#ffffff", height=Size(91, "dvh", offset_px=104), style=BlockStyle(padding=0, overflow="hidden")),
 ]
 
 
@@ -327,6 +327,11 @@ def render_pulse_page() -> None:
         background:#888 !important; border-color:#666 !important;
     }
     .st-key-pulse_expanded label:has(> span > input[role="switch"]:checked) > span + div > div {
+        background:#fff !important;
+    }
+    .st-key-lab-group-pulse-view,
+    .st-key-lab-toolbar,
+    .st-key-lab-live {
         background:#fff !important;
     }
     .pulse-overview { display:grid; grid-template-columns:200px minmax(0,1fr); gap:24px; align-items:center; margin:4px 0; }
