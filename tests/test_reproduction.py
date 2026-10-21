@@ -788,6 +788,10 @@ class ReproductionTest(unittest.TestCase):
             "reproduction_next",
         ):
             self.assertEqual(
+                style_by_key[key].border,
+                "1px solid rgba(255, 255, 255, 0.8)",
+            )
+            self.assertEqual(
                 style_by_key[key].color,
                 reproduction.REPRODUCTION_CONTROL_STYLE.color,
             )

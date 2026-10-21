@@ -129,7 +129,7 @@ REPRODUCTION_GROUP = Group(
 )
 REPRODUCTION_CONTROL_STYLE = ButtonStyle(
     color="white",
-    border="none",
+    border="1px solid rgba(255, 255, 255, 0.8)",
     padding="0 0.15rem",
     border_radius="0",
     width="100%",
