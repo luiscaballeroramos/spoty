@@ -180,6 +180,134 @@ class PulseTest(unittest.TestCase):
             self.assertIn("(4/4 100%)", chart)
             self.assertIn("thirty-six hours ago", chart)
 
+    def test_chart_toggle_switches_to_current_track_hexagon_and_back(self):
+        from streamlit.testing.v1 import AppTest
+
+        audio = {
+            "energy": 0.75,
+            "danceability": 0.5,
+            "valence": 0.25,
+            "acousticness": 0.3,
+            "instrumentalness": 0.1,
+            "tempo": 120,
+        }
+        rows = [
+            {"kind": "current", "audio": audio},
+            {"kind": "history", "played_at": 9950, "audio": audio},
+            {"kind": "history", "played_at": 9900, "audio": audio},
+        ]
+        with patch("app_views.pulse.has_spotify_auth_available", return_value=False), patch(
+            "app_views.pulse.time.time", return_value=10000,
+        ), patch(
+            "app_views.pulse._load_history", return_value=rows,
+        ):
+            app = AppTest.from_string(
+                "from app_views.pulse import render_pulse_page\nrender_pulse_page()"
+            ).run(timeout=10)
+            self.assertFalse(app.exception)
+            self.assertTrue(any(
+                'aria-label="Perfil sonoro reciente"' in element.value
+                for element in app.markdown
+            ))
+
+            app.button(key="pulse_chart_toggle").click().run(timeout=10)
+            self.assertFalse(app.exception)
+            chart = next(
+                element.value for element in app.markdown
+                if 'aria-label="Perfil hexagonal con polígonos' in element.value
+            )
+            self.assertEqual(chart.count('class="pulse-hexagon-point"'), 6)
+            self.assertEqual(chart.count('class="pulse-hexagon-ring"'), 5)
+            self.assertEqual(chart.count('class="pulse-history-polygon"'), 2)
+            self.assertIn("Energía", chart)
+            self.assertIn("240 BPM", chart)
+            self.assertIn("75% / 100%", chart)
+            self.assertIn('cx="260.0" cy="147.0"', chart)
+            self.assertLess(
+                chart.index("<tspan>Bailabilidad</tspan>"),
+                chart.index("<tspan>Valencia</tspan>"),
+            )
+            self.assertLess(
+                chart.index("<tspan>Valencia</tspan>"),
+                chart.index("<tspan>Tempo</tspan>"),
+            )
+            self.assertLess(
+                chart.index("<tspan>Tempo</tspan>"),
+                chart.index("<tspan>Instrumentalidad</tspan>"),
+            )
+            self.assertLess(
+                chart.index("<tspan>Instrumentalidad</tspan>"),
+                chart.index("<tspan>Acústica</tspan>"),
+            )
+            self.assertLess(
+                chart.index("<tspan>Acústica</tspan>"),
+                chart.index("<tspan>Energía</tspan>"),
+            )
+            self.assertIn('x="260.0" y="42.0"', chart)
+            self.assertIn('x="123.2" y="121.0"', chart)
+            self.assertIn('x="396.8" y="121.0"', chart)
+
+            app.button(key="pulse_chart_toggle").click().run(timeout=10)
+            self.assertFalse(app.exception)
+            self.assertTrue(any(
+                'aria-label="Perfil sonoro reciente"' in element.value
+                for element in app.markdown
+            ))
+
+    def test_hexagon_draws_transparent_polygon_for_each_complete_history_track(self):
+        from app_views.pulse import _history_hexagons
+
+        audio = {
+            "energy": 0.75,
+            "danceability": 0.5,
+            "valence": 0.25,
+            "acousticness": 0.3,
+            "instrumentalness": 0.1,
+            "tempo": 120,
+        }
+        rows = [
+            {"kind": "history", "audio": audio},
+            {"kind": "history", "audio": audio},
+            {"kind": "history", "audio": {"energy": 0.9}},
+            {"kind": "current", "audio": audio},
+        ]
+
+        polygons, polygon_count, total_count = _history_hexagons(rows, 260, 205, 116)
+
+        self.assertEqual(polygon_count, 2)
+        self.assertEqual(total_count, 2)
+        self.assertEqual(polygons.count('class="pulse-history-polygon"'), 2)
+        self.assertIn('points="260.0,147.0 285.1,190.5 310.2,234.0 260.0,216.6 229.9,222.4 184.7,161.5"', polygons)
+        self.assertIn('fill="none" stroke-opacity=".08"', polygons)
+        self.assertNotIn("current", polygons)
+
+    def test_infinite_hexagon_history_is_sampled_across_the_full_period(self):
+        from app_views.pulse import MAX_HEXAGON_HISTORY_POLYGONS, _history_hexagons
+
+        rows = [
+            {
+                "kind": "history",
+                "played_at": timestamp,
+                "audio": {
+                    "energy": 0.5,
+                    "danceability": 0.5,
+                    "valence": 0.5,
+                    "acousticness": 0.5,
+                    "instrumentalness": 0.5,
+                    "tempo": 120,
+                },
+            }
+            for timestamp in range(1000)
+        ]
+
+        polygons, shown_count, total_count = _history_hexagons(rows, 260, 205, 116)
+
+        self.assertEqual(shown_count, MAX_HEXAGON_HISTORY_POLYGONS)
+        self.assertEqual(total_count, 1000)
+        self.assertEqual(polygons.count('class="pulse-history-polygon"'), MAX_HEXAGON_HISTORY_POLYGONS)
+        self.assertIn('points="260.0,147.0', polygons)
+        self.assertIn('260.0,147.0 310.2,176.0', polygons)
+
     def test_page_does_not_show_notice_when_current_track_has_no_audio_data(self):
         """Keep the chart visible without a text notice for missing current-track data."""
         from streamlit.testing.v1 import AppTest

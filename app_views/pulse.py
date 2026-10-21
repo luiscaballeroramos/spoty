@@ -1,5 +1,6 @@
 """Listening audio profile and live current-track markers."""
 
+import math
 import os
 import queue
 import threading
@@ -23,6 +24,7 @@ from spotifyapi.streamlit_auth import has_spotify_auth_available
 _CURRENT_TRACK_ENRICHMENT_KEY = "pulse_current_track_enrichment_v2"
 _CURRENT_TRACK_AUDIO_KEY = "pulse_current_track_audio"
 _CURRENT_TRACK_LOOKUP_STATUS_KEY = "pulse_current_track_lookup_status"
+MAX_HEXAGON_HISTORY_POLYGONS = 150
 PULSE_GROUP = Group(
     "pulse-view",
     ("toolbar", "live"),
@@ -198,6 +200,59 @@ def _heat_color(intensity: float) -> str:
     return f"rgb({channels[0]},{channels[1]},{channels[2]})"
 
 
+def _history_hexagons(
+    rows: list[dict], center_x: float, center_y: float, radius: float,
+) -> tuple[str, int, int]:
+    parameters = {parameter.key: parameter for parameter in PARAMETERS}
+    radar_parameters = tuple(
+        parameters[key]
+        for key in (
+            "danceability",
+            "valence",
+            "tempo",
+            "instrumentalness",
+            "acousticness",
+            "energy",
+        )
+    )
+    polygons = []
+    for row in rows:
+        if row.get("kind") != "history":
+            continue
+        audio = row.get("audio") or {}
+        values = [audio_value(audio, parameter) for parameter in radar_parameters]
+        if any(value is None for value in values):
+            continue
+        polygon = []
+        for spoke, (value, parameter) in enumerate(zip(values, radar_parameters)):
+            angle = -math.pi / 2 + spoke * math.pi / 3
+            scale = min(1.0, value / parameter.maximum)
+            polygon.append(
+                f"{center_x + radius * scale * math.cos(angle):.1f},"
+                f"{center_y + radius * scale * math.sin(angle):.1f}"
+            )
+        polygons.append((row.get("played_at") or 0, " ".join(polygon)))
+
+    total_count = len(polygons)
+    if not total_count:
+        return "", 0, 0
+    polygons.sort(key=lambda polygon: polygon[0])
+    if total_count > MAX_HEXAGON_HISTORY_POLYGONS:
+        last_index = total_count - 1
+        polygons = [
+            polygons[round(index * last_index / (MAX_HEXAGON_HISTORY_POLYGONS - 1))]
+            for index in range(MAX_HEXAGON_HISTORY_POLYGONS)
+        ]
+    shown_count = len(polygons)
+    rendered_polygons = "".join(
+        f'<polygon class="pulse-history-polygon" '
+        'fill="none" stroke-opacity=".08" '
+        f'points="{points}" />'
+        for _, points in polygons
+    )
+    return rendered_polygons, shown_count, total_count
+
+
 def _render_chart(analysis: dict) -> None:
     rows = []
     for band in analysis["bands"]:
@@ -243,6 +298,120 @@ def _render_chart(analysis: dict) -> None:
         f'<section class="pulse-chart" aria-label="Perfil sonoro reciente" '
         f'style="grid-template-rows:repeat({len(rows)},minmax(0,1fr))">'
         + "".join(rows) + '</section>', unsafe_allow_html=True,
+    )
+
+
+def _render_hexagon(analysis: dict, history: list[dict]) -> None:
+    center_x, center_y, radius = 260, 205, 116
+    bands = {
+        band["parameter"].key: band
+        for band in analysis["bands"]
+    }
+    parameters = {parameter.key: parameter for parameter in PARAMETERS}
+    radar_parameters = tuple(
+        parameters[key]
+        for key in (
+            "danceability",
+            "valence",
+            "tempo",
+            "instrumentalness",
+            "acousticness",
+            "energy",
+        )
+    )
+    history_polygons, history_polygon_count, history_total_count = _history_hexagons(
+        history, center_x, center_y, radius,
+    )
+    history_count_label = (
+        f"Mostrando {history_polygon_count} de {history_total_count} polígonos del periodo"
+        if history_polygon_count < history_total_count
+        else f"Polígonos del periodo: {history_polygon_count}"
+    )
+    points = []
+    labels = []
+    for index, parameter in enumerate(radar_parameters):
+        angle = -math.pi / 2 + index * math.pi / 3
+        band = bands[parameter.key]
+        maximum = parameter.maximum
+        value = band["current"]
+        position = min(1.0, max(0.0, value / maximum)) if value is not None else None
+        points.append(
+            (
+                center_x + radius * (position or 0) * math.cos(angle),
+                center_y + radius * (position or 0) * math.sin(angle),
+            )
+        )
+        labels.append(
+            (
+                center_x + 158 * math.cos(angle),
+                center_y + 158 * math.sin(angle),
+                parameter,
+                _format_value(value, parameter.key),
+            )
+        )
+
+    def coordinates(scale: float) -> str:
+        return " ".join(
+            f"{center_x + radius * scale * math.cos(-math.pi / 2 + index * math.pi / 3):.1f},"
+            f"{center_y + radius * scale * math.sin(-math.pi / 2 + index * math.pi / 3):.1f}"
+            for index in range(len(radar_parameters))
+        )
+
+    rings = "".join(
+        f'<polygon class="pulse-hexagon-ring" points="{coordinates(scale)}" />'
+        for scale in (0.2, 0.4, 0.6, 0.8, 1.0)
+    )
+    axes = "".join(
+        f'<line class="pulse-hexagon-axis" x1="{center_x}" y1="{center_y}" '
+        f'x2="{center_x + radius * math.cos(-math.pi / 2 + index * math.pi / 3):.1f}" '
+        f'y2="{center_y + radius * math.sin(-math.pi / 2 + index * math.pi / 3):.1f}" />'
+        for index in range(len(radar_parameters))
+    )
+    valid_indexes = [
+        index for index, parameter in enumerate(radar_parameters)
+        if bands[parameter.key]["current"] is not None
+    ]
+    polygon = ""
+    if len(valid_indexes) == len(radar_parameters):
+        polygon = (
+            '<polygon class="pulse-hexagon-profile" points="'
+            + " ".join(f"{x:.1f},{y:.1f}" for x, y in points)
+            + '" />'
+        )
+    segments = "".join(
+        f'<line class="pulse-hexagon-segment" x1="{points[index][0]:.1f}" '
+        f'y1="{points[index][1]:.1f}" x2="{points[(index + 1) % 6][0]:.1f}" '
+        f'y2="{points[(index + 1) % 6][1]:.1f}" />'
+        for index in valid_indexes
+        if (index + 1) % len(radar_parameters) in valid_indexes
+        and len(valid_indexes) != len(radar_parameters)
+    )
+    markers = "".join(
+        f'<circle class="pulse-hexagon-point" cx="{points[index][0]:.1f}" '
+        f'cy="{points[index][1]:.1f}" r="5"><title>'
+        f'{escape(radar_parameters[index].label)}: {escape(labels[index][3])}</title></circle>'
+        for index in valid_indexes
+    )
+    axis_labels = "".join(
+        f'<text class="pulse-hexagon-label" x="{x:.1f}" y="{y - 5:.1f}" '
+        f'text-anchor="{"start" if x > center_x + 1 else "end" if x < center_x - 1 else "middle"}">'
+        f'<tspan>{escape(parameter.label)}</tspan>'
+        f'<tspan class="pulse-hexagon-value" x="{x:.1f}" dy="17">'
+        f'{escape(value)} / {_format_value(parameter.maximum, parameter.key)}</tspan></text>'
+        for x, y, parameter, value in labels
+    )
+    st.markdown(
+        '<section class="pulse-hexagon" aria-label="Perfil hexagonal con polígonos '
+        'de las canciones del periodo">'
+        '<svg viewBox="0 0 520 410" role="img" '
+        'aria-label="Perfil actual superpuesto a los polígonos del historial">'
+        f'<title>Perfil de audio de la canción actual</title>'
+        f'{history_polygons}'
+        f'{rings}{axes}{segments}{polygon}{markers}{axis_labels}'
+        '<text class="pulse-hexagon-history-count" x="260" y="402" text-anchor="middle">'
+        f'{escape(history_count_label)}</text>'
+        '</svg></section>',
+        unsafe_allow_html=True,
     )
 
 
@@ -302,7 +471,10 @@ def _render_live_pulse(hours: int | None, expanded: bool) -> None:
             st.caption("SmarterPlaylists no devolvió datos para esta canción.")
         elif lookup_status[1] == "no_audio":
             st.caption("SmarterPlaylists respondió, pero no incluyó parámetros de audio.")
-    _render_chart(analysis)
+    if st.session_state.get("pulse_hexagon", False):
+        _render_hexagon(analysis, rows)
+    else:
+        _render_chart(analysis)
     weighting = "Todas las escuchas pesan igual" if hours is None else "Semivida: 30 min"
     st.caption(f"SmarterPlaylists · {weighting} · Historial: caché 45 s · Actualización: 15 s")
 
@@ -317,6 +489,7 @@ def render_pulse_page() -> None:
         background:#d5eee3 !important; border-color:#448269 !important;
     }
     .st-key-pulse_sync button { min-width:42px; }
+    .st-key-pulse_chart_toggle button { min-width:42px; }
     .st-key-pulse_expanded label > span:has(> input[role="switch"]) + div {
         background:#fff !important; border:1px solid #111 !important;
     }
@@ -344,14 +517,25 @@ def render_pulse_page() -> None:
     .pulse-total { text-align:left; font-size:14px; white-space:nowrap; }
     .st-key-lab-live { min-height:0 !important; overflow:hidden !important; }
     .st-key-lab-live [data-testid="stVerticalBlock"] { height:100%; min-height:0; display:flex; flex-direction:column; gap:0 !important; }
-    .st-key-lab-live [data-testid="stLayoutWrapper"]:has(.pulse-chart) { height:100%; min-height:0; flex:1 1 0 !important; }
-    .st-key-lab-live [data-testid="stLayoutWrapper"]:has(.pulse-chart) > [data-testid="stVerticalBlock"] { height:100%; min-height:0; }
-    .st-key-lab-live [data-testid="stVerticalBlock"] > div:has(.pulse-chart) { flex:1 1 0; min-height:0; overflow:hidden; }
-    .st-key-lab-live [data-testid="stElementContainer"]:has(.pulse-chart) { flex:1 1 0; min-height:0; height:100%; }
-    .st-key-lab-live [data-testid="stElementContainer"]:has(.pulse-chart) [data-testid="stMarkdown"] { height:100%; min-height:0; display:flex; flex-direction:column; }
-    .st-key-lab-live [data-testid="stElementContainer"]:has(.pulse-chart) [data-testid="stMarkdown"] > div { height:100%; min-height:0; flex:1 1 auto; display:flex; flex-direction:column; }
-    .st-key-lab-live [data-testid="stElementContainer"]:has(.pulse-chart) [data-testid="stMarkdownContainer"] { height:100%; min-height:0; flex:1 1 auto; }
+    .st-key-lab-live [data-testid="stLayoutWrapper"]:has(.pulse-chart, .pulse-hexagon) { height:100%; min-height:0; flex:1 1 0 !important; }
+    .st-key-lab-live [data-testid="stLayoutWrapper"]:has(.pulse-chart, .pulse-hexagon) > [data-testid="stVerticalBlock"] { height:100%; min-height:0; }
+    .st-key-lab-live [data-testid="stVerticalBlock"] > div:has(.pulse-chart, .pulse-hexagon) { flex:1 1 0; min-height:0; overflow:hidden; }
+    .st-key-lab-live [data-testid="stElementContainer"]:has(.pulse-chart, .pulse-hexagon) { flex:1 1 0; min-height:0; height:100%; }
+    .st-key-lab-live [data-testid="stElementContainer"]:has(.pulse-chart, .pulse-hexagon) [data-testid="stMarkdown"] { height:100%; min-height:0; display:flex; flex-direction:column; }
+    .st-key-lab-live [data-testid="stElementContainer"]:has(.pulse-chart, .pulse-hexagon) [data-testid="stMarkdown"] > div { height:100%; min-height:0; flex:1 1 auto; display:flex; flex-direction:column; }
+    .st-key-lab-live [data-testid="stElementContainer"]:has(.pulse-chart, .pulse-hexagon) [data-testid="stMarkdownContainer"] { height:100%; min-height:0; flex:1 1 auto; }
     .pulse-chart { width:100%; height:100%; min-height:0; display:grid; overflow:hidden; }
+    .pulse-hexagon { width:100%; height:100%; min-height:0; display:flex; justify-content:center; overflow:hidden; }
+    .pulse-hexagon svg { width:100%; height:100%; max-width:560px; overflow:visible; }
+    .pulse-hexagon-ring { fill:none; stroke:#dce5e1; stroke-width:1; }
+    .pulse-hexagon-axis { stroke:#dce5e1; stroke-width:1; }
+    .pulse-hexagon-profile { fill:none; stroke:#287552; stroke-width:3; stroke-linejoin:round; }
+    .pulse-hexagon-segment { stroke:#287552; stroke-width:3; stroke-linecap:round; }
+    .pulse-hexagon-point { fill:#287552; stroke:white; stroke-width:2; }
+    .pulse-hexagon-label { fill:#26352f; font-size:12px; font-weight:600; }
+    .pulse-hexagon-value { fill:#64746d; font-size:10px; font-weight:400; }
+    .pulse-history-polygon { fill:none; stroke:#287552; stroke-width:1.2; stroke-linejoin:round; }
+    .pulse-hexagon-history-count { fill:#64746d; font-size:11px; }
     .pulse-row { display:grid; grid-template-columns:145px minmax(0,1fr) 90px; gap:20px; align-items:center; min-height:0; padding:2px 0; }
     .pulse-label strong { font-size:14px; font-weight:600; }
     .pulse-label small { margin-top:2px; }
@@ -368,6 +552,7 @@ def render_pulse_page() -> None:
         .st-key-pulse_hours button { padding:4px 6px !important; min-width:0; }
         .st-key-pulse_hours button p { font-size:12px; }
         .st-key-pulse_sync button { min-width:36px; padding:4px 6px; }
+        .st-key-pulse_chart_toggle button { min-width:36px; padding:4px 6px; }
         .st-key-pulse_expanded label { gap:4px; }
         .st-key-pulse_expanded p { font-size:12px; }
         .pulse-row { grid-template-columns:minmax(0,1fr) 85px; gap:6px 10px; }
@@ -404,6 +589,16 @@ def render_pulse_page() -> None:
                 if st.button(":material/sync:", key="pulse_sync"):
                     run_registration_with_feedback()
                     _load_history.clear()
+                st.button(
+                    ":material/bar_chart:" if st.session_state.get("pulse_hexagon", False)
+                    else ":material/hexagon:",
+                    key="pulse_chart_toggle",
+                    help="Mostrar gráfico de barras" if st.session_state.get("pulse_hexagon", False)
+                    else "Mostrar perfil hexagonal",
+                    on_click=lambda: st.session_state.update(
+                        pulse_hexagon=not st.session_state.get("pulse_hexagon", False)
+                    ),
+                )
             return
 
         interval = st.session_state.get("pulse_hours", "1d")
