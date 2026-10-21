@@ -400,3 +400,4 @@ $env:SPOTY_LOG_LEVEL = "DEBUG"
 Use `INFO` for normal operation. Changing the level requires restarting the
 process. Existing progress prints and third-party logs are separate from this
 logger; this step does not replace all repository output or change retry policy.
+
