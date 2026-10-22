@@ -25,7 +25,7 @@ python -m venv venv
 .\venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-This editable installation includes the eight `spoty-*` console commands listed
+This editable installation includes the ten `spoty-*` console commands listed
 below. Start the web app with:
 
 ```powershell
@@ -47,13 +47,126 @@ LASTFM_API_KEY=tu_api_key
 ```
 
 `DATABASE_URL` must point to a Neon PostgreSQL host. Spotify credentials are
-required only by operations that use Spotify; database analysis can run without
-them.
+required by operations that use Neon. Local listening-event capture does not
+require `DATABASE_URL`; database analysis and importing the local CSV do.
+
+### Local listening-event capture
+
+When the Streamlit app is open in a browser, it checks Spotify for recent
+listening events every five minutes and saves new events to
+`external data/listening_events.csv`. The CSV includes the event timestamp and
+context, plus the Spotify item needed to recreate the track, album and artist
+records during import. Repeated results are skipped using the same
+`(track_id, played_at)` key as the database. The file is local to the computer
+running Streamlit and is already excluded from Git by `.gitignore`.
+
+The capture runs only while a browser session is active. Spotify returns only
+recent history (up to 50 items per request), so the CSV cannot recover listens
+that are no longer available from Spotify after the app was closed. The
+dashboard and other database-backed features still require Neon.
+
+Set `SPOTY_LISTENING_EVENTS_CSV` to use another CSV path. Relative paths are
+resolved from the project root. When Neon is available again, validate the file
+without writing first, then apply it:
+
+```powershell
+spoty-import-listening-events --dry-run
+spoty-import-listening-events --apply
+```
+
+To import another file, pass `--csv "path\to\listening_events.csv"`. Import
+validates the whole CSV before connecting to Neon, saves catalog records and
+listening events transactionally, and skips existing event keys. It is safe to
+repeat the import; the local CSV is never deleted or cleared.
+
+Pulse's live lookup uses the optional SmarterPlaylists session. For a local
+checkout, set `SMARTERPLAYLISTS_SESSION_FILE` or keep the session file at
+`.secrets/smarterplaylists-session.json`. For Streamlit Community Cloud, add the
+cookie under **App settings → Secrets**; local files are not deployed:
+
+```toml
+SMARTERPLAYLISTS_SESSION_COOKIE = "your-authorized-session-cookie"
+```
+
+The cookie is private and expires; never commit it to the repository. Refresh it
+through an authorized SmarterPlaylists browser session when it expires.
+When Pulse successfully looks up a current track, it stores the normalized
+SmarterPlaylists metadata in PostgreSQL so later history queries can reuse it.
+This live lookup can persist metadata for a track before it exists in the local
+catalog; it does not create or modify core track, album, or artist rows.
 
 The installed commands are `spoty-register`, `spoty-currently-playing`,
 `spoty-sync-liked`, `spoty-enrich`, `spoty-print-summary`, and
 `spoty-print-liked`, plus `spoty-import-smarterplaylists` and
-`spoty-refresh-smarterplaylists`.
+`spoty-refresh-smarterplaylists`, `spoty-genres`, and
+`spoty-import-listening-events`.
+
+### Local genre taxonomy
+
+The initial, editable classification lives in
+[services/genre_taxonomy_seed.json](services/genre_taxonomy_seed.json). It is a
+small editorial starting point, not an official Spotify hierarchy. PostgreSQL
+is the operational authority after import; provider metadata is never rewritten.
+Only artist `genres` reported by SmarterPlaylists are mapped in this first version.
+
+The seed now includes an explicit editorial review of the 482 initially pending
+labels. Musical, regional and contextual families are intentionally separate;
+grouped regional labels are not claimed to be synonyms. All original labels
+remain in provider metadata. See the generated
+[family and subgenre diagrams](GENRE_TAXONOMY.md) for every relationship and mapping.
+For a readable, navigable view, open the standalone
+[interactive taxonomy viewer](GENRE_TAXONOMY.html). It works offline without a
+server, with collapsible branches, label search, direct parents/children,
+cross-family navigation and adjustable tree size.
+
+```powershell
+.\venv\Scripts\python.exe -m register.migrations
+.\venv\Scripts\python.exe -m services.genre_taxonomy import
+.\venv\Scripts\python.exe -m services.genre_taxonomy import --apply
+.\venv\Scripts\python.exe -m services.genre_taxonomy discover
+.\venv\Scripts\python.exe -m services.genre_taxonomy discover --apply
+.\venv\Scripts\python.exe -m services.genre_taxonomy diagram --output GENRE_TAXONOMY.md
+.\venv\Scripts\python.exe -m services.genre_taxonomy viewer --output GENRE_TAXONOMY.html
+```
+
+`spoty-genres` accepts the same arguments after installation. Import without
+`--apply` validates the seed offline; discovery without `--apply` reads unknown
+labels without writing. Import adds missing genres and relationships and approves
+pending labels explicitly listed in the seed. Existing names, approved mappings
+and exclusions are preserved. Repeat imports are idempotent; removals from the
+file do not delete database rows. New relationships may change historical family
+totals, so seed changes should be reviewed before applying.
+
+To expand the classification, add canonical genres with stable `id`, display
+`name`, a `parents` list and exact `labels`, then validate and explicitly import.
+Use `--seed path/to/seed.json` for another seed. Version `1` identifies the file
+format. Multiple parents are allowed; cycles, unknown parents and duplicate
+normalized labels are rejected. The importer also validates the combined stored
+and incoming graph under a transaction lock. Future graph editors must use the
+same validation and lock; foreign keys alone do not prevent multi-node cycles.
+
+Summary defaults to **Generos** (approved labels grouped by root ancestors),
+shown on the left of the selector. **Subgeneros** preserves the original label
+view. The percentage of included listens appears to the right of the selector;
+the included/total counts are available on hover. A listen counts once per family even across
+multiple artists or descendants. Families may overlap and percentages can sum
+above 100%; percentages use listens with at least one resolved family. The
+coverage numerator therefore differs between modes. Pending and excluded labels
+do not contribute to family totals. Genre attribution is inherited from artists,
+not inferred from the audio of each song.
+
+Discovery is an explicit local operation; run it again after metadata refreshes.
+The diagram command works offline and regenerates a family overview, one Mermaid
+diagram per root and the associated source labels directly from the JSON. It does
+not read or write PostgreSQL. Regenerate it whenever the seed changes; database-only
+edits are not reflected in this seed diagram.
+The viewer command also works offline and embeds the same seed in a single HTML
+file, with no CDN, Mermaid renderer, database connection or external assets. It
+uses a lazily expanded tree rather than drawing every relationship at once;
+multiple parents remain available in the selected genre's detail panel.
+No scheduled job or automatic musical classification is added. Reviewing existing
+pending labels in the UI, richer audit history and materialized aggregates are
+future extensions, not prerequisites for this first version.
 
 Run one bounded metadata-enrichment batch for a specific source:
 
@@ -132,7 +245,15 @@ Daily calls reusable workflows consecutively in this order:
 | 2 | Last.fm Metadata | `workflow_dispatch` / `run-lastfm-enrichment` |
 | 3 | MusicBrainz Metadata | `workflow_dispatch` / `run-musicbrainz-enrichment` |
 | 4 | AcousticBrainz Metadata | `workflow_dispatch` / `run-acousticbrainz-enrichment` |
-| 5 | Smarter Playlists Metadata | `workflow_dispatch` / `run-smarterplaylists` |
+| 5 | Smarter Playlists Initial Metadata | `workflow_call` from Daily |
+
+The complete `Smarter Playlists Metadata` workflow remains independently
+available through `workflow_dispatch` and `run-smarterplaylists`; it also runs
+weekly on Sunday at 03:00 UTC to refresh existing captures.
+
+Liked Tracks downloads the full library before reconciling the database. It
+retries rate-limited pages and restarts the scan once if the library changes
+during pagination; a repeatedly changing or incomplete scan is never applied.
 
 Each task retains its own timeout, credentials and concurrency group, including
 standalone runs. A failed or timed-out task does not prevent subsequent tasks from
@@ -140,7 +261,9 @@ running, but the daily run still reports failure. Cancelling Daily stops the cha
 Daily also has its own concurrency group to prevent overlapping daily runs.
 GitHub concurrency keeps at most one running and one pending run per group; newer
 requests can replace pending requests, so this is not a durable cron backlog.
-Individual native GitHub schedules are removed to avoid duplicate daily runs.
+Individual native GitHub schedules are removed from the Daily tasks to avoid
+duplicate daily runs. The complete Smarter Playlists workflow has its own weekly
+schedule, separate from Daily's first-attempt-only check.
 
 The separate external cron every 30 minutes still sends `run-registration` and
 runs Registration independently. It can overlap with Daily: the daily sequence
@@ -196,26 +319,37 @@ new metadata without changing existing analysis queries. Audio values in the
 track view prefer this resource and fall back to core data, with provenance for
 each field. Popularity and followers from different sources remain separate.
 
-## Daily Smarter Playlists Refresh
+## Smarter Playlists metadata workflows
 
 `0004_smarterplaylists_refresh_state` adds per-entity retry state. With an
-authorized private session file, scan all due entities in bounded batches:
+authorized private session file, the complete refresh scans all due entities in
+bounded batches:
 
 ```powershell
 .\venv\Scripts\python.exe -m _enrichment --provider smarterplaylists --all --batch-size 50 --session-file .secrets/smarterplaylists-session.json
 ```
 
-The daily Action uses `--all`: no total entity cap. It snapshots all due IDs,
-then processes at most 50 entities of each type per batch without repeating IDs
-within that execution. The snapshot is read before HTTP, not inside a long DB
-transaction. Manual Actions runs expose batch size (1..100) and refresh age.
-Batch size is not the total number of entities checked.
+The complete `Smarter Playlists Metadata` Action uses `--all`: no total entity
+cap. It snapshots all due IDs, including entities with no metadata and entities
+whose captures are expired or eligible for retry, then processes at most 50
+entities of each type per batch without repeating IDs within that execution.
+The snapshot is read before HTTP, not inside a long DB transaction. Manual
+Actions runs expose batch size (1..100) and refresh age. Batch size is not the
+total number of entities checked.
 
-`--refresh-hours` defaults to 20 to tolerate daily schedule jitter (1..168 hours).
-New entities precede expired ones. Already-fresh metadata and retry-backoff IDs
-are skipped, so this is a complete scan of eligible pending/expired entities,
-not a forced refetch of every row regardless of age. `--all --dry-run` reports
-the full eligible counts without HTTP or writes.
+Daily uses the separate `Smarter Playlists Initial Metadata` Action. It also
+processes all eligible IDs in bounded batches, but only entities with neither a
+metadata row nor a refresh-attempt row. Entities with prior failed attempts and
+entities with existing captures are left for the complete Action; this daily
+check does not retry failures or refresh existing metadata. Both Actions share
+the same concurrency group to prevent overlapping provider runs.
+
+`--refresh-hours` defaults to 20 to tolerate schedule jitter (1..168 hours).
+The complete Action selects new entities before expired ones. Already-fresh
+metadata and retry-backoff IDs are skipped, so this is a complete scan of
+eligible pending/expired entities, not a forced refetch of every row regardless
+of age. `--all --dry-run` reports the full eligible counts without HTTP or writes;
+add `--only-unattempted` to preview only entities with no metadata or attempt.
 
 Each batch emits progress JSON. The default `--max-minutes 300` gives the bulk
 process a five-hour budget; Actions has a 330-minute timeout. Budget exhaustion

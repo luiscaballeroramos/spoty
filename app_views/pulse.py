@@ -586,7 +586,11 @@ def render_pulse_page() -> None:
                     key="pulse_hours", label_visibility="collapsed", wrap=False,
                 )
                 st.toggle("All metadata", key="pulse_expanded", wrap=False)
-                if st.button(":material/sync:", key="pulse_sync"):
+                if st.button(
+                    ":material/sync:",
+                    key="pulse_sync",
+                    help="Consultar Spotify y guardar las escuchas nuevas en el CSV local",
+                ):
                     run_registration_with_feedback()
                     _load_history.clear()
                 st.button(

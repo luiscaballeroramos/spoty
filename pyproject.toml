@@ -31,6 +31,7 @@ spoty-refresh-smarterplaylists = "_smarterplaylists_refresh:main"
 spoty-print-summary = "_print_summary:print_database_summary"
 spoty-print-liked = "_print:print_liked_tracks"
 spoty-genres = "services.genre_taxonomy:main"
+spoty-import-listening-events = "services.listening_event_import:main"
 
 [tool.setuptools]
 py-modules = [

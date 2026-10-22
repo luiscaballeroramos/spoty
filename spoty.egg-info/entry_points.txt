@@ -1,6 +1,8 @@
 [console_scripts]
 spoty-currently-playing = _currently_playing:main
 spoty-enrich = _enrichment:main
+spoty-genres = services.genre_taxonomy:main
+spoty-import-listening-events = services.listening_event_import:main
 spoty-import-smarterplaylists = _smarterplaylists:main
 spoty-print-liked = _print:print_liked_tracks
 spoty-print-summary = _print_summary:print_database_summary

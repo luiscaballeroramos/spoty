@@ -94,14 +94,10 @@ class SynchronizationService:
         counters = {
             "fetched_items": 0,
             "skipped_invalid_events": 0,
-            "inserted_tracks": 0,
-            "inserted_albums": 0,
-            "inserted_artists": 0,
-            "inserted_listening_events": 0,
+            "saved_local_events": 0,
             "skipped_existing_listening_events": 0,
         }
         try:
-            database_url = self._get_database_url()
             spotify = self._get_spotify_client()
             response = spotify.get_recently_played(limit=limit)
             items = response["items"]
@@ -134,42 +130,21 @@ class SynchronizationService:
 
             from register.listeningevent import ListeningEvent
             from register.spotify_data import models_from_spotify_track
+            from services.listening_event_csv import ListeningEventCsvStore
 
-            with self._get_database_factory()(database_url) as database:
-                track_ids = list({track_id for _, track_id, _, _ in candidates})
-                timestamps = [timestamp for _, _, _, timestamp in candidates]
-                existing = database.get_listening_event_keys(
-                    track_ids, min(timestamps), max(timestamps)
+            valid_events = []
+            for item, track_id, played_at_utc, timestamp in candidates:
+                models_from_spotify_track(item["track"])
+                ListeningEvent(
+                    track_id,
+                    played_at_utc,
+                    (item.get("context") or {}).get("uri"),
                 )
+                valid_events.append((item, track_id, timestamp))
 
-                for item, track_id, played_at_utc, timestamp in candidates:
-                    event_key = (track_id, timestamp)
-                    if event_key in existing:
-                        counters["skipped_existing_listening_events"] += 1
-                        continue
-
-                    track_model, album_model, artists = models_from_spotify_track(
-                        item["track"]
-                    )
-                    context = item.get("context") or {}
-                    event = ListeningEvent(
-                        track_id, played_at_utc, context.get("uri")
-                    )
-                    with database.transaction():
-                        counters["inserted_tracks"] += bool(
-                            track_model.save(database, print_only_insert=True)
-                        )
-                        counters["inserted_albums"] += bool(
-                            album_model.save(database, print_only_insert=True)
-                        )
-                        for artist in artists:
-                            counters["inserted_artists"] += bool(
-                                artist.save(database, print_only_insert=True)
-                            )
-                        counters["inserted_listening_events"] += bool(
-                            event.save(database, print_only_insert=True)
-                        )
-                    existing.add(event_key)
+            saved, skipped = ListeningEventCsvStore().append_events(valid_events)
+            counters["saved_local_events"] = saved
+            counters["skipped_existing_listening_events"] = skipped
 
             status = (
                 SyncStatus.PARTIAL
