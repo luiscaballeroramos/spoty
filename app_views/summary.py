@@ -20,7 +20,7 @@ else:
 
 
 def run_registration_with_feedback():
-    """Run available listening-event registration with a spinner and display Spotify failures."""
+    """Capture recent Spotify listening events in the local CSV and report the result."""
     if register_listeningevents is None:
         return
 
@@ -29,25 +29,33 @@ def run_registration_with_feedback():
             result = register_listeningevents()
     except SpotifyError as exc:
         render_incident_notice(
-            "summary_registration_error", exc, "No se pudieron actualizar los eventos de escucha."
+            "summary_registration_error",
+            exc,
+            "No se pudieron consultar las escuchas de Spotify.",
         )
         return
     except Exception as exc:
         render_incident_notice(
-            "summary_registration_error", exc, "No se pudo completar la sincronización."
+            "summary_registration_error",
+            exc,
+            "No se pudo completar la captura local de escuchas.",
         )
         return
 
     if result.status is SyncStatus.COMPLETED:
         clear_incident(st.session_state, "summary_registration_error")
-        st.success("Datos de escucha actualizados.")
+        st.success(
+            "Escuchas guardadas en local: "
+            f"{result.counters.get('saved_local_events', 0)} nuevas; "
+            f"{result.counters.get('skipped_existing_listening_events', 0)} repetidas omitidas."
+        )
     else:
         error = RuntimeError(result.message or result.status.value)
         error.action = "sync listening events"
         error.retry_after = result.retry_after
         render_incident_notice(
             "summary_registration_error", error,
-            f"Sincronización {result.status.value}: los datos locales pueden estar incompletos.",
+            f"Captura local {result.status.value}: el CSV puede estar incompleto.",
         )
 
 

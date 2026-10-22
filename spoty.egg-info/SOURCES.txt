@@ -13,6 +13,9 @@ pyproject.toml
 streamlit_app.py
 app_views/__init__.py
 app_views/error_feedback.py
+app_views/listening_event_capture.py
+app_views/metadata.py
+app_views/pulse.py
 app_views/reproduction.py
 app_views/summary.py
 app_views/top_navigation.py
@@ -24,6 +27,7 @@ register/album.py
 register/artist.py
 register/db.py
 register/enrichment.py
+register/genre_taxonomy.py
 register/listeningevent.py
 register/migrations.py
 register/smarterplaylists.py
@@ -32,8 +36,15 @@ register/track.py
 services/enrichment.py
 services/enrichment_contract.py
 services/errors.py
+services/genre_taxonomy.py
+services/genre_taxonomy_seed.json
+services/genre_taxonomy_viewer.html
+services/listening_event_capture.py
+services/listening_event_csv.py
+services/listening_event_import.py
 services/metadata_enrichment.py
 services/playback.py
+services/pulse.py
 services/reproduction.py
 services/smarterplaylists.py
 services/smarterplaylists_refresh.py
@@ -60,9 +71,13 @@ streamlit_lab/test_blocks.py
 tests/test_configuration.py
 tests/test_enrichment.py
 tests/test_error_feedback.py
+tests/test_genre_taxonomy.py
+tests/test_listening_event_csv.py
 tests/test_metadata_sources.py
+tests/test_metadata_view.py
 tests/test_persistence.py
 tests/test_playback_controller.py
+tests/test_pulse.py
 tests/test_reproduction.py
 tests/test_smarterplaylists.py
 tests/test_smarterplaylists_postgres.py

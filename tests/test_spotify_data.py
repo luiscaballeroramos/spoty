@@ -1,7 +1,9 @@
 import sys
+import csv
+import tempfile
 import unittest
-from contextlib import nullcontext
 from datetime import datetime, timezone
+from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
 
@@ -33,40 +35,7 @@ class SpotifyDataMappingTest(unittest.TestCase):
         database.insert.assert_not_called()
 
     def test_repeated_registration_keeps_one_utc_event(self):
-        """The shared registration use case inserts a repeated UTC event only once."""
-        class MemoryDatabase:
-            def __init__(self):
-                self.events = set()
-                self.transaction_count = 0
-
-            def transaction(self):
-                self.transaction_count += 1
-                return nullcontext()
-
-            def __enter__(self):
-                return self
-
-            def __exit__(self, exc_type, exc_value, traceback):
-                return False
-
-            def get_listening_event_keys(self, track_ids, min_played_at, max_played_at):
-                return {
-                    event
-                    for event in self.events
-                    if event[0] in track_ids
-                    and min_played_at <= event[1] <= max_played_at
-                }
-
-            def insert(self, table, data, **_kwargs):
-                if table != "listening_events":
-                    return False
-                event = (data["track_id"], data["played_at"])
-                if event in self.events:
-                    return False
-                self.events.add(event)
-                return True
-
-        database = MemoryDatabase()
+        """The shared registration use case keeps one UTC event in the local CSV."""
         track = {
             "id": "track-id",
             "name": "Track",
@@ -114,28 +83,41 @@ class SpotifyDataMappingTest(unittest.TestCase):
         listening_event = MagicMock()
         listening_event.ListeningEvent = Event
 
-        with patch.dict(sys.modules, {
-            "register.listeningevent": listening_event,
-            "register.spotify_data": spotify_data,
-        }):
-            from services.synchronization import SynchronizationService
+        database_factory = Mock()
+        with tempfile.TemporaryDirectory() as temporary:
+            csv_path = Path(temporary) / "events.csv"
+            with (
+                patch.dict(sys.modules, {
+                    "register.listeningevent": listening_event,
+                    "register.spotify_data": spotify_data,
+                }),
+                patch(
+                    "services.listening_event_csv.default_listening_events_csv_path",
+                    return_value=csv_path,
+                ),
+            ):
+                from services.synchronization import SynchronizationService
 
-            service = SynchronizationService(
-                database_url="unused",
-                spotify_factory=lambda: spotify,
-                database_factory=lambda _database_url: database,
-                sleep=lambda _seconds: None,
-                delay=lambda _low, _high: 0,
-            )
-            first = service.sync_listening_events()
-            second = service.sync_listening_events()
+                service = SynchronizationService(
+                    database_url="unused",
+                    spotify_factory=lambda: spotify,
+                    database_factory=database_factory,
+                    sleep=lambda _seconds: None,
+                    delay=lambda _low, _high: 0,
+                )
+                first = service.sync_listening_events()
+                second = service.sync_listening_events()
+            with csv_path.open("r", encoding="utf-8", newline="") as csv_file:
+                rows = list(csv.DictReader(csv_file))
 
         self.assertEqual(first.status.value, "completed", first.message)
-        self.assertEqual(first.counters["inserted_listening_events"], 1)
-        self.assertEqual(second.counters["inserted_listening_events"], 0)
+        self.assertEqual(first.counters["saved_local_events"], 1)
+        self.assertEqual(second.counters["saved_local_events"], 0)
         self.assertEqual(second.counters["skipped_existing_listening_events"], 1)
-        self.assertEqual(database.events, {("track-id", 1735732800)})
-        self.assertEqual(database.transaction_count, 1)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["track_id"], "track-id")
+        self.assertEqual(rows[0]["played_at"], "1735732800")
+        database_factory.assert_not_called()
 
     def test_shared_mapper_handles_optional_fields_without_update_operations(self):
         """Map optional track data and insert related models without updates."""

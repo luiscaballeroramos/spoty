@@ -54,6 +54,7 @@ st.set_page_config(
 try:
     from app_views.metadata import render_metadata_page
     from app_views.pulse import render_pulse_page
+    from app_views.listening_event_capture import render_listening_event_capture
     from app_views.reproduction import (
         refresh_playback_on_page_entry,
         render_reproduction_page,
@@ -156,6 +157,7 @@ def render_current_page():
     current_page = get_current_page()
     previous_page = st.session_state.get(PREVIOUS_PAGE_STATE_KEY)
 
+    render_listening_event_capture()
     render_top_navigation(
         current_page=current_page,
         on_summary_click=go_to_summary_page,

@@ -316,15 +316,19 @@ class SynchronizationServiceTest(unittest.TestCase):
             self.assertIs(save_liked_track_ids(limit=20), result)
         service.sync_liked_tracks.assert_called_once_with(limit=20, offset=0)
 
-    def test_configuration_failure_is_returned_as_failed_result(self):
-        """Verify Configuration failure is returned as failed result."""
-        service = SynchronizationService()
+    def test_listening_event_capture_does_not_require_database_configuration(self):
+        """Capture an empty listening history without requiring Neon configuration."""
+        spotify = Mock()
+        spotify.get_recently_played.return_value = {"items": []}
+        service = SynchronizationService(
+            spotify_factory=lambda: spotify,
+        )
         with patch.dict(sys.modules, {"config": ModuleType("config")}):
             result = service.sync_listening_events()
 
-        self.assertEqual(result.status, SyncStatus.FAILED)
-        self.assertEqual(result.exit_code, 1)
-        self.assertEqual(result.message, "Synchronization failed (ImportError).")
+        self.assertEqual(result.status, SyncStatus.COMPLETED)
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(result.counters["fetched_items"], 0)
 
     def test_registration_cli_prints_json_and_exits_nonzero_for_partial_result(self):
         """Verify Registration cli prints json and exits nonzero for partial result."""

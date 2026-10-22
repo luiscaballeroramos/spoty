@@ -8,7 +8,7 @@ python -m venv venv
 .\venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-This editable installation includes the nine `spoty-*` console commands listed
+This editable installation includes the ten `spoty-*` console commands listed
 below. Start the web app with:
 
 ```powershell
@@ -30,8 +30,37 @@ LASTFM_API_KEY=tu_api_key
 ```
 
 `DATABASE_URL` must point to a Neon PostgreSQL host. Spotify credentials are
-required only by operations that use Spotify; database analysis can run without
-them.
+required by operations that use Neon. Local listening-event capture does not
+require `DATABASE_URL`; database analysis and importing the local CSV do.
+
+### Local listening-event capture
+
+When the Streamlit app is open in a browser, it checks Spotify for recent
+listening events every five minutes and saves new events to
+`external data/listening_events.csv`. The CSV includes the event timestamp and
+context, plus the Spotify item needed to recreate the track, album and artist
+records during import. Repeated results are skipped using the same
+`(track_id, played_at)` key as the database. The file is local to the computer
+running Streamlit and is already excluded from Git by `.gitignore`.
+
+The capture runs only while a browser session is active. Spotify returns only
+recent history (up to 50 items per request), so the CSV cannot recover listens
+that are no longer available from Spotify after the app was closed. The
+dashboard and other database-backed features still require Neon.
+
+Set `SPOTY_LISTENING_EVENTS_CSV` to use another CSV path. Relative paths are
+resolved from the project root. When Neon is available again, validate the file
+without writing first, then apply it:
+
+```powershell
+spoty-import-listening-events --dry-run
+spoty-import-listening-events --apply
+```
+
+To import another file, pass `--csv "path\to\listening_events.csv"`. Import
+validates the whole CSV before connecting to Neon, saves catalog records and
+listening events transactionally, and skips existing event keys. It is safe to
+repeat the import; the local CSV is never deleted or cleared.
 
 Pulse's live lookup uses the optional SmarterPlaylists session. For a local
 checkout, set `SMARTERPLAYLISTS_SESSION_FILE` or keep the session file at
@@ -52,7 +81,8 @@ catalog; it does not create or modify core track, album, or artist rows.
 The installed commands are `spoty-register`, `spoty-currently-playing`,
 `spoty-sync-liked`, `spoty-enrich`, `spoty-print-summary`, and
 `spoty-print-liked`, plus `spoty-import-smarterplaylists` and
-`spoty-refresh-smarterplaylists`, plus `spoty-genres`.
+`spoty-refresh-smarterplaylists`, `spoty-genres`, and
+`spoty-import-listening-events`.
 
 ### Local genre taxonomy
 
@@ -400,4 +430,3 @@ $env:SPOTY_LOG_LEVEL = "DEBUG"
 Use `INFO` for normal operation. Changing the level requires restarting the
 process. Existing progress prints and third-party logs are separate from this
 logger; this step does not replace all repository output or change retry policy.
-
