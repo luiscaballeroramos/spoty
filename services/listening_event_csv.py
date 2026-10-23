@@ -29,7 +29,7 @@ def default_listening_events_csv_path() -> Path:
         return path
     return (
         Path(__file__).resolve().parents[1]
-        / "external data"
+        / "data"
         / "listening_events.csv"
     )
 
