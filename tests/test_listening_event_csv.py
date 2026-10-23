@@ -1,5 +1,6 @@
 import csv
 import json
+import os
 import tempfile
 import unittest
 from contextlib import nullcontext
@@ -47,6 +48,13 @@ def spotify_item(track_id="track-id", played_at="2026-10-22T07:00:00Z"):
 
 
 class ListeningEventCsvTest(unittest.TestCase):
+    def test_default_csv_path_is_inside_repository_data_directory(self):
+        repository_root = Path(__file__).resolve().parents[1]
+        with patch.dict(os.environ, {"SPOTY_LISTENING_EVENTS_CSV": ""}):
+            path = ListeningEventCsvStore().path
+
+        self.assertEqual(path, repository_root / "data" / "listening_events.csv")
+
     def test_csv_append_preserves_payload_and_deduplicates_by_database_key(self):
         item = spotify_item()
         with tempfile.TemporaryDirectory() as temporary:

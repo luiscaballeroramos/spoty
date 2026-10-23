@@ -37,11 +37,12 @@ require `DATABASE_URL`; database analysis and importing the local CSV do.
 
 When the Streamlit app is open in a browser, it checks Spotify for recent
 listening events every five minutes and saves new events to
-`external data/listening_events.csv`. The CSV includes the event timestamp and
+`data/listening_events.csv`, inside the repository and not excluded by Git. The
+CSV includes the event timestamp and
 context, plus the Spotify item needed to recreate the track, album and artist
 records during import. Repeated results are skipped using the same
-`(track_id, played_at)` key as the database. The file is local to the computer
-running Streamlit and is already excluded from Git by `.gitignore`.
+`(track_id, played_at)` key as the database. Review the CSV before committing:
+it contains your personal listening history and Spotify metadata.
 
 The capture runs only while a browser session is active. Spotify returns only
 recent history (up to 50 items per request), so the CSV cannot recover listens
