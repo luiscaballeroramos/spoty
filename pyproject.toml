@@ -15,6 +15,7 @@ dependencies = [
     "pandas",
     "matplotlib",
     "tzdata",
+    "cryptography>=42",
 ]
 
 [project.optional-dependencies]

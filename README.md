@@ -37,12 +37,11 @@ require `DATABASE_URL`; database analysis and importing the local CSV do.
 
 When the Streamlit app is open in a browser, it checks Spotify for recent
 listening events every five minutes and saves new events to
-`data/listening_events.csv`, inside the repository and not excluded by Git. The
-CSV includes the event timestamp and
-context, plus the Spotify item needed to recreate the track, album and artist
-records during import. Repeated results are skipped using the same
-`(track_id, played_at)` key as the database. Review the CSV before committing:
-it contains your personal listening history and Spotify metadata.
+`data/listening_events.csv`. The CSV includes the event timestamp and context,
+plus the Spotify item needed to recreate the track, album and artist records
+during import. Repeated results are skipped using the same `(track_id, played_at)`
+key as the database. This file contains personal listening history and Spotify
+metadata; keep it local and do not commit it.
 
 The capture runs only while a browser session is active. Spotify returns only
 recent history (up to 50 items per request), so the CSV cannot recover listens
@@ -62,6 +61,39 @@ To import another file, pass `--csv "path\to\listening_events.csv"`. Import
 validates the whole CSV before connecting to Neon, saves catalog records and
 listening events transactionally, and skips existing event keys. It is safe to
 repeat the import; the local CSV is never deleted or cleared.
+
+### Persisting listening history from GitHub Actions
+
+The Registration workflow can keep its cumulative history in
+`data/listening_events.csv.enc`. The public repository contains only AES-256-GCM
+ciphertext; the plaintext CSV is restored to the runner's temporary directory
+and removed before the workflow completes. The encryption key is never stored
+in Git. Create a 32-byte key locally and save it as the repository Actions secret
+`SPOTY_LISTENING_EVENTS_KEY`:
+
+```powershell
+$key = python -c "import secrets; print(secrets.token_hex(32))"
+gh secret set SPOTY_LISTENING_EVENTS_KEY --body "$key"
+```
+
+To seed the encrypted file from an existing local CSV, set the same key in the
+current PowerShell session, then run:
+
+```powershell
+$env:SPOTY_LISTENING_EVENTS_KEY = $key
+python -m services.encrypted_listening_events encrypt `
+  data\listening_events.csv data\listening_events.csv.enc
+git add -- data/listening_events.csv.enc
+git commit -m "Add encrypted listening history"
+Remove-Item Env:SPOTY_LISTENING_EVENTS_KEY
+Remove-Variable key
+```
+
+Review the encrypted file before committing it. Do not commit the plaintext
+`data/listening_events.csv`; it is ignored by Git. The public `main` history was
+rewritten to remove the previously committed plaintext CSV. Existing clones,
+forks, and cached copies may still retain it; collaborators should re-clone or
+otherwise ensure their branches do not reintroduce the old history.
 
 Pulse's live lookup uses the optional SmarterPlaylists session. For a local
 checkout, set `SMARTERPLAYLISTS_SESSION_FILE` or keep the session file at

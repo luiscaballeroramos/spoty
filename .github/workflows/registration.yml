@@ -4,6 +4,13 @@ on:
   repository_dispatch:
     types: [run-registration]
 
+permissions:
+  contents: write
+
+concurrency:
+  group: registration-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   registration:
     runs-on: ubuntu-latest
@@ -26,11 +33,22 @@ jobs:
           SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
           SPOTIFY_REFRESH_TOKEN: ${{ secrets.SPOTIFY_REFRESH_TOKEN }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SPOTY_LISTENING_EVENTS_KEY: ${{ secrets.SPOTY_LISTENING_EVENTS_KEY }}
         run: |
           test -n "$SPOTIFY_CLIENT_ID"
           test -n "$SPOTIFY_CLIENT_SECRET"
           test -n "$SPOTIFY_REFRESH_TOKEN"
           test -n "$DATABASE_URL"
+          test -n "$SPOTY_LISTENING_EVENTS_KEY"
+
+      - name: Restore encrypted listening history
+        env:
+          SPOTY_LISTENING_EVENTS_KEY: ${{ secrets.SPOTY_LISTENING_EVENTS_KEY }}
+        run: |
+          python -m services.encrypted_listening_events decrypt \
+            data/listening_events.csv.enc \
+            "$RUNNER_TEMP/listening_events.csv"
+          echo "SPOTY_LISTENING_EVENTS_CSV=$RUNNER_TEMP/listening_events.csv" >> "$GITHUB_ENV"
 
       - name: Run registration
         env:
@@ -40,3 +58,29 @@ jobs:
           SPOTIFY_REDIRECT_URI: ${{ secrets.SPOTIFY_REDIRECT_URI }}
           SPOTIFY_REFRESH_TOKEN: ${{ secrets.SPOTIFY_REFRESH_TOKEN }}
         run: python -m _registration
+
+      - name: Encrypt listening history
+        env:
+          SPOTY_LISTENING_EVENTS_KEY: ${{ secrets.SPOTY_LISTENING_EVENTS_KEY }}
+        run: |
+          python -m services.encrypted_listening_events encrypt \
+            "$RUNNER_TEMP/listening_events.csv" \
+            data/listening_events.csv.enc
+
+      - name: Remove temporary plaintext
+        if: always()
+        run: rm -f "$RUNNER_TEMP/listening_events.csv"
+
+      - name: Save encrypted listening history
+        run: |
+          if [ -f data/listening_events.csv.enc ]; then
+            git add -- data/listening_events.csv.enc
+          fi
+          if git diff --cached --quiet; then
+            echo "Encrypted listening history is unchanged."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update encrypted listening history"
+          git push
