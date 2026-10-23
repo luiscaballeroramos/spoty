@@ -11,3 +11,4 @@ __pycache__/
 !.env.example
 external data/
 /data/listening_events.csv
+/data/listening_events.backup.csv
