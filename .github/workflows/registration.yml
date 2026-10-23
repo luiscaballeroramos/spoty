@@ -84,4 +84,16 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Update encrypted listening history"
-          git push
+          for attempt in 1 2 3; do
+            if git push; then
+              exit 0
+            fi
+            echo "Push rejected (attempt $attempt); rebasing onto remote main."
+            git pull --rebase origin "${GITHUB_REF_NAME}" || {
+              git rebase --abort || true
+              echo "Rebase conflict; aborting."
+              exit 1
+            }
+          done
+          echo "Could not push after 3 attempts."
+          exit 1
