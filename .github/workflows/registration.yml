@@ -3,6 +3,7 @@ name: Registration
 on:
   repository_dispatch:
     types: [run-registration]
+  workflow_dispatch:
 
 permissions:
   contents: write
