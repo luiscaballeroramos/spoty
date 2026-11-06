@@ -50,7 +50,7 @@ py-modules = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["app_views*", "metadata_sources*", "register*", "services*", "spotifyapi*", "streamlit_lab*"]
+include = ["app_views*", "metadata_sources*", "register*", "services*", "spotifyapi*", "streamlit_lab*", "spoty", "spoty.*"]
 namespaces = true
 
 [tool.setuptools.package-data]

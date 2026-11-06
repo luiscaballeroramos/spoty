@@ -6,6 +6,69 @@ comparten servicios y persistencia, sin un worker permanente.
 
 ## Estado actual
 
+### Prototipo CSV/Git independiente
+
+`spoty.domain`, `spoty.storage` y `spoty.services` implementan un primer flujo
+local de escuchas y metadatos: lote validado -> inbox Git -> consolidacion -> catalogo,
+historico, archivo original, receipts y manifiesto publicados en un commit.
+Las lecturas fijan el commit; un cambio concurrente de la referencia impide
+publicar un snapshot obsoleto y obliga a recalcular. Entradas invalidas quedan
+en cuarentena con resultado explicito. Las cuentas tienen rutas independientes.
+
+El paquete permanece en la raiz siguiendo el empaquetado existente; no se ha
+migrado todo el producto a `src`. La separacion es por dependencias: este flujo
+no importa Streamlit, pandas, psycopg, configuracion ni clientes de proveedores.
+La unica dependencia temporal del dominio de metadatos respecto al paquete
+antiguo es el normalizador puro `services.smarterplaylists`; el servicio reutiliza
+su merge por campo/fecha sin importar persistencia SQL ni duplicar reglas.
+Los estados Last.fm/MusicBrainz/AcousticBrainz se reciben ya normalizados desde
+su contrato de salida existente, con validacion adicional y timestamp de captura.
+
+El manifiesto v2 incluye datasets por proveedor, importaciones idempotentes y
+una proyeccion ligera `track_audio`. Los receipts v2 separan escuchas/metadatos.
+Los snapshots v1 permanecen legibles; se actualizan solo al publicar un nuevo
+commit de consolidacion. `PulseQueryService` produce el contrato de filas usado
+por el calculo existente, con fechas acotadas y exclusion de la escucha actual.
+Los track captures de Pulse pueden preceder al catalogo; no crean entidades
+ficticias. La lectura sigue siendo consolidada y no sustituye la consulta live.
+
+Favoritos mantienen Spotify como autoridad y la politica confirmada de una
+modificacion pendiente por cuenta. `FavoritesCoordinator` publica reservas,
+journals de capturas y referencias de revision con compare-and-swap Git antes
+de cualquier futura llamada remota. No realiza esas llamadas ni desbloquea por
+timeout. Una observacion confirmada/reconciliada publica su lote y libera la
+reserva en un commit; una descarga completa queda superseded si se adelanta
+otra reserva o cambia la revision. Las capturas completas invalidas se conservan
+con error sin borrar favoritos. El llamador debe comprobar que una peticion
+incierta ya no sigue en vuelo antes de reconciliar, sin repetir intenciones.
+
+El manifiesto/receipts v3 agrega favoritos y su revision aplicada, sin perder
+compatibilidad de lectura con v1/v2. Actions aplicara revisiones consecutivas:
+una revision ausente o manipulada bloquea la consolidacion, sin descartarla ni
+publicar un estado inventado. Esta coordinacion exige commits adicionales al
+inbox, pero no una base de datos. `FavoriteQueryService` lee la replica consolidada.
+Los escritores deben cooperar; no existe aislamiento de permisos por carpeta.
+`examples/csv_git_demo.py`, `tests/test_csv_git_prototype.py` y
+`tests/test_csv_metadata_prototype.py`, `tests/test_csv_favorites_prototype.py`
+usan datos sinteticos.
+
+`DataStore` desacopla consumidores del backend local; `GitHubGitStore` agrega
+transporte por API Git (blobs/arbol/commit/ref), sin clonar el historico ni
+construir clientes HTTP desde servicios. La composicion HTTP recibe un proveedor
+de token externo; no carga configuracion, credenciales o datos reales.
+El repositorio debe existir, ser privado y tener la rama inicializada; se rechaza
+el repo del producto. Lecturas por SHA y actualizacion ref sin force mantienen
+publicacion atomica frente a escritores cooperantes. La API ref garantiza
+fast-forward, no CAS literal: prohibir force-push, borrado y rewinds de rama es
+un requisito de despliegue. Los conflictos concurrentes se recalculan; errores
+de autenticacion/rate-limit/red no son exitos ni se ocultan con reintentos.
+Pruebas offline simulan GitHub y HTTP; permisos/conectividad/coste reales aun
+no se han validado ni configurado. No existe integracion con las vistas/workflows.
+Ejecucion/recuperacion remota de favoritos, adquisicion/planificacion de proveedores, taxonomia,
+consultas de cobertura, migracion de datos y medicion
+de consumo siguen pendientes. El siguiente diagrama describe el producto
+operativo, no el prototipo ni una migracion completada.
+
 ```mermaid
 flowchart LR
         USER[Usuario] --> UI[streamlit_app.py]

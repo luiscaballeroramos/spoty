@@ -2,6 +2,23 @@
 
 Fecha de revision: 2026-10-14.
 
+Actualizacion 2026-11-06: el usuario acordo CSV como almacenamiento principal
+en un repositorio privado de datos y un repositorio de codigo con paquetes
+separados. Se prepara el ambito de cuenta sin implementar multiusuario completo.
+Streamlit conserva captura/Pulse en directo mediante lotes; Actions consolida,
+con frecuencia y ubicacion aun pendientes. El prototipo local no cambia la
+persistencia operativa PostgreSQL. Las decisiones SQL anteriores quedan como
+contexto historico, no como requisitos del nuevo almacenamiento.
+Favoritos: se confirma una modificacion pendiente por cuenta, con reserva
+duradera anterior a la llamada remota y reconciliacion explicita de resultados
+inciertos. Spotify conserva la autoridad; no se reenvian intenciones antiguas
+ni se desbloquea por tiempo. Git ordena la replica mediante revisiones y protege
+las descargas completas frente a cambios o reservas posteriores.
+Transporte GitHub: implementacion y pruebas offline confirmadas para este paso;
+no se autoriza crear repos ni publicar datos reales. La API Git ref se actualiza
+sin force y exige una rama que solo avance (sin borrados/rewinds externos).
+Este requisito debera verificarse con reglas/permisos antes del despliegue.
+
 Este documento recoge el contexto de diseno de spoty y propuestas para una
 refactorizacion incremental. No describe una arquitectura ya implementada ni
 autoriza cambios en el codigo. La revision que lo origina es estatica: no se han

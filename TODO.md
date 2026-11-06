@@ -5,6 +5,61 @@ Plan basado en [ARCHITECTURE.md](ARCHITECTURE.md) y
 
 ## Alcance y forma de trabajo
 
+### Actualizacion CSV - 2026-11-06
+
+El objetivo acordado ahora es CSV principal en un repositorio privado de datos,
+sin base de datos obligatoria; un repositorio de codigo con paquetes separados.
+Streamlit publica lotes duraderos y mantiene Pulse en directo; Actions consolida.
+Resumen/historico leen snapshots consolidados, con pendientes indicados aparte.
+La frecuencia y ubicacion de workflows se decidiran tras medir el prototipo.
+
+El primer prototipo local de `spoty` cubre escuchas, catalogo, CSV v1, particiones,
+archivo original, cuarentena, receipts y publicacion atomica Git con lectura
+por commit. No ha cambiado el backend operativo ni migrado datos reales.
+La ampliacion local incluye capturas SmarterPlaylists/Pulse y resultados ya
+normalizados Last.fm/MusicBrainz/AcousticBrainz, merge e idempotencia, proyeccion
+ligera de audio y consultas compatibles con el calculo actual de Pulse.
+El manifiesto/receipts v2 conserva lectura y actualizacion atomica desde v1.
+La siguiente ampliacion implementa coordinacion local serializada de favoritos:
+reservas previas, bloqueo de operaciones inciertas, observaciones y snapshots
+completos por revision, originales invalidos/superseded conservados y consultas
+de replica por commit. El manifiesto/receipts v3 conserva lectores v1/v2.
+La ampliacion de transporte introduce `DataStore` y adaptador API GitHub,
+con blobs/arbol/commit/ref sin force, lecturas por SHA y errores explicitos.
+Solo validacion offline con servidor de objetos en memoria y HTTP simulado.
+Pendientes: validacion/configuracion GitHub real (repo privado, permisos y rama
+sin force-push/borrado/rewinds), ejecucion/recuperacion remota de favoritos, adquisicion/planificacion
+de metadatos, consultas de cobertura y taxonomia,
+consumidores UI/analisis y migracion validada. El plan PostgreSQL de abajo
+se conserva como historial; no exige mantener Neon en la arquitectura objetivo.
+
+Validacion inicial del prototipo: 33 pruebas nuevas y 54 pruebas existentes relacionadas
+correctas (87 en total), demo sintetica end-to-end, sintaxis y comprobacion de
+wheel instalada desde una copia temporal sin `.env` ni datos. No se ha ejecutado
+la suite completa de nuevo ni resuelto sus incidencias previas. La construccion
+restauro sus dependencias declaradas en el entorno temporal de build, no en el
+entorno operativo. No se han publicado repositorios, datos ni workflows.
+Validacion de la ampliacion: 23 pruebas nuevas de metadatos; suite focalizada de
+120 pruebas correctas (CSV/Git, metadatos, normalizacion SmarterPlaylists, Pulse
+y consultas existentes). Demo ampliada correcta, importaciones aisladas sin
+configuracion/DB/HTTP/UI, compilacion y diagnosticos Pylance sin errores.
+Validacion de favoritos: 30 pruebas nuevas; 171 pruebas focalizadas correctas
+(los tres prototipos CSV/Git y regresiones operativas de reproduccion,
+sincronizacion y controlador de playback). Demo completa verifica que un
+snapshot antiguo no borra el favorito confirmado. Compilacion, imports aislados
+y diagnosticos Pylance correctos. No se han ejecutado llamadas reales a proveedores
+ni migrado o publicado datos.
+Validacion del transporte: suite combinada de 109 pruebas correcta (23 nuevas
+y 86 de los tres prototipos anteriores), seguida de 25 pruebas de transporte
+correctas tras agregar el limite exacto de 20 MiB y reintentos acotados.
+Demo local sigue correcta; imports remotos
+aislados no cargan config/HTTP/DB/UI/subprocess. Compilacion y diagnosticos Pylance
+sin errores. Verificacion real de GitHub se mantiene expresamente pendiente.
+Carga local explicita de GH_TOKEN/GITHUB_TOKEN y demo remota opt-in incorporadas.
+30 pruebas focalizadas correctas (configuracion/preflight y transporte). La
+comprobacion real de solo lectura devuelve HTTP 404 al consultar el repo destino;
+privacidad/reglas/permisos aun no verificables. No se han publicado datos.
+
 Un usuario, una cuenta Spotify y un repositorio. Objetivo: monolito modular con
 servicios compartidos por Streamlit, CLI y GitHub Actions. El diagrama representa
 flujos de datos; la UI consultara PostgreSQL mediante servicios de consulta,

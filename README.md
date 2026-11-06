@@ -1,4 +1,215 @@
 # spoty
+## CSV/Git migration prototype
+
+The production app and workflows have **not** switched away from Neon yet.
+The independent `spoty` package prototypes listening, metadata and serialized favorites using
+versioned CSV and a local bare Git data repository. It imports no application
+configuration, reads no `.env`, calls no providers and requires only Python
+3.10+ and Git. Run the synthetic demo from the repository root:
+
+```powershell
+.\venv\Scripts\python.exe -m examples.csv_git_demo
+.\venv\Scripts\python.exe -m unittest tests.test_csv_git_prototype tests.test_csv_metadata_prototype tests.test_csv_favorites_prototype
+```
+
+The demo creates and cleans up its own temporary repository. It publishes a
+durable listening, metadata and favorite batches, consolidates catalog, history and audio,
+archives the original captures, and checks idempotent retries. No real data is used.
+For persistent **local** experiments, `LocalGitStore.initialize(Path(...))`
+requires a new or empty directory; existing application worktrees are refused.
+The local demo never uses the network. A separate GitHub API adapter is available,
+validated offline with simulated responses; no real repository has been configured.
+
+`ListeningBatch.from_items(account, producer, captured_at, items)` validates
+Spotify-shaped input and preserves its complete JSON payload. `publish_batch`
+returns `saved` or `already_saved` only after local Git persistence; failures
+raise `StorageError` or `PublicationConflict`, never a success-shaped fallback.
+After an uncertain failure, retry the same batch (including its original
+capture timestamp). `consolidate` publishes catalog, history, archived captures,
+receipts and a checksummed manifest atomically. Invalid batches are preserved
+in quarantine and reported through receipts and result counters. Summary/history
+read consolidated data only; pending counts count **batches**, not distinct plays.
+
+CSV v1 uses UTF-8, LF, fixed headers and JSON cells for structured values.
+`\N` represents a null cell; literal initial backslashes are escaped by adding
+one backslash. Empty strings, zero, false, null cells and JSON null remain
+distinct (`JSON_NULL` represents a top-level JSON null in the Python codec).
+Partitions are limited to exactly 20 MiB including headers/escaping, with 16
+stable SHA-256 key buckets; history and receipts also partition by UTC month.
+Readers pin a commit and verify file hashes,
+sizes, row counts and unique keys.
+
+Metadata uses the same publication/archive/quarantine flow:
+
+- `MetadataBatch.from_smarterplaylists(account, producer, captured_at, captures,
+  live_track=True)` accepts a completed single-track live lookup even before
+  catalog capture. With the default `live_track=False`, entities must exist in
+  the consolidated catalog. Unknown fields remain in the original capture.
+- Normalization and per-field timestamp/provenance merging reuse the existing
+  **pure**, offline `services.smarterplaylists` functions. Partial and older
+  captures cannot erase newer fields; equal-time conflicting fields reject the
+  whole batch. Nested artist/album values do not create separate metadata rows.
+- `MetadataBatch.from_enrichment_records(account, producer, fetched_at, records)`
+  accepts the normalized outputs of the existing Last.fm, MusicBrainz and
+  AcousticBrainz enrichment service, adding the acquisition timestamp. It
+  validates identifiers, provider states and content consistency, but does not
+  perform new matching or normalize arbitrary raw provider responses.
+  These providers retain **first-consolidated-record wins**, including negative
+  matches; AcousticBrainz low/high levels have independent keys. Every incoming
+  accepted capture remains archived even when its stored record is a duplicate.
+- Receipts count `saved_metadata`/`duplicate_metadata` separately from listening
+  events. Manifest v2 declares the added datasets and receipt CSV v2. Existing
+  listening-only manifest v1 snapshots remain readable, with new metadata
+  datasets empty and historical metadata counters zero. Consolidation upgrades
+  them atomically, without changing the historical commit.
+- `PulseQueryService(snapshot).recent_audio_history(...)` returns Pulse's current
+  and history row shape, using the small `track_audio` projection instead of
+  reading raw metadata. Its rows work with the unchanged `services.pulse.build_pulse`.
+  This is a consolidated reader, **not** a replacement for live Spotify lookup
+  or immediate Streamlit session display. Pending metadata batches can be counted
+  using `snapshot.pending_batches("metadata_capture")`.
+
+### Serialized favorites (local coordination prototype)
+
+Spotify remains the authority; `liked_tracks` is a consolidated replica.
+`FavoritesCoordinator(store, account, producer)` adds small durable coordination
+commits, rather than treating unordered inbox captures as sufficient:
+
+1. Generate and retain a stable request ID (32 lowercase hexadecimal characters).
+   `begin_change(request_id, track_id, desired_liked, started_at)` must persist
+   **before** any remote mutation. Only a returned `reserved` result authorizes
+   the caller to dispatch once. `already_pending`/`already_resolved` retries must
+   **not** dispatch another mutation.
+2. A pending request blocks another favorite change and a new full download for
+   that account. `pending_change()` lets a new process recover its journal.
+   There is no time-based expiry or automatic unlock.
+3. After the request is known to have settled, `resolve_change(request_id,
+   observed_liked, observed_at, resolution="confirmed", remote_settled=True)`
+   records a successful acknowledged state. For an uncertain request, query
+   Spotify's current state and use `resolution="reconciled"`; do not replay an
+   old intent. The caller must ensure no original request remains in flight:
+   an elapsed timeout alone does not prove that. The prototype does not
+   implement this remote recovery or dispatch calls itself.
+4. Resolution atomically clears the pending flag and publishes the observed
+   state as an ordered CSV inbox batch. Failure leaves the durable operation
+   pending, or an idempotently recoverable completed commit. `saved` means
+   **locally durable**, not already consolidated or remotely atomic.
+
+For full downloads, call `reserve_snapshot(sync_id, started_at)` **before**
+acquisition, then `submit_snapshot(sync_id, completed_at, pages)` with the full
+Spotify-shaped page responses. A changed revision, newer reservation or pending
+mutation makes the capture `superseded`: originals are retained in the
+coordination journal, but the replica is not replaced. Incomplete, inconsistent,
+duplicate or unavailable-track pagination is recorded as `invalid` and raises
+`FavoriteCaptureRejected`. A complete empty library may remove all favorites.
+Stable totals and complete pagination cannot detect every concurrent external
+Spotify edit (for example, a same-size swap); later reconciliation is still needed.
+
+Successful snapshots and observations receive consecutive revisions in the
+same commit as their inbox batch and checksummed reference. Consolidation
+applies those revisions in order, independently of timestamps or batch hashes.
+Missing/corrupt/ungated favorite revisions raise `FavoriteRevisionBlocked` and
+leave the snapshot/inbox unchanged; they cannot be skipped to invent a replica.
+This deliberately blocks account consolidation pending repair, unlike isolated
+invalid listening/metadata captures, which can be quarantined independently.
+`LocalGitStore.publish_batch` refuses favorites; they must pass through the
+coordinator. This is a cooperating-code invariant, not token-level authorization.
+
+Manifest/receipt v3 add `liked_tracks`, `favorites_replica_state`, and separate
+`saved_favorites`/`removed_favorites` counters. Snapshots v1/v2 remain readable
+and upgrade atomically on consolidation; older favorite datasets/counters are
+empty/zero because those prototypes did not contain them.
+`FavoriteQueryService(snapshot).liked_ids()` and `.is_liked(track_id)` read only
+the pinned consolidated replica, not pending changes or live Spotify state.
+
+### GitHub data transport (offline-validated)
+
+`GitHubGitStore(owner, repository, transport, branch="main")` implements the
+same `DataStore` contract as `LocalGitStore`. Snapshot readers, consolidation,
+batch publication and favorite coordination use that contract; domain/services
+do not construct HTTP clients or read credentials.
+
+For a future explicitly approved deployment, compose it with
+`RequestsGitHubTransport(token_provider)`, where `token_provider` is a callable
+that obtains the credential from the deployment's secrets. Do not paste tokens
+into code, CSV, commit messages, URLs or the chat. This step does not read
+environment configuration, create a repository, initialize its branch or call
+GitHub with real data.
+
+- Only an **existing, non-archived private repository** with an initialized data
+  branch is accepted; the application's own repository is refused. The repository
+  identity/privacy is checked on each `head()` and before publication.
+- Writes create base64 blobs, a tree based on the pinned parent and one commit,
+  then advance the reference with `force=False`. Files, deletion entries,
+  manifests and favorite coordination become visible together. Missing-file
+  deletion and unchanged bytes do not create unnecessary commits.
+- GitHub's reference API provides **fast-forward**, not the local backend's
+  literal expected-SHA compare-and-swap. With a branch that only advances,
+  sibling commits lose the race without overwriting each other; callers retry
+  boundedly from the new head. Protect the data branch against force pushes,
+  deletion and out-of-band history rewinds. That deployment rule is required:
+  this adapter alone cannot enforce it or claim CAS across arbitrary rewinds.
+- Reads use immutable commit/tree/blob SHA identities, never moving download
+  URLs. Trees are traversed one directory at a time with cached immutable
+  descriptors; incomplete/truncated trees are errors, not partial results.
+  Blob sizes and Git hashes are checked, in addition to snapshot SHA-256 checks.
+  Per-file limit remains 20 MiB; HTTP responses and tree traversal are bounded.
+- HTTP uses the fixed GitHub API origin, TLS, a bounded timeout and no redirects
+  or environment proxies/netrc. Credentials are supplied at request time.
+  Transport errors omit response bodies/tokens. Auth, rate-limit and server
+  failures raise explicit errors; `GitHubHTTPError` retains status and rate-limit
+  headers for the eventual UI/job policy, without automatically sleeping/retrying.
+- A timeout is an **uncertain result**, not success. Retry the same batch/request
+  identity to discover already-published inbox/archive/journal entries.
+  A `422` reference error is a concurrency conflict only when the branch actually
+  moved; otherwise permission/validation failures remain explicit.
+
+Run the offline transport suite:
+
+```powershell
+.\venv\Scripts\python.exe -m unittest tests.test_github_data_store
+```
+
+For an approved real **synthetic-only** check, an explicit local credential
+loader is available. It reads only `GH_TOKEN`/`GITHUB_TOKEN` from the supplied
+file, supports quoted values, and never loads Spotify/Neon settings or populates
+the process environment. Environment tokens take precedence. The file must
+remain ignored and untracked; do not paste its contents into chat or commit it.
+
+```powershell
+# Read-only preflight: private repository, main and active rules without bypass.
+.\venv\Scripts\python.exe -m examples.github_data_demo --owner OWNER --repository DATA_REPO --env-file .env
+
+# Only after preflight succeeds and publication is explicitly approved:
+.\venv\Scripts\python.exe -m examples.github_data_demo --owner OWNER --repository DATA_REPO --env-file .env --publish-synthetic --account synthetic-UNIQUE-ID
+```
+
+The preflight verifies active repository-level deletion/force-push rules and
+their empty bypass lists; denied or unverifiable rules stop the check. The
+publication flag requires a new `synthetic-` namespace and leaves its captures
+available for inspection. It tests listening, metadata and synthetic favorite
+observations, consolidation, retries, pinned reads and stale-head rejection.
+No Spotify calls, real migration, force push or deletion of test history occurs.
+The CLI reports sanitized failures; no credentials or response bodies are printed.
+Reading rule details may require additional permission depending on GitHub's
+repository policy; failures must be resolved before publication, not bypassed.
+
+The tests use an in-memory GitHub object server and mocked HTTP responses,
+including all three capture kinds, concurrency and lost acknowledgments.
+Real GitHub permissions/branch rules, Community Cloud connectivity, API quotas,
+large-export memory/cost and performance remain unverified. Cross-repository
+writes will need a fine-grained PAT or GitHub App credential restricted to the
+private data repository (`Contents: write`); a code-repository `GITHUB_TOKEN`
+does not grant those permissions. Token choice and workflow location remain
+deployment decisions. There is no per-folder token isolation.
+
+The prototype does not migrate the existing CSV/COPY formats or taxonomy,
+wire Streamlit/Actions or certify performance on the
+full export. It currently loads/repartitions the small prototype datasets in
+memory; scaling and incremental partition updates remain separate work.
+Provider HTTP acquisition, candidate selection, refresh scheduling/retries and
+metadata-coverage UI queries have not yet been migrated.
+
 ## Installation
 
 From the repository root, install the project and its Streamlit UI extra:
