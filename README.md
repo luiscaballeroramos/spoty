@@ -33,6 +33,67 @@ LASTFM_API_KEY=tu_api_key
 required by operations that use Neon. Local listening-event capture does not
 require `DATABASE_URL`; database analysis and importing the local CSV do.
 
+### Responding to an exposed Neon credential
+
+Treat any committed database password as compromised, even after removing it
+from the latest source code.
+
+1. Open the [Neon Console](https://console.neon.tech/) directly, locate the
+   affected project and branch, and reset the affected database role's password.
+   Update or revoke that role on any other branches where its old password is
+   still valid.
+2. Replace `DATABASE_URL` wherever the application runs: the local `.env`,
+   GitHub Actions repository/environment secrets, Streamlit deployment secrets,
+   and any other deployment configuration. Restart running applications to load
+   the replacement value. Never paste the new password into source code,
+   issues, chat, or logs.
+3. Verify that the application connects using the replacement credential and
+   that the old password no longer authenticates. Review available access logs
+   and database changes for unexpected activity.
+4. After revocation, coordinate any Git history cleanup with collaborators.
+   Deleting a file or making a new commit does not remove the secret from older
+   commits, forks, or clones; rewriting history is not a substitute for rotation.
+
+Local `.env` files and `.streamlit/secrets.toml` are ignored by Git. This does
+not protect files already tracked, so review staged changes before committing.
+
+### One-off Neon CSV export
+
+Run from the repository root using the existing `DATABASE_URL` in `.env`:
+
+```powershell
+.\venv\Scripts\python.exe export_neon_csv.py
+```
+
+This standalone script needs no Spotify credentials or extra packages. It creates
+a new `database_backups/neon/csv_<UTC timestamp>_<unique suffix>/` directory
+(ignored by Git), with a CSV per table, grouped by schema. `manifest.json` marks
+completion and lists the original table names and file paths. Without that
+manifest the export is incomplete; partial files are retained for inspection.
+An optional `--output "D:\private-backups\neon-export"` chooses a new directory;
+existing directories are never overwritten. Custom locations are not automatically
+ignored by Git. Keep these files private: they contain your database contents.
+
+The export uses one connection and one read-only, repeatable-read transaction,
+streaming native PostgreSQL COPY output directly to disk. It reads each table
+once without row counts, sorting, pagination, parallel queries or automatic
+retries. Partitioned tables include their partitions once. All non-system schemas
+in the connected database are included, but not views, foreign tables, other
+databases or other Neon branches. Insufficient permissions or row-level security
+restrictions fail the export instead of silently reporting a complete backup.
+Avoid concurrent schema migrations during export.
+
+CSV files use UTF-8, headers and PostgreSQL CSV escaping (including embedded
+newlines and JSON). NULL is an unquoted empty field; an empty string is quoted.
+CSV is a data export, not a restorable schema backup: it omits table definitions,
+indexes, constraints, sequence state and roles. Use `pg_dump` when those are needed.
+
+Manual CSV export offers no inherent reduction in database reads or transfer.
+This script still wakes a suspended Neon compute, transfers all table data and
+keeps its snapshot open until finished. Run once with a reliable connection and
+preferably little write activity; no full export can avoid reading the data.
+No live database export is performed by tests.
+
 ### Local listening-event capture
 
 When the Streamlit app is open in a browser, it checks Spotify for recent
