@@ -1,15 +1,13 @@
 import os
 from typing import Any
 
-import requests
-
 from config import load_env_file
+from publish_data import publish_data
 from register.listeningevent import ListeningEvent
+from register.spotify_data import catalog_from_items
 from spotifyapi.spotifyclient import SpotifyClient
 from spotifyapi.timestamps import parse_spotify_timestamp
 
-DATA_REPOSITORY = "luiscaballeroramos/spoty-data"
-EVENT_TYPE = "record-listening-events"
 RECENT_LISTENING_LIMIT = 50
 
 
@@ -31,32 +29,6 @@ def build_event_rows(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return rows
 
 
-def publish_events(
-    events: list[dict[str, Any]],
-    token: str,
-) -> None:
-    if not events:
-        return
-    if not token:
-        raise ValueError("Missing SPOTY_DATA_TOKEN.")
-
-    response = requests.post(
-        f"https://api.github.com/repos/{DATA_REPOSITORY}/dispatches",
-        headers={
-            "Accept": "application/vnd.github+json",
-            "Authorization": f"Bearer {token}",
-            "X-GitHub-Api-Version": "2022-11-28",
-        },
-        json={"event_type": EVENT_TYPE, "client_payload": {"events": events}},
-        timeout=20,
-        allow_redirects=False,
-    )
-    if response.status_code != 204:
-        raise RuntimeError(
-            f"GitHub repository dispatch failed (HTTP {response.status_code})."
-        )
-
-
 def main() -> None:
     load_env_file()
     token = os.getenv("SPOTY_DATA_TOKEN", "").strip()
@@ -64,8 +36,9 @@ def main() -> None:
         raise ValueError("Missing SPOTY_DATA_TOKEN.")
     response = SpotifyClient().get_recently_played(limit=RECENT_LISTENING_LIMIT)
     events = build_event_rows(response["items"])
-    publish_events(events, token)
-    print(f"Dispatched {len(events)} listening events.")
+    catalog = catalog_from_items(response["items"])
+    publish_data({"events": events, **catalog}, token, source="spotify-listening")
+    print(f"Dispatched {len(events)} listening events and their catalog.")
 
 
 if __name__ == "__main__":

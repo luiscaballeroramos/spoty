@@ -6,13 +6,23 @@ from unittest.mock import Mock, patch
 
 import config
 import publish_listening_events as publisher
+import publish_data as data_publisher
+from register.spotify_data import catalog_from_items
 from spotifyapi.spotifyclient import SpotifyClient
 from spotifyapi.timestamps import parse_spotify_timestamp
 from register.listeningevent import ListeningEvent
 
 
 ITEM = {
-    "track": {"id": "T" * 22},
+    "track": {
+        "id": "T" * 22, "name": 'Song, "title"', "duration_ms": 180000,
+        "artists": [{"id": "R" * 22, "name": "Artist"}],
+        "album": {
+            "id": "A" * 22, "name": "Album", "total_tracks": 10,
+            "artists": [{"id": "R" * 22, "name": "Artist"}],
+            "release_date": "2020-02", "release_date_precision": "month",
+        },
+    },
     "played_at": "2026-11-06T10:00:00Z",
     "context": None,
 }
@@ -69,12 +79,15 @@ class ListeningRegistrationTest(unittest.TestCase):
             patch.dict(os.environ, {"SPOTY_DATA_TOKEN": "test"}, clear=True),
             patch.object(publisher, "load_env_file"),
             patch.object(publisher, "SpotifyClient") as client,
-            patch.object(publisher, "publish_events") as publish,
+            patch.object(publisher, "publish_data") as publish,
             patch("builtins.print"),
         ):
             client.return_value.get_recently_played.return_value = {"items": [ITEM]}
             publisher.main()
-            publish.assert_called_once_with(publisher.build_event_rows([ITEM]), "test")
+            publish.assert_called_once_with(
+                {"events": publisher.build_event_rows([ITEM]), **catalog_from_items([ITEM])},
+                "test", source="spotify-listening",
+            )
 
     def test_recovered_modules_are_outside_old(self):
         root = Path(__file__).resolve().parents[1]
@@ -95,19 +108,19 @@ class ListeningRegistrationTest(unittest.TestCase):
 
     def test_dispatch_success_failure_and_empty_batch(self):
         rows = publisher.build_event_rows([ITEM])
-        with patch.object(publisher.requests, "post") as post:
+        with patch.object(data_publisher.requests, "post") as post:
             post.return_value = Mock(status_code=204)
-            publisher.publish_events(rows, "test-token")
+            data_publisher.publish_data({"events": rows}, "test-token", "test-source")
             self.assertEqual(post.call_args.kwargs["json"], {
-                "event_type": "record-listening-events",
-                "client_payload": {"events": rows},
+                "event_type": "record-data",
+                "client_payload": {"source": "test-source", "events": rows},
             })
             self.assertFalse(post.call_args.kwargs["allow_redirects"])
             post.return_value = Mock(status_code=403)
             with self.assertRaisesRegex(RuntimeError, "HTTP 403"):
-                publisher.publish_events(rows, "test-token")
+                data_publisher.publish_data({"events": rows}, "test-token", "test-source")
             post.reset_mock()
-            publisher.publish_events([], "test-token")
+            data_publisher.publish_data({"events": []}, "test-token", "test-source")
             post.assert_not_called()
 
     def test_invalid_items_fail_before_dispatch(self):
@@ -131,6 +144,34 @@ class ListeningRegistrationTest(unittest.TestCase):
             get.return_value = Mock(status_code=200, json=lambda: {"items": None})
             with self.assertRaisesRegex(ValueError, "recently-played"):
                 SpotifyClient().get_recently_played()
+
+    def test_catalog_extracts_original_headers_and_deduplicates(self):
+        catalog = catalog_from_items([ITEM, ITEM])
+        self.assertEqual(len(catalog["tracks"]), 1)
+        self.assertEqual(len(catalog["artists"]), 1)
+        self.assertEqual(catalog["albums"][0]["tracks"], ["T" * 22])
+        self.assertEqual(catalog["albums"][0]["release_year"], 2020)
+        self.assertIsNone(catalog["tracks"][0]["popularity"])
+
+    def test_large_dispatches_are_split_without_losing_records(self):
+        import json
+        records = [{"id": str(index), "name": "á" * 2000} for index in range(20)]
+        batches = data_publisher.build_dispatches({"artists": records}, "import")
+        self.assertGreater(len(batches), 1)
+        self.assertEqual(
+            [row for batch in batches for row in batch["client_payload"].get("artists", [])],
+            records,
+        )
+        self.assertTrue(all(
+            len(json.dumps(batch).encode("utf-8")) <= data_publisher.MAX_DISPATCH_BYTES
+            for batch in batches
+        ))
+        with patch.object(data_publisher.requests, "post") as post:
+            with self.assertRaises(ValueError):
+                data_publisher.publish_data(
+                    {"artists": [{"name": "x" * 70000}]}, "test", "import"
+                )
+            post.assert_not_called()
 
 
 if __name__ == "__main__":

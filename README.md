@@ -4,7 +4,8 @@
 
 `publish_listening_events.py` fetches the latest 50 Spotify plays and sends flat
 event rows to the `spoty-data` Action. It does not import code from `old/`.
-No intermediate CSV is needed.
+No intermediate CSV is needed. The capture also supplies tracks, artists and
+albums from the same Spotify response, without extra API requests.
 
 Only the necessary legacy pieces have been recovered: `spotifyapi/spotifyclient.py`
 for refresh-token authentication and recent plays, `spotifyapi/timestamps.py`
@@ -57,6 +58,20 @@ Only `spoty-data` owns the CSV schema and writes CSV. `register/listeningevent.p
 only validates and serializes events for dispatch. There is no local CSV buffer.
 More than 50 plays between successful captures can leave gaps; the chosen capture
 frequency does not guarantee complete history.
+
+## Common data entry
+
+`publish_data.py` sends a source label and any combination of `events`, `tracks`,
+`artists` and `albums`. Future source adapters can use this entry independently
+of listening capture. IDs must be Spotify IDs.
+
+`register/spotify_data.py` extracts the catalog using the original database
+columns. Lists are JSON arrays, missing values are null, and album `tracks`
+contains only known songs.
+
+Large payloads are split into bounded dispatches, each committed separately.
+If delivery fails, retry the same data: merging is idempotent. Acceptance by
+GitHub is not confirmation that the data Action completed.
 
 ## Archived data and Git LFS
 
