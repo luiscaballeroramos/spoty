@@ -27,7 +27,7 @@ the request; check the `spoty-data` Action for the final CSV update.
 
 ## Hourly registration
 
-The `Publish listening events` Action runs each hour at minute 17 (UTC),
+The `Publish listening events` Action is scheduled each hour at minute 00 (UTC),
 or manually through `Run workflow`. GitHub schedules can run late or be skipped;
 this is not an exact hourly timer.
 
@@ -45,3 +45,18 @@ Only `spoty-data` owns the CSV schema and writes CSV. `register/listeningevent.p
 only validates and serializes events for dispatch. There is no local CSV buffer.
 More than 50 plays between successful captures can leave gaps; hourly capture
 does not guarantee complete history.
+
+## Archived data and Git LFS
+
+The five archived metadata CSVs larger than 50 MB are tracked with Git LFS,
+as configured in `.gitattributes`. Install Git LFS before cloning or updating
+this repository, then run:
+
+```powershell
+git lfs install
+git lfs pull
+```
+
+Keep these files in LFS when updating them. Pushes upload their contents to
+GitHub LFS and are subject to the repository owner's LFS storage and bandwidth
+limits.
