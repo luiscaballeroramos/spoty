@@ -1,0 +1,116 @@
+{
+  "status": "complete",
+  "started_at": "2026-11-02T09:04:53.094761+00:00",
+  "finished_at": "2026-11-02T09:06:15.179157+00:00",
+  "format": "PostgreSQL CSV, UTF-8, header; NULL is unquoted empty field",
+  "tables": [
+    {
+      "schema": "public",
+      "table": "acousticbrainz_analysis_metadata",
+      "file": "schema-public/table-acousticbrainz_analysis_metadata.csv",
+      "bytes": 82240198
+    },
+    {
+      "schema": "public",
+      "table": "albums",
+      "file": "schema-public/table-albums.csv",
+      "bytes": 1704813
+    },
+    {
+      "schema": "public",
+      "table": "artists",
+      "file": "schema-public/table-artists.csv",
+      "bytes": 172058
+    },
+    {
+      "schema": "public",
+      "table": "genre_label_mappings",
+      "file": "schema-public/table-genre_label_mappings.csv",
+      "bytes": 48139
+    },
+    {
+      "schema": "public",
+      "table": "genre_relations",
+      "file": "schema-public/table-genre_relations.csv",
+      "bytes": 9965
+    },
+    {
+      "schema": "public",
+      "table": "genres",
+      "file": "schema-public/table-genres.csv",
+      "bytes": 17470
+    },
+    {
+      "schema": "public",
+      "table": "lastfm_track_metadata",
+      "file": "schema-public/table-lastfm_track_metadata.csv",
+      "bytes": 14727174
+    },
+    {
+      "schema": "public",
+      "table": "liked_sync_state",
+      "file": "schema-public/table-liked_sync_state.csv",
+      "bytes": 70
+    },
+    {
+      "schema": "public",
+      "table": "liked_tracks",
+      "file": "schema-public/table-liked_tracks.csv",
+      "bytes": 69095
+    },
+    {
+      "schema": "public",
+      "table": "listening_events",
+      "file": "schema-public/table-listening_events.csv",
+      "bytes": 803763
+    },
+    {
+      "schema": "public",
+      "table": "musicbrainz_recording_metadata",
+      "file": "schema-public/table-musicbrainz_recording_metadata.csv",
+      "bytes": 92800177
+    },
+    {
+      "schema": "public",
+      "table": "schema_migrations",
+      "file": "schema-public/table-schema_migrations.csv",
+      "bytes": 431
+    },
+    {
+      "schema": "public",
+      "table": "smarterplaylists_album_metadata",
+      "file": "schema-public/table-smarterplaylists_album_metadata.csv",
+      "bytes": 57260742
+    },
+    {
+      "schema": "public",
+      "table": "smarterplaylists_artist_metadata",
+      "file": "schema-public/table-smarterplaylists_artist_metadata.csv",
+      "bytes": 64530227
+    },
+    {
+      "schema": "public",
+      "table": "smarterplaylists_import_runs",
+      "file": "schema-public/table-smarterplaylists_import_runs.csv",
+      "bytes": 24136181
+    },
+    {
+      "schema": "public",
+      "table": "smarterplaylists_refresh_state",
+      "file": "schema-public/table-smarterplaylists_refresh_state.csv",
+      "bytes": 1742160
+    },
+    {
+      "schema": "public",
+      "table": "smarterplaylists_track_metadata",
+      "file": "schema-public/table-smarterplaylists_track_metadata.csv",
+      "bytes": 547441366
+    },
+    {
+      "schema": "public",
+      "table": "tracks",
+      "file": "schema-public/table-tracks.csv",
+      "bytes": 870957
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+
+--- Table LISTENING_EVENTS ---
+track_id               | played_at  | context_source | context_type | context_id            
+--------------------------------------------------------------------------------------------
+7gz99ddQV2bzraoFHgNlad | 1787332564 | spotify        | playlist     | 37i9dQZF1E8PQgx7NfIdVj
+7gz99ddQV2bzraoFHgNlad | 1787332439 | spotify        | playlist     | 37i9dQZF1E8PQgx7NfIdVj
+7wukCdVOe3faszjEbsiy5e | 1787332420 | None           | None         | None                  
+7gz99ddQV2bzraoFHgNlad | 1787332364 | spotify        | playlist     | 37i9dQZF1E8PQgx7NfIdVj
+7gz99ddQV2bzraoFHgNlad | 1787332350 | spotify        | playlist     | 37i9dQZF1E8PQgx7NfIdVj
+03ZJzglTN3K5cE0CzUBmyt | 1787332318 | spotify        | playlist     | 37i9dQZF1E8PQgx7NfIdVj
+4IpOkqVe7FHTwWnxvxY8wC | 1787332024 | spotify        | playlist     | 37i9dQZF1E8PQgx7NfIdVj
+10PoXrzxGD2WaWTRuYU7VE | 1787331788 | spotify        | playlist     | 37i9dQZF1E8PQgx7NfIdVj
+4oOkxAlDYhRGGrJaaSnvk0 | 1787331489 | spotify        | playlist     | 37i9dQZF1E8PQgx7NfIdVj
+4qYT4nKGxKm0bgxNU8QFsZ | 1787331288 | spotify        | playlist     | 37i9dQZF1E8PQgx7NfIdVj
+--------------------------------------------------------------------------------------------

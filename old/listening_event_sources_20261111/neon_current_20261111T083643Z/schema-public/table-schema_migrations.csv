@@ -1,0 +1,8 @@
+version,applied_at
+0001_initial_schema,2026-10-15 09:34:04.272582+00
+0002_metadata_enrichment,2026-10-15 12:52:14.800607+00
+0003_smarterplaylists_metadata,2026-10-15 14:53:14.285326+00
+0004_smarterplaylists_refresh_state,2026-10-15 14:58:23.778141+00
+0005_remove_non_spotify_core_columns,2026-10-16 10:35:26.580039+00
+0006_prune_empty_catalog_columns,2026-10-16 10:35:26.580039+00
+0007_genre_taxonomy,2026-10-16 13:42:01.856483+00
