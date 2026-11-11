@@ -1,0 +1,44 @@
+name: CSV synthetic validation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: csv-synthetic-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  synthetic-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code only
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install declared dependencies
+        run: python -m pip install -e ".[ui,test]"
+
+      - name: Validate CSV services and isolated Streamlit
+        run: >-
+          python -m unittest
+          tests.test_csv_git_prototype tests.test_csv_metadata_prototype
+          tests.test_csv_favorites_prototype tests.test_csv_genre_taxonomy
+          tests.test_csv_coverage_projection tests.test_csv_grouped_reads
+          tests.test_csv_metadata_incremental tests.test_csv_staging
+          tests.test_csv_acquisition tests.test_csv_operations
+          tests.test_github_data_store tests.test_github_local_configuration
+          tests.test_csv_summary_queries tests.test_csv_summary_view
+          tests.test_csv_benchmark tests.test_csv_pipeline -q
+
+      - name: Verify synthetic acquisition and recovery end to end
+        run: python -m examples.csv_pipeline_demo
