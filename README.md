@@ -25,11 +25,23 @@ Run from this repository root:
 The script requires `requests`. A successful dispatch means GitHub accepted
 the request; check the `spoty-data` Action for the final CSV update.
 
-## Hourly registration
+## Manual or external cron registration
 
-The `Publish listening events` Action is scheduled each hour at minute 00 (UTC),
-or manually through `Run workflow`. GitHub schedules can run late or be skipped;
-this is not an exact hourly timer.
+The `Publish listening events` Action has no built-in schedule. Run it manually
+through `Run workflow`, or have an external cron trigger its `workflow_dispatch`
+event. The Python script also runs once and exits; it has no internal timer.
+
+For example, an authenticated GitHub CLI session with Actions write permission
+on `spoty` can trigger the workflow from a cron job or manually:
+
+```powershell
+gh workflow run registration.yml --repo luiscaballeroramos/spoty --ref main
+```
+
+Use the default branch instead of `main` if it differs. Alternatively, the cron
+can call GitHub's `POST /repos/luiscaballeroramos/spoty/actions/workflows/registration.yml/dispatches`
+API with a JSON body containing `{"ref":"main"}` and a token with Actions write
+permission. The external cron owns the capture frequency.
 
 Add the four credentials above as Actions secrets in `spoty`. The refresh token
 must authorize `user-read-recently-played`. Use a fine-grained GitHub token with
@@ -43,8 +55,8 @@ confirmation of a completed save: check both Actions for failures.
 
 Only `spoty-data` owns the CSV schema and writes CSV. `register/listeningevent.py`
 only validates and serializes events for dispatch. There is no local CSV buffer.
-More than 50 plays between successful captures can leave gaps; hourly capture
-does not guarantee complete history.
+More than 50 plays between successful captures can leave gaps; the chosen capture
+frequency does not guarantee complete history.
 
 ## Archived data and Git LFS
 
