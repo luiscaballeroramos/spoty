@@ -73,6 +73,41 @@ Large payloads are split into bounded dispatches, each committed separately.
 If delivery fails, retry the same data: merging is idempotent. Acceptance by
 GitHub is not confirmation that the data Action completed.
 
+## Local read-only Streamlit dashboard
+
+The initial dashboard reads `listening_events.csv`, `tracks.csv`, `artists.csv`
+and `albums.csv` from one immutable commit of `spoty-data`. It resolves the
+configured branch once, verifies each downloaded Git blob, validates CSV
+headers and duplicate keys, and caches the result for five minutes. It does not
+write to `spoty-data` or use Spotify credentials.
+
+Install the dashboard dependencies and start it from the repository root:
+
+```powershell
+.\venv\Scripts\python.exe -m pip install -r requirements-dashboard.txt
+.\venv\Scripts\python.exe -m streamlit run streamlit_app.py
+```
+
+For a public `spoty-data` repository, the token can be omitted. For a private
+repository, use a fine-grained token limited to **Contents: read** on
+`spoty-data`; do not use the write token from the capture workflow. Locally,
+save it in the ignored `.streamlit/secrets.toml` file:
+
+```toml
+SPOTY_DATA_READ_TOKEN = "your read-only GitHub token"
+```
+
+Streamlit Community Cloud can use the same key in the app's Secrets settings.
+Keep this personal-data dashboard local or restrict access to it before deploying.
+Use **Actualizar datos** to bypass the cache and load the latest commit on
+`main`. The UI displays the short commit ID used for its metrics.
+
+Run the reader tests without network access:
+
+```powershell
+.\venv\Scripts\python.exe -m unittest tests.test_spoty_data_reader -v
+```
+
 ## Archived data and Git LFS
 
 The five archived metadata CSVs larger than 50 MB are tracked with Git LFS,

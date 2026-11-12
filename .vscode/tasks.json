@@ -1,0 +1,23 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run spoty Streamlit dashboard",
+			"type": "shell",
+			"command": ".\\venv\\Scripts\\python.exe",
+			"args": [
+				"-m",
+				"streamlit",
+				"run",
+				"streamlit_app.py",
+				"--server.address",
+				"127.0.0.1",
+				"--server.headless",
+				"true"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "build"
+		}
+	]
+}
