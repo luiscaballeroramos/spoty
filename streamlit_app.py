@@ -4,6 +4,7 @@ import os
 from collections import Counter
 from datetime import datetime, timezone
 
+import altair as alt
 import pandas as pd
 import streamlit as st
 from streamlit.errors import StreamlitSecretNotFoundError
@@ -16,6 +17,8 @@ from spoty_data_reader import (
     GitHubDataReader,
     SpotySnapshot,
 )
+
+RECENT_LISTENING_LIMIT = 50
 
 
 @st.cache_data(ttl=300)
@@ -49,20 +52,57 @@ def render_dashboard(snapshot: SpotySnapshot) -> None:
 
     top_tracks = plays.most_common(10)
     if top_tracks:
-        chart = pd.DataFrame(
-            [
-                {"Cancion": _track_name(track_id, tracks), "Escuchas": count}
-                for track_id, count in top_tracks
-            ]
-        ).set_index("Cancion")
-        st.subheader("Canciones mas escuchadas")
-        st.bar_chart(chart)
+        ranking = []
+        for position, (track_id, count) in enumerate(top_tracks, start=1):
+            name = _track_name(track_id, tracks)
+            artist_names = ", ".join(
+                artists.get(artist_id) or artist_id
+                for artist_id in tracks.get(track_id, {}).get("artists_ids") or []
+            )
+            label = f"{position}. {name}"
+            if artist_names:
+                label += f" · {artist_names}"
+            ranking.append({
+                "Etiqueta": label,
+                "Cancion": name,
+                "Artista": artist_names,
+                "Escuchas": count,
+            })
+        first = min(row["played_at"] for row in snapshot.listening_events)
+        start_date = datetime.fromtimestamp(first, timezone.utc).strftime("%d/%m/%Y")
+        end_date = datetime.fromtimestamp(latest["played_at"], timezone.utc).strftime("%d/%m/%Y")
+        st.subheader("Top 10 canciones por escuchas registradas")
+        st.caption(
+            f"Todo el historial guardado: {start_date} – {end_date} (UTC). "
+            "Cada barra indica el numero de reproducciones registradas de una cancion; "
+            "no son minutos escuchados ni solo las escuchas recientes."
+        )
+        chart = alt.Chart(pd.DataFrame(ranking)).encode(
+            x=alt.X(
+                "Escuchas:Q", title="Reproducciones registradas",
+                scale=alt.Scale(domain=[0, top_tracks[0][1] + 1]),
+                axis=alt.Axis(tickMinStep=1, format="d"),
+            ),
+            y=alt.Y(
+                "Etiqueta:N", title=None,
+                sort=[row["Etiqueta"] for row in ranking],
+                axis=alt.Axis(labelLimit=450),
+            ),
+            tooltip=[
+                alt.Tooltip("Cancion:N", title="Cancion"),
+                alt.Tooltip("Artista:N", title="Artista"),
+                alt.Tooltip("Escuchas:Q", title="Reproducciones", format="d"),
+            ],
+        )
+        bars = chart.mark_bar(color="#1DB954", cornerRadiusEnd=4)
+        counts = chart.mark_text(align="left", dx=6).encode(text=alt.Text("Escuchas:Q", format="d"))
+        st.altair_chart((bars + counts).properties(height=36 * len(ranking)), width="stretch")
 
     recent = sorted(
         snapshot.listening_events,
         key=lambda row: row["played_at"],
         reverse=True,
-    )[:10]
+    )[:RECENT_LISTENING_LIMIT]
     if recent:
         rows = []
         for event in recent:
@@ -78,7 +118,7 @@ def render_dashboard(snapshot: SpotySnapshot) -> None:
                 ),
             })
         st.subheader("Escuchas recientes")
-        st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
+        st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch", height=600)
 
 
 def main() -> None:

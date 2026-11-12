@@ -81,6 +81,10 @@ configured branch once, verifies each downloaded Git blob, validates CSV
 headers and duplicate keys, and caches the result for five minutes. It does not
 write to `spoty-data` or use Spotify credentials.
 
+The horizontal top-10 chart counts plays across the entire saved history,
+shows its UTC date range, and labels each song with its artists and play count.
+Hover over a bar to read the full song and artist names.
+
 Install the dashboard dependencies and start it from the repository root:
 
 ```powershell
