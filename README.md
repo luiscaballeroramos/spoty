@@ -81,9 +81,23 @@ configured branch once, verifies each downloaded Git blob, validates CSV
 headers and duplicate keys, and caches the result for five minutes. It does not
 write to `spoty-data` or use Spotify credentials.
 
+The summary shows registered plays and catalog totals for songs, albums and
+artists, with a single song counter.
+
 The horizontal top-10 chart counts plays across the entire saved history,
 shows its UTC date range, and labels each song with its artists and play count.
 Hover over a bar to read the full song and artist names.
+
+The monthly listening calendar opens on the latest month with saved plays.
+Use the arrows beside the month/year heading or the separate **Año** and
+**Mes (UTC)** selectors to browse the history, including months with no records.
+Navigation stops at the first and last months in the saved history.
+Each cell represents a UTC day. Colors range from green for one registered
+play to red for the highest daily count in the entire saved history. All months
+and years share this scale and legend, including empty months; when the
+historical maximum is one, it stays green.
+Hover over a day for its date and exact count. Black cells mean
+zero saved records, not necessarily zero actual listening: capture gaps may exist.
 
 Install the dashboard dependencies and start it from the repository root:
 
