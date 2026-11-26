@@ -1,4 +1,7 @@
 # spoty
+## Run update listening avents
+.\update_local_listening_events.ps1(Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned) ; (& c:\Users\Luis\spoty\.venv\Scripts\Activate.ps1)
+
 ## Installation
 
 From the repository root, install the project and its Streamlit UI extra:

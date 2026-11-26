@@ -10,6 +10,15 @@ git pull --ff-only
 if ($LASTEXITCODE -ne 0) { throw "git pull failed; resolve it and run again." }
 
 $key = $env:SPOTY_LISTENING_EVENTS_KEY
+$envFile = Join-Path $PSScriptRoot ".env"
+if (-not $key -and (Test-Path $envFile)) {
+    $line = Get-Content $envFile |
+        Where-Object { $_ -match '^\s*(export\s+)?SPOTY_LISTENING_EVENTS_KEY\s*=' } |
+        Select-Object -First 1
+    if ($line) {
+        $key = ($line -replace '^[^=]*=', '').Trim().Trim('"').Trim("'")
+    }
+}
 if (-not $key -and (Test-Path $keyFile)) {
     $key = (Get-Content -Raw $keyFile).Trim()
 }
