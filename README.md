@@ -84,6 +84,30 @@ write to `spoty-data` or use Spotify credentials.
 The summary shows registered plays and catalog totals for songs, albums and
 artists, with a single song counter.
 
+The dashboard uses the responsive layout API developed in the adjacent
+`streamlit-template` project, included locally in [layouts.py](layouts.py) so
+the app does not depend on a sibling folder at runtime. In landscape, metrics
+and the growth chart use the full width, the calendar and top songs share a
+row, and recent plays use the full width. In portrait, those regions stack
+automatically. The layout is fluid so the full dashboard scrolls as a page.
+
+The combined chart shows daily registered plays as bars and cumulative distinct
+listened songs, artists and albums as lines, with independent y-axes. The bar
+scale stays fixed from zero to the highest daily count in the full history.
+The line scale spans the minimum and maximum across all three series in the
+selected period, with labeled major marks at multiples of 1000 and thinner,
+fainter unlabeled grid lines every 250 within those limits, regardless of the
+selected period. Horizontal grid lines follow only the right axis, not the
+daily-play scale. If all values are equal, its upper limit is
+extended by one to keep a visible scale. The lines
+count entities from their first recorded listen across the full history, even
+when a shorter period is selected. Missing track metadata prevents the related
+artists and albums from being counted; catalog totals above may therefore differ.
+The period selector uses UTC dates through today, calendar months for the
+one-, six- and twelve-month windows, and seven days including today for the
+last-seven-days window. Each bar spans its full UTC day.
+Days without saved plays are shown as zero, not proof of no actual listening.
+
 The horizontal top-10 chart counts plays across the entire saved history,
 shows its UTC date range, and labels each song with its artists and play count.
 Hover over a bar to read the full song and artist names.

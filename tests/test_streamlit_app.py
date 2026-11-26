@@ -1,14 +1,44 @@
 import unittest
-from datetime import datetime
+from datetime import date, datetime
 from unittest.mock import patch
 
 from streamlit.testing.v1 import AppTest
 
 from spoty_data_reader import SpotySnapshot
-from streamlit_app import render_dashboard, render_listening_calendar
+from streamlit_app import (
+    growth_period_bounds, listening_growth, render_dashboard,
+    render_listening_calendar, render_listening_growth,
+)
 
 
 class DashboardChartTest(unittest.TestCase):
+    def test_dashboard_uses_fluid_auto_layout_for_all_regions(self):
+        snapshot = SpotySnapshot("abcdef123", (), (), (), ())
+        with patch("streamlit_app.render_layout") as layout:
+            render_dashboard(snapshot)
+
+        options = layout.call_args.kwargs
+        self.assertEqual(options["key"], "spoty-dashboard")
+        self.assertEqual(options["orientation"], "auto")
+        self.assertEqual(options["height"], "fluid")
+        self.assertEqual(
+            set(options["regions"]),
+            {"metrics", "growth", "calendar", "ranking", "recent"},
+        )
+        self.assertEqual(
+            options["horizontal"].areas,
+            (
+                ("metrics", "metrics"),
+                ("growth", "growth"),
+                ("calendar", "ranking"),
+                ("recent", "recent"),
+            ),
+        )
+        self.assertEqual(
+            options["vertical"].areas,
+            (("metrics",), ("growth",), ("calendar",), ("ranking",), ("recent",)),
+        )
+
     def test_summary_shows_tracks_albums_and_artists_without_duplicate_song_counts(self):
         app = AppTest.from_string("""
 from spoty_data_reader import SpotySnapshot
@@ -53,6 +83,7 @@ render_dashboard(SpotySnapshot(
         )
         with patch("streamlit_app.st") as streamlit:
             streamlit.session_state = {}
+            streamlit.selectbox.return_value = "Todo"
             render_dashboard(snapshot)
         chart = streamlit.altair_chart.call_args.args[0]
         rows = chart.data.to_dict("records")
@@ -75,6 +106,135 @@ render_dashboard(SpotySnapshot(
             render_dashboard(snapshot)
         streamlit.altair_chart.assert_not_called()
         streamlit.info.assert_called_once()
+
+
+class ListeningGrowthTest(unittest.TestCase):
+    def test_distinct_counts_carry_into_period_and_include_zero_days(self):
+        events = tuple(
+            {"track_id": track, "played_at": int(datetime.fromisoformat(time).timestamp())}
+            for track, time in [
+                ("a", "2024-01-01T23:30:00+00:00"),
+                ("a", "2024-01-03T00:00:00+00:00"),
+                ("b", "2024-01-03T01:00:00+00:00"),
+                ("missing", "2024-01-03T23:30:00+00:00"),
+                ("c", "2024-01-04T00:30:00+01:00"),
+            ]
+        )
+        snapshot = SpotySnapshot("commit", events, (
+            {"id": "a", "album_id": "album1", "artists_ids": ["one", "two"]},
+            {"id": "b", "album_id": "album1", "artists_ids": ["two", "three"]},
+            {"id": "c", "album_id": "album2", "artists_ids": ["three"]},
+        ), (), ())
+        rows = listening_growth(snapshot, date(2024, 1, 2), date(2024, 1, 4)).to_dict("records")
+        self.assertEqual(rows, [
+            {"Fecha": "2024-01-02", "FechaFin": "2024-01-03", "Escuchas": 0, "Canciones": 1, "Artistas": 2, "Álbumes": 1},
+            {"Fecha": "2024-01-03", "FechaFin": "2024-01-04", "Escuchas": 4, "Canciones": 4, "Artistas": 3, "Álbumes": 2},
+            {"Fecha": "2024-01-04", "FechaFin": "2024-01-05", "Escuchas": 0, "Canciones": 4, "Artistas": 3, "Álbumes": 2},
+        ])
+
+    def test_calendar_periods_use_utc_today(self):
+        today = date(2024, 3, 31)
+        first, last = date(2022, 1, 1), today
+        expected = {
+            "Todo": first, "Último año": date(2023, 3, 31),
+            "Últimos 6 meses": date(2023, 9, 30),
+            "Último mes": date(2024, 2, 29), "Últimos 7 días": date(2024, 3, 25),
+        }
+        for period, start in expected.items():
+            with self.subTest(period=period):
+                self.assertEqual(growth_period_bounds(period, today, first, last), (start, today))
+        self.assertEqual(
+            growth_period_bounds("Últimos 7 días", date(2025, 1, 2), first, last),
+            (date(2024, 12, 27), date(2025, 1, 2)),
+        )
+
+    def test_combined_chart_has_independent_y_scales(self):
+        snapshot = SpotySnapshot(
+            "commit", ({"track_id": "a", "played_at": 1704067200},),
+            ({"id": "a", "album_id": "album", "artists_ids": ["artist"]},), (), (),
+        )
+        with patch("streamlit_app.st") as streamlit:
+            streamlit.selectbox.return_value = "Todo"
+            render_listening_growth(snapshot)
+        spec = streamlit.altair_chart.call_args.args[0].to_dict()
+        self.assertEqual(spec["resolve"]["scale"]["y"], "independent")
+        self.assertEqual(spec["layer"][0]["mark"]["type"], "bar")
+        self.assertEqual(spec["layer"][0]["mark"]["binSpacing"], 0)
+        self.assertEqual(spec["layer"][0]["mark"]["orient"], "vertical")
+        self.assertEqual(spec["layer"][0]["encoding"]["x2"]["field"], "FechaFin")
+        self.assertEqual(spec["layer"][0]["encoding"]["y"]["scale"], {
+            "domain": [0, 1], "nice": False, "padding": 0,
+        })
+        self.assertEqual(spec["layer"][0]["encoding"]["y2"]["datum"], 0)
+        self.assertEqual(spec["layer"][1]["mark"]["type"], "line")
+        self.assertEqual(spec["layer"][1]["transform"][0]["fold"], ["Canciones", "Artistas", "Álbumes"])
+
+    def test_scales_use_full_history_for_bars_and_period_for_lines(self):
+        events = tuple(
+            {"track_id": track, "played_at": int(datetime.fromisoformat(day).timestamp()) + second}
+            for track, day, count in [
+                ("a", "2024-01-01T00:00:00+00:00", 5),
+                ("b", "2024-01-02T00:00:00+00:00", 1),
+                ("c", "2024-01-03T00:00:00+00:00", 1),
+                ("c", "2024-01-04T00:00:00+00:00", 6),
+            ]
+            for second in range(count)
+        )
+        snapshot = SpotySnapshot("commit", events, (
+            {"id": "a", "album_id": "one", "artists_ids": ["one"]},
+            {"id": "b", "album_id": "two", "artists_ids": ["one"]},
+            {"id": "c", "album_id": "three", "artists_ids": ["one", "two"]},
+        ), (), ())
+        for start, end, expected_domain, expected_ticks in [
+            (date(2024, 1, 2), date(2024, 1, 3), [1, 3], []),
+            (date(2024, 1, 1), date(2024, 1, 1), [1, 2], []),
+            (date(2023, 12, 31), date(2023, 12, 31), [0, 1], [0]),
+        ]:
+            with self.subTest(start=start):
+                with patch("streamlit_app.st") as streamlit, patch(
+                    "streamlit_app.growth_period_bounds", return_value=(start, end),
+                ):
+                    render_listening_growth(snapshot)
+                spec = streamlit.altair_chart.call_args.args[0].to_dict()
+                bars = spec["layer"][0]["encoding"]["y"]
+                lines = spec["layer"][1]["encoding"]["y"]
+                self.assertEqual(bars["scale"]["domain"], [0, 6])
+                self.assertFalse(bars["axis"]["grid"])
+                self.assertEqual(lines["scale"]["domain"], expected_domain)
+                self.assertFalse(lines["scale"]["zero"])
+                self.assertEqual(lines["axis"]["values"], expected_ticks)
+                self.assertTrue(lines["axis"]["grid"])
+                streamlit.caption.assert_not_called()
+
+    def test_line_grid_has_quarter_thousand_steps_with_major_labels_only(self):
+        snapshot = SpotySnapshot(
+            "commit", ({"track_id": "a", "played_at": 1704067200},), (), (), (),
+        )
+        for lower, upper, ticks in [
+            (4608, 6309, [4750, 5000, 5250, 5500, 5750, 6000, 6250]),
+            (1000, 3000, [1000, 1250, 1500, 1750, 2000, 2250, 2500, 2750, 3000]),
+            (5100, 5900, [5250, 5500, 5750]),
+        ]:
+            with self.subTest(limits=(lower, upper)):
+                data = listening_growth(snapshot, date(2024, 1, 1), date(2024, 1, 1))
+                data["Canciones"] = upper
+                data["Artistas"] = lower
+                data["Álbumes"] = lower
+                with patch("streamlit_app.st") as streamlit, patch(
+                    "streamlit_app.listening_growth", return_value=data,
+                ):
+                    streamlit.selectbox.return_value = "Todo"
+                    render_listening_growth(snapshot)
+                spec = streamlit.altair_chart.call_args.args[0].to_dict()
+                y = spec["layer"][1]["encoding"]["y"]
+                self.assertEqual(y["scale"]["domain"], [lower, upper])
+                self.assertEqual(y["axis"]["values"], ticks)
+                self.assertEqual(
+                    y["axis"]["labelExpr"],
+                    "datum.value % 1000 === 0 ? format(datum.value, 'd') : ''",
+                )
+                self.assertEqual(y["axis"]["gridOpacity"]["expr"], "datum.value % 1000 === 0 ? 0.5 : 0.15")
+                self.assertEqual(y["axis"]["gridWidth"]["expr"], "datum.value % 1000 === 0 ? 1 : 0.5")
 
 
 class ListeningCalendarTest(unittest.TestCase):
@@ -206,7 +366,7 @@ render_dashboard(SpotySnapshot(
         self.assertFalse(app.exception)
         self.assertEqual(app.selectbox(key="calendar_year").value, 2025)
         self.assertEqual(app.selectbox(key="calendar_month").value, 1)
-        self.assertEqual(len(app.get("vega_lite_chart")), 2)
+        self.assertEqual(len(app.get("vega_lite_chart")), 3)
 
     def test_separate_year_and_month_selectors_respect_history_bounds(self):
         app = self.create_calendar_app()
@@ -223,7 +383,7 @@ render_dashboard(SpotySnapshot(
         self.assertIn("### Febrero 2024", [element.value for element in app.markdown])
         self.assertFalse(app.button(key="calendar_previous").disabled)
         self.assertFalse(app.button(key="calendar_next").disabled)
-        self.assertEqual(len(app.get("vega_lite_chart")), 2)
+        self.assertEqual(len(app.get("vega_lite_chart")), 3)
 
 
 if __name__ == "__main__":

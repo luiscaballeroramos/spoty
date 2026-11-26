@@ -10,6 +10,7 @@ import pandas as pd
 import streamlit as st
 from streamlit.errors import StreamlitSecretNotFoundError
 
+from layouts import Layout, render_layout
 from spoty_data_reader import (
     DATA_BRANCH,
     DATA_REPOSITORY_NAME,
@@ -24,6 +25,23 @@ MONTH_NAMES = (
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 )
+HORIZONTAL_DASHBOARD = Layout(
+    areas=(
+        ("metrics", "metrics"),
+        ("growth", "growth"),
+        ("calendar", "ranking"),
+        ("recent", "recent"),
+    ),
+    columns=(1, 1),
+    rows=(1, 1, 1, 1),
+    min_height=0,
+)
+VERTICAL_DASHBOARD = Layout(
+    areas=(("metrics",), ("growth",), ("calendar",), ("ranking",), ("recent",)),
+    columns=(1,),
+    rows=(1, 1, 1, 1, 1),
+    min_height=0,
+)
 
 
 @st.cache_data(ttl=300)
@@ -34,6 +52,132 @@ def load_snapshot(token: str | None) -> SpotySnapshot:
 def _track_name(track_id: str, tracks: dict[str, dict]) -> str:
     track = tracks.get(track_id)
     return track.get("name") or track_id if track else track_id
+
+
+def listening_growth(snapshot: SpotySnapshot, start: date, end: date) -> pd.DataFrame:
+    tracks = {track["id"]: track for track in snapshot.tracks}
+    daily = Counter()
+    first_seen: dict[str, dict[str, date]] = {
+        "Canciones": {}, "Artistas": {}, "Álbumes": {},
+    }
+    for event in snapshot.listening_events:
+        day = datetime.fromtimestamp(event["played_at"], timezone.utc).date()
+        if day > end:
+            continue
+        daily[day] += 1
+        track_id = event["track_id"]
+        track = tracks.get(track_id, {})
+        entities = {
+            "Canciones": (track_id,),
+            "Artistas": track.get("artists_ids") or (),
+            "Álbumes": (track["album_id"],) if track.get("album_id") else (),
+        }
+        for kind, identifiers in entities.items():
+            for identifier in identifiers:
+                previous = first_seen[kind].get(identifier)
+                if previous is None or day < previous:
+                    first_seen[kind][identifier] = day
+
+    daily_new = {
+        kind: Counter(dates.values()) for kind, dates in first_seen.items()
+    }
+    totals = {
+        kind: sum(day < start for day in dates.values())
+        for kind, dates in first_seen.items()
+    }
+    rows = []
+    for timestamp in pd.date_range(start, end, freq="D"):
+        day = timestamp.date()
+        for kind, counts in daily_new.items():
+            totals[kind] += counts[day]
+        rows.append({
+            "Fecha": day.isoformat(),
+            "FechaFin": (day + timedelta(days=1)).isoformat(),
+            "Escuchas": daily[day],
+            **totals,
+        })
+    return pd.DataFrame(rows)
+
+
+def growth_period_bounds(period: str, today: date, first: date, last: date) -> tuple[date, date]:
+    if period == "Todo":
+        return first, max(today, last)
+    if period == "Últimos 7 días":
+        return today - timedelta(days=6), today
+    months = {"Último año": 12, "Últimos 6 meses": 6, "Último mes": 1}[period]
+    return (pd.Timestamp(today) - pd.DateOffset(months=months)).date(), today
+
+
+def render_listening_growth(snapshot: SpotySnapshot) -> None:
+    if not snapshot.listening_events:
+        return
+    st.subheader("Escuchas diarias y evolución acumulada")
+    period = st.selectbox(
+        "Periodo (UTC)",
+        ("Todo", "Último año", "Últimos 6 meses", "Último mes", "Últimos 7 días"),
+        key="growth_period",
+    )
+    dates = [
+        datetime.fromtimestamp(event["played_at"], timezone.utc).date()
+        for event in snapshot.listening_events
+    ]
+    start, end = growth_period_bounds(
+        period, datetime.now(timezone.utc).date(), min(dates), max(dates),
+    )
+    if start > end:
+        st.info("No hay escuchas en el periodo seleccionado.")
+        return
+    data = listening_growth(snapshot, start, end)
+    if not data["Escuchas"].any():
+        st.info("No hay escuchas registradas en este periodo.")
+    historical_max = max(Counter(dates).values())
+    cumulative = data[["Canciones", "Artistas", "Álbumes"]]
+    cumulative_min = int(cumulative.min().min())
+    cumulative_max = int(cumulative.max().max())
+    axis_max = cumulative_max if cumulative_max > cumulative_min else cumulative_min + 1
+    cumulative_ticks = list(range(((cumulative_min + 249) // 250) * 250, axis_max + 1, 250))
+    base = alt.Chart(data).encode(
+        x=alt.X(
+            "Fecha:T", title="Fecha (UTC)", scale=alt.Scale(type="utc"),
+            axis=alt.Axis(format="%d/%m/%Y", tickMinStep=86400000),
+        ),
+    )
+    bars = base.mark_bar(color="#94a3b8", binSpacing=0, orient="vertical").encode(
+        x2=alt.X2("FechaFin:T"),
+        y=alt.Y(
+            "Escuchas:Q", title="Escuchas por día",
+            scale=alt.Scale(domain=[0, historical_max], nice=False, padding=0),
+            axis=alt.Axis(tickMinStep=1, format="d", grid=False),
+        ),
+        y2=alt.Y2(datum=0),
+        tooltip=[alt.Tooltip("Fecha:N", title="Fecha (UTC)"),
+                 alt.Tooltip("Escuchas:Q", title="Escuchas", format="d")],
+    )
+    lines = base.transform_fold(
+        ["Canciones", "Artistas", "Álbumes"], as_=["Tipo", "Acumulado"],
+    ).mark_line(point=len(data) == 1).encode(
+        y=alt.Y(
+            "Acumulado:Q", title="Elementos distintos acumulados",
+            scale=alt.Scale(domain=[cumulative_min, axis_max], nice=False, zero=False, padding=0),
+            axis=alt.Axis(
+                values=cumulative_ticks, grid=True,
+                labelExpr="datum.value % 1000 === 0 ? format(datum.value, 'd') : ''",
+                gridOpacity=alt.ExprRef(expr="datum.value % 1000 === 0 ? 0.5 : 0.15"),
+                gridWidth=alt.ExprRef(expr="datum.value % 1000 === 0 ? 1 : 0.5"),
+            ),
+        ),
+        color=alt.Color("Tipo:N", title="Acumulado", scale=alt.Scale(
+            domain=["Canciones", "Artistas", "Álbumes"],
+            range=["#1DB954", "#2563eb", "#e76f00"],
+        )),
+        tooltip=[alt.Tooltip("Fecha:N", title="Fecha (UTC)"),
+                 alt.Tooltip("Tipo:N", title="Tipo"),
+                 alt.Tooltip("Acumulado:Q", title="Total acumulado", format="d")],
+    )
+    st.altair_chart(
+        (bars + lines).resolve_scale(y="independent").properties(height=320),
+        width="stretch",
+    )
 
 
 def _shift_calendar_month(offset: int) -> None:
@@ -163,19 +307,29 @@ def render_dashboard(snapshot: SpotySnapshot) -> None:
         if latest else "Sin escuchas"
     )
 
-    st.title("spoty · Resumen de escuchas")
-    st.caption(f"Datos de spoty-data · commit `{snapshot.commit[:7]}`")
-    columns = st.columns(4)
-    columns[0].metric("Escuchas", f"{len(snapshot.listening_events):,}")
-    columns[1].metric("Canciones en catálogo", f"{len(snapshot.tracks):,}")
-    columns[2].metric("Álbumes en catálogo", f"{len(snapshot.albums):,}")
-    columns[3].metric("Artistas en catálogo", f"{len(snapshot.artists):,}")
-    st.caption(f"Ultima escucha registrada: {latest_text}")
+    def render_header() -> None:
+        st.title("spoty · Resumen de escuchas")
+        st.caption(f"Datos de spoty-data · commit `{snapshot.commit[:7]}`")
 
-    render_listening_calendar(snapshot)
+    def render_metrics() -> None:
+        columns = st.columns(4)
+        columns[0].metric("Escuchas", f"{len(snapshot.listening_events):,}")
+        columns[1].metric("Canciones en catálogo", f"{len(snapshot.tracks):,}")
+        columns[2].metric("Álbumes en catálogo", f"{len(snapshot.albums):,}")
+        columns[3].metric("Artistas en catálogo", f"{len(snapshot.artists):,}")
+        st.caption(f"Ultima escucha registrada: {latest_text}")
+
+    def render_growth() -> None:
+        render_listening_growth(snapshot)
+
+    def render_calendar() -> None:
+        render_listening_calendar(snapshot)
 
     top_tracks = plays.most_common(10)
-    if top_tracks:
+
+    def render_ranking() -> None:
+        if not top_tracks:
+            return
         ranking = []
         for position, (track_id, count) in enumerate(top_tracks, start=1):
             name = _track_name(track_id, tracks)
@@ -222,12 +376,14 @@ def render_dashboard(snapshot: SpotySnapshot) -> None:
         counts = chart.mark_text(align="left", dx=6).encode(text=alt.Text("Escuchas:Q", format="d"))
         st.altair_chart((bars + counts).properties(height=36 * len(ranking)), width="stretch")
 
-    recent = sorted(
-        snapshot.listening_events,
-        key=lambda row: row["played_at"],
-        reverse=True,
-    )[:RECENT_LISTENING_LIMIT]
-    if recent:
+    def render_recent() -> None:
+        recent = sorted(
+            snapshot.listening_events,
+            key=lambda row: row["played_at"],
+            reverse=True,
+        )[:RECENT_LISTENING_LIMIT]
+        if not recent:
+            return
         rows = []
         for event in recent:
             track = tracks.get(event["track_id"], {})
@@ -243,6 +399,22 @@ def render_dashboard(snapshot: SpotySnapshot) -> None:
             })
         st.subheader("Escuchas recientes")
         st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch", height=600)
+
+    render_layout(
+        key="spoty-dashboard",
+        horizontal=HORIZONTAL_DASHBOARD,
+        vertical=VERTICAL_DASHBOARD,
+        regions={
+            "metrics": render_metrics,
+            "growth": render_growth,
+            "calendar": render_calendar,
+            "ranking": render_ranking,
+            "recent": render_recent,
+        },
+        header=render_header,
+        orientation="auto",
+        height="fluid",
+    )
 
 
 def main() -> None:
