@@ -1,0 +1,14 @@
+{
+  "repository": "luiscaballeroramos/spoty",
+  "branch": "main",
+  "commit": "ef650b0a12d18f8060ccc0cb706169d979784915",
+  "downloaded_at": "2026-11-11T08:36:45.865806+00:00",
+  "files": [
+    {
+      "path": "old/data/listening_events.csv.enc",
+      "git_blob": "236316ddc4743397ccf355bd6cf83bb1ea4f23b2",
+      "bytes": 3262544,
+      "sha256": "6f19d037f51d7215a131d18fff60d90d12dd4001d5006c12754764dadfdc21ae"
+    }
+  ]
+}

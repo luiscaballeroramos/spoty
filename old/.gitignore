@@ -1,0 +1,14 @@
+venv/
+__pycache__/
+.cache
+.playback_state.json
+.playback_state.tmp
+.env
+.streamlit/secrets.toml
+.secrets/
+.env.*
+.venv
+.venv.*
+!.env.example
+external data/
+database_backups/neon/csv_*/

@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spoty"
+version = "0.1.0"
+description = "Spotify tracker that stores listening data in PostgreSQL."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "spotipy",
+    "requests",
+    "psycopg[binary]",
+    "pandas",
+    "matplotlib",
+    "tzdata",
+]
+
+[project.optional-dependencies]
+ui = ["streamlit==1.63.0"]
+test = ["PyYAML>=6,<7"]
+
+[project.scripts]
+spoty-register = "_registration:main"
+spoty-currently-playing = "_currently_playing:main"
+spoty-sync-liked = "_liked_tracks:main"
+spoty-enrich = "_enrichment:main"
+spoty-import-smarterplaylists = "_smarterplaylists:main"
+spoty-refresh-smarterplaylists = "_smarterplaylists_refresh:main"
+spoty-print-summary = "_print_summary:print_database_summary"
+spoty-print-liked = "_print:print_liked_tracks"
+spoty-genres = "services.genre_taxonomy:main"
+spoty-import-listening-events = "services.listening_event_import:main"
+
+[tool.setuptools]
+py-modules = [
+    "config",
+    "_registration",
+    "_currently_playing",
+    "_liked_tracks",
+    "_enrichment",
+    "_smarterplaylists",
+    "_smarterplaylists_refresh",
+    "_missing_data",
+    "_print",
+    "_print_summary",
+    "streamlit_app",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app_views*", "metadata_sources*", "register*", "services*", "spotifyapi*", "streamlit_lab*", "spoty", "spoty.*"]
+namespaces = true
+
+[tool.setuptools.package-data]
+services = ["genre_taxonomy_seed.json", "genre_taxonomy_viewer.html"]

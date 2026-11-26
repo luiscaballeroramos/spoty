@@ -2,7 +2,7 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "Run luispoty locally",
+			"label": "Run spoty Streamlit dashboard",
 			"type": "shell",
 			"command": ".\\venv\\Scripts\\python.exe",
 			"args": [
@@ -10,11 +10,14 @@
 				"streamlit",
 				"run",
 				"streamlit_app.py",
+				"--server.address",
+				"127.0.0.1",
 				"--server.headless",
 				"true"
 			],
 			"isBackground": true,
-			"problemMatcher": []
+			"problemMatcher": [],
+			"group": "build"
 		}
 	]
 }

@@ -1,0 +1,524 @@
+source,field,normalized_label,genre_id,status,introduced_by,created_at
+smarterplaylists,genres,rock,rock,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,pop,pop,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,electronic,electronic,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,electronica,electronic,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,hip hop,hip-hop,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,hip-hop,hip-hop,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,rap,hip-hop,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,soul,soul-rnb,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,r&b,soul-rnb,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,rhythm and blues,soul-rnb,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,jazz,jazz,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,blues,blues,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,folk,folk,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,country,country,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,classical,classical,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,reggae,reggae,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,metal,metal,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,funk,funk,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,alternative rock,alternative-rock,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,alt rock,alternative-rock,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,indie rock,indie-rock,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,grunge,grunge,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,punk,punk-rock,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,punk rock,punk-rock,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,hard rock,hard-rock,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,classic rock,classic-rock,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,progressive rock,progressive-rock,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,prog rock,progressive-rock,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,folk rock,folk-rock,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,pop rock,pop-rock,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,indie pop,indie-pop,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,synthpop,synthpop,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,synth-pop,synthpop,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,house,house,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,techno,techno,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,ambient,ambient,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,neo soul,neo-soul,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,neo-soul,neo-soul,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,retro soul,retro-soul,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,heavy metal,heavy-metal,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,alternative metal,alternative-metal,approved,seed:1,2026-10-16 13:42:04.263301+00
+smarterplaylists,genres,latin,latin,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,traditional music,regional-traditional,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,flamenco,flamenco,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,christian,religious,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,worship,religious,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,hymns,religious,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,experimental,experimental,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,avant-garde,experimental,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,urbano latino,urbano-latino,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,pop urbano,urbano-latino,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,reggaeton,reggaeton,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,reggaeton chileno,reggaeton,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,reggaeton mexa,reggaeton,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,christian reggaeton,christian-reggaeton,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,neoperreo,neoperreo,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,dembow,dembow,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,dembow belico,dembow,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,trap latino,latin-trap,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,argentine trap,latin-trap,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,chilean trap,latin-trap,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,latin hip hop,latin-hip-hop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,mexican hip hop,latin-hip-hop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,latin r&b,latin-rnb,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,latin pop,latin-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,colombian pop,latin-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,latin alternative,latin-alternative,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,latin indie,latin-alternative,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,mexican indie,latin-alternative,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,latin rock,latin-rock,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,rock en español,latin-rock,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,argentine rock,latin-rock,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,latin folk,latin-folk,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,latin folklore,latin-folk,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,folclor andino,latin-folk,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,folklore argentino,latin-folk,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,chamamé,latin-folk,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,son jarocho,latin-folk,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,trova,trova,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,nueva trova,trova,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,música tropical,tropical-latin,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,salsa,salsa,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,salsa choke,salsa,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,son cubano,son-cubano,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,timba,son-cubano,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,mambo,mambo,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,cha cha cha,mambo,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,merengue,merengue,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,bachata,bachata,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,cumbia,cumbia,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,cumbia sonidera,cumbia,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,chicha,cumbia,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,electrocumbia,electrocumbia,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,vallenato,vallenato,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,cuarteto,cuarteto,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,tango,rioplatense,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,candombe,rioplatense,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,murga,rioplatense,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,bolero,bolero,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,música mexicana,mexican-regional,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,grupera,mexican-regional,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,banda,banda,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,corrido,corrido,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,corridos bélicos,corrido,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,corridos tumbados,corridos-tumbados,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,sierreño,sierreno,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,sad sierreño,sierreno,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,norteño,norteno,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,mariachi,mariachi-ranchera,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,ranchera,mariachi-ranchera,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,musica popular colombiana,colombian-popular,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,latin dance,latin-club,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,chilean mambo,latin-club,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,techengue,latin-club,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,turreo,latin-club,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,rkt,latin-club,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,guaracha,guaracha,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,electro corridos,electro-corridos,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,flamenco pop,flamenco-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,flamenco urbano,flamenco-urbano,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,brazilian pop,brazilian-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,mpb,brazilian-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,new mpb,brazilian-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,samba,samba,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,bossa nova,bossa-nova,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,forró,forro,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,forró tradicional,forro,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,piseiro,forro,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,brega,brega,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,arrocha,brega,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,seresta,brega,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,sertanejo tradicional,sertanejo,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,brazilian hip hop,brazilian-hip-hop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,brazilian funk,funk-carioca,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,funk carioca,funk-carioca,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,funk de bh,funk-carioca,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,funk bruxaria,funk-carioca,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,funk melody,funk-carioca,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,brega funk,funk-carioca,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,funk gospel,funk-gospel,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,afrobeat,afrobeat,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,afrobeats,afrobeats,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,azonto,afrobeats,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,afropop,afropop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,afro adura,afro-adura,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,alté,alte,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,afrogospel,afrogospel,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,afroswing,afroswing,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,latin afrobeats,latin-afrobeats,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,highlife,highlife,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,hiplife,hiplife,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,bikutsi,bikutsi,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,gqom,african-dance,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,kuduro,african-dance,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,kizomba,kizomba,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,calypso,caribbean-traditional,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,soca,caribbean-traditional,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,kompa,caribbean-traditional,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,zouk,caribbean-traditional,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,punta,caribbean-traditional,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,dansk rap,regional-hip-hop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,desi hip hop,regional-hip-hop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,french rap,regional-hip-hop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,german hip hop,regional-hip-hop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,ghanaian hip hop,regional-hip-hop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,hindi hip hop,regional-hip-hop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,indonesian hip hop,regional-hip-hop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,k-rap,regional-hip-hop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,norwegian hip hop,regional-hip-hop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,rap québécois,regional-hip-hop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,turkish hip hop,regional-hip-hop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,alternative hip hop,alternative-hip-hop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,underground hip hop,alternative-hip-hop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,experimental hip hop,experimental-hip-hop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,boom bap,boom-bap,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,old school hip hop,boom-bap,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,east coast hip hop,boom-bap,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,west coast hip hop,west-coast-hip-hop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,hyphy,west-coast-hip-hop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,gangster rap,gangsta-rap,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,hardcore hip hop,gangsta-rap,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,horrorcore,gangsta-rap,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,southern hip hop,southern-hip-hop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,bounce,southern-hip-hop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,miami bass,southern-hip-hop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,g-funk,g-funk,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,trap,trap,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,italian trap,trap,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,rage rap,trap,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,drill,drill,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,uk drill,drill,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,nigerian drill,drill,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,sexy drill,drill,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,grime,grime,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,uk grime,grime,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,melodic rap,melodic-rap,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,emo rap,melodic-rap,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,jazz rap,jazz-rap,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,lo-fi hip hop,lofi-hip-hop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,lo-fi beats,lofi-hip-hop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,jazz beats,jazz-beats,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,phonk,phonk,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,brazilian phonk,phonk,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,christian hip hop,christian-hip-hop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,anime rap,anime-rap,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,rap rock,rap-rock,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,rap metal,rap-metal,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,bangla pop,regional-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,dansk pop,regional-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,french pop,regional-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,german pop,regional-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,indonesian pop,regional-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,marathi pop,regional-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,nederpop,regional-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,norwegian pop,regional-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,pop québécoise,regional-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,swedish pop,regional-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,turkish pop,regional-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,acoustic pop,acoustic-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,k-pop,k-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,art pop,art-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,baroque pop,art-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,bedroom pop,bedroom-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,french indie pop,regional-indie-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,german indie pop,regional-indie-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,dream pop,dream-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,jangle pop,jangle-power-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,power pop,jangle-power-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,dance pop,dance-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,eurodance,dance-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,freestyle,dance-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,russelåter,dance-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,electropop,electropop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,hyperpop,electropop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,folk pop,folk-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,pop soul,pop-soul,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,retro pop,retro-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,soft pop,retro-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,city pop,retro-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,adult standards,retro-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,chanson,chanson,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,chanson québécoise,chanson,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,variété française,chanson,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,canzone napoletana,chanson,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,neomelodico,chanson,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,pop urbaine,pop-urbaine,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,christian pop,christian-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,french r&b,regional-rnb,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,indonesian r&b,regional-rnb,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,uk r&b,regional-rnb,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,afro r&b,african-rnb,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,afro soul,african-rnb,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,alternative r&b,alternative-rnb,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,dark r&b,alternative-rnb,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,indie r&b,alternative-rnb,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,indie soul,alternative-rnb,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,classic soul,classic-soul,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,motown,classic-soul,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,northern soul,classic-soul,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,philly soul,classic-soul,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,contemporary r&b,contemporary-rnb,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,new jack swing,contemporary-rnb,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,quiet storm,contemporary-rnb,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,trap soul,contemporary-rnb,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,christian r&b,christian-rnb,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,gospel,gospel,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,southern gospel,gospel,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,traditional gospel,gospel,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,bhajan,bhajan,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,sufi,sufi,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,acid jazz,acid-jazz,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,nu jazz,nu-jazz,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,jazz funk,jazz-funk,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,jazz fusion,jazz-fusion,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,latin jazz,latin-jazz,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,afro-cuban jazz,latin-jazz,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,brazilian jazz,brazilian-jazz,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,french jazz,regional-jazz,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,indonesian jazz,regional-jazz,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,bebop,bebop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,hard bop,bebop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,cool jazz,cool-jazz,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,smooth jazz,cool-jazz,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,ambient jazz,cool-jazz,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,swing music,swing,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,big band,swing,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,vocal jazz,vocal-jazz,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,jazz ballads,vocal-jazz,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,soul jazz,soul-jazz,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,jazz pop,jazz-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,indie jazz,indie-jazz,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,free jazz,free-jazz,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,experimental jazz,free-jazz,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,ragtime,ragtime,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,brass band,brass-band,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,christian jazz,christian-jazz,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,classic blues,classic-blues,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,country blues,classic-blues,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,boogie-woogie,classic-blues,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,modern blues,modern-blues,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,soul blues,soul-blues,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,blues rock,blues-rock,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,funk rock,funk-rock,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,funk pop,funk-pop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,boogie,boogie,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,post-disco,boogie,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,disco,disco,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,psychedelic rock,psychedelic-rock,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,acid rock,psychedelic-rock,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,neo-psychedelic,psychedelic-rock,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,art rock,art-rock,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,krautrock,art-rock,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,garage rock,garage-rock,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,glam rock,glam-rock,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,soft rock,soft-rock,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,aor,soft-rock,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,yacht rock,soft-rock,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,roots rock,roots-rock,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,southern rock,roots-rock,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,rock and roll,rock-and-roll,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,rockabilly,rock-and-roll,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,surf rock,surf-rock,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,stoner rock,stoner-rock,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,post-grunge,post-grunge,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,britpop,britpop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,madchester,madchester,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,shoegaze,shoegaze,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,post-rock,post-rock,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,math rock,post-rock,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,slowcore,slowcore,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,post-punk,post-punk,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,gothic rock,post-punk,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,new wave,new-wave,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,darkwave,darkwave,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,cold wave,darkwave,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,hardcore punk,hardcore-punk,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,skate punk,hardcore-punk,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,proto-punk,proto-punk,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,pop punk,pop-punk,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,emo,emo,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,post-hardcore,emo,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,screamo,emo,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,ska punk,ska-punk,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,anatolian rock,regional-rock,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,celtic rock,regional-rock,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,country rock,country-rock,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,nu metal,nu-metal,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,progressive metal,progressive-metal,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,djent,progressive-metal,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,doom metal,doom-metal,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,thrash metal,thrash-metal,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,glam metal,glam-metal,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,metalcore,metalcore,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,indie folk,indie-folk,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,anti-folk,indie-folk,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,ambient folk,indie-folk,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,traditional folk,traditional-folk,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,celtic,traditional-folk,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,christian folk,christian-folk,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,americana,americana,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,alt country,americana,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,southern gothic,americana,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,acoustic country,traditional-country,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,classic country,traditional-country,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,traditional country,traditional-country,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,honky tonk,traditional-country,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,outlaw country,traditional-country,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,red dirt,traditional-country,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,bluegrass,bluegrass,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,newgrass,bluegrass,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,country christian,christian-country,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,christian bluegrass,christian-country,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,fado,fado,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,arabesk,mediterranean,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,entehno,mediterranean,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,laïko,mediterranean,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,mizrahi,mediterranean,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,oyun havası,mediterranean,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,ghazal,ghazal,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,raï,rai,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,zydeco,zydeco,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,ska,ska,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,mexican ska,ska,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,rocksteady,ska,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,roots reggae,roots-reggae,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,lovers rock,lovers-rock,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,nz reggae,regional-reggae,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,reggae en español,regional-reggae,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,dancehall,dancehall,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,ragga,dancehall,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,shatta,dancehall,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,dub,dub,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,reggae rock,reggae-rock,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,christian reggae,christian-reggae,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,early music,early-music,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,renaissance,early-music,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,gregorian chant,early-music,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,baroque,baroque,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,orchestral,orchestral,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,concerto,orchestral,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,ballet,orchestral,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,chamber music,chamber-music,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,classical piano,chamber-music,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,opera,vocal-classical,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,choral,vocal-classical,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,contemporary classical,modern-classical,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,neoclassical,modern-classical,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,impressionism,modern-classical,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,expressionism,modern-classical,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,minimalism,modern-classical,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,japanese classical,modern-classical,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,classical crossover,classical-crossover,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,electroacoustic,electroacoustic,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,electronic classical,electroacoustic,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,musique concrète,electroacoustic,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,edm,edm,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,big room,edm,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,melbourne bounce,edm,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,acid house,acid-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,chicago house,acid-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,afro house,afro-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,afro tech,afro-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,3 step,afro-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,afropiano,amapiano,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,bass house,bass-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,g-house,bass-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,brazilian bass,bass-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,deep house,deep-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,organic house,deep-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,lo-fi house,deep-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,disco house,disco-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,funky house,disco-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,french house,disco-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,electro house,electro-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,future house,electro-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,slap house,electro-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,stutter house,electro-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,hard house,hard-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,rally house,hard-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,vinahouse,hard-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,hip house,hip-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,jazz house,jazz-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,latin house,latin-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,tribal house,tribal-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,melodic house,melodic-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,progressive house,melodic-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,tech house,tech-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,tropical house,tropical-house,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,acid techno,acid-techno,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,hard techno,hard-techno,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,hypertechno,hard-techno,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,melodic techno,melodic-techno,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,minimal techno,melodic-techno,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,trance,trance,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,progressive trance,trance,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,hardstyle,hard-dance,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,happy hardcore,hard-dance,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,funkot,hard-dance,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,bass music,bass-music,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,bassline,bass-music,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,future bass,bass-music,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,melodic bass,bass-music,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,dubstep,dubstep,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,deathstep,dubstep,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,riddim,dubstep,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,chillstep,dubstep,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,drum and bass,drum-and-bass,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,jungle,drum-and-bass,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,liquid funk,drum-and-bass,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,drumstep,drum-and-bass,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,breakbeat,breakbeat,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,big beat,breakbeat,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,breakcore,breakbeat,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,uk garage,uk-garage,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,uk funky,uk-garage,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,ballroom vogue,club,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,baltimore club,club,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,jersey club,club,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,downtempo,downtempo,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,trip hop,trip-hop,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,electro,electro,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,electroclash,electro,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,electro swing,electro-swing,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,nu disco,nu-disco,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,italo disco,nu-disco,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,hi-nrg,nu-disco,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,alternative dance,alternative-dance,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,indie dance,alternative-dance,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,new rave,alternative-dance,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,moombahton,moombahton,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,synthwave,synthwave,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,chillwave,synthwave,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,vaporwave,synthwave,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,dark ambient,dark-ambient,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,drone,dark-ambient,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,space music,dark-ambient,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,idm,idm,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,glitch,idm,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,noise music,noise,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,plunderphonics,noise,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,soundtrack,soundtrack,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,score,soundtrack,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,anime,soundtrack,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,bollywood,soundtrack,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,musicals,musicals,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,indie,indie-context,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,german indie,indie-context,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,indie québécois,indie-context,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,indonesian indie,indie-context,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,lo-fi indie,indie-context,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,lo-fi,lofi-context,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,christian lo-fi,christian-lofi,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,singer-songwriter,songwriter-context,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,italian singer-songwriter,songwriter-context,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,lounge,lounge-context,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,exotica,lounge-context,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,new age,lounge-context,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,christmas,seasonal-context,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,villancicos,seasonal-context,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,spoken word,performance-context,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,comedy,performance-context,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,jam band,jam-band-context,approved,seed:1,2026-10-16 13:42:16.53649+00
+smarterplaylists,genres,malay,regional-context,approved,seed:1,2026-10-16 13:42:16.53649+00

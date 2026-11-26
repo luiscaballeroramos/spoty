@@ -1,31 +1,31 @@
+import re
 from datetime import datetime, timezone
-
-from register.db import SimpleDB
 
 
 class ListeningEvent:
-    def __init__(self, track_id: str, played_at: datetime, context_uri: str):
-        self.track_id = track_id
-        self.played_at = played_at
-        self.context_source = None
-        self.context_type = None
-        self.context_id = None
-
-        if context_uri:
-            parts = context_uri.split(":")
-            if len(parts) == 3:
-                self.context_source, self.context_type, self.context_id = parts
-
-    def save(self, db: "SimpleDB", print_only_insert=False) -> bool:
-        if self.played_at.tzinfo is None or self.played_at.utcoffset() is None:
+    def __init__(
+        self, track_id: str, played_at: datetime, context_uri: str | None = None
+    ) -> None:
+        if not isinstance(track_id, str) or not re.fullmatch(r"[A-Za-z0-9]{22}", track_id):
+            raise ValueError("Invalid listening-event track ID.")
+        if played_at.tzinfo is None or played_at.utcoffset() is None:
             raise ValueError("Listening-event timestamps must be timezone-aware.")
+        if played_at.timestamp() < 0:
+            raise ValueError("Invalid listening-event timestamp.")
+        if context_uri is not None and not isinstance(context_uri, str):
+            raise ValueError("Invalid listening-event context URI.")
 
-        timestamp = int(self.played_at.astimezone(timezone.utc).timestamp())
+        self.track_id = track_id
+        self.played_at = played_at.astimezone(timezone.utc)
+        parts = context_uri.split(":") if context_uri else []
+        context = parts if len(parts) == 3 and all(parts) else [None, None, None]
+        self.context_source, self.context_type, self.context_id = context
 
-        return db.insert("listening_events", {
+    def to_dict(self) -> dict[str, str | int | None]:
+        return {
             "track_id": self.track_id,
-            "played_at": timestamp,
+            "played_at": int(self.played_at.timestamp()),
             "context_source": self.context_source,
             "context_type": self.context_type,
-            "context_id": self.context_id
-        }, print_only_insert=print_only_insert)
+            "context_id": self.context_id,
+        }

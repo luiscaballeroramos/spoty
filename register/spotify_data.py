@@ -1,42 +1,43 @@
+from datetime import datetime
 from typing import Any
 
-from register.album import Album
-from register.artist import Artist
-from register.track import Track
-from spotifyapi.timestamps import parse_spotify_timestamp
 
-
-def models_from_spotify_track(
-    track_data: dict[str, Any],
-) -> tuple[Track, Album, list[Artist]]:
-    album_data = track_data["album"]
-    track_artists = track_data["artists"]
-    album_artists = album_data["artists"]
-    track_id = track_data["id"]
-
-    track = Track(
-        id=track_id,
-        name=track_data["name"],
-        duration_ms=track_data["duration_ms"],
-        album_id=album_data["id"],
-        album_track=track_data.get("track_number"),
-        disc_number=track_data.get("disc_number"),
-        artists_ids=[artist["id"] for artist in track_artists],
-        explicit=track_data.get("explicit"),
-        popularity=track_data.get("popularity"),
-    )
-    album = Album(
-        id=album_data["id"],
-        name=album_data["name"],
-        artists=[artist["id"] for artist in album_artists],
-        tracks=[track_id],
-        total_tracks=album_data["total_tracks"],
-        images=[image["url"] for image in album_data.get("images", [])],
-        release_date=album_data.get("release_date"),
-        release_date_precision=album_data.get("release_date_precision"),
-    )
-    artists = [
-        Artist(id=artist["id"], name=artist["name"])
-        for artist in track_artists + album_artists
-    ]
-    return track, album, artists
+def catalog_from_items(items: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    tracks: dict[str, dict[str, Any]] = {}
+    artists: dict[str, dict[str, Any]] = {}
+    albums: dict[str, dict[str, Any]] = {}
+    for item in items:
+        track = item["track"]
+        album = track.get("album")
+        if not isinstance(album, dict):
+            raise ValueError("Missing Spotify album data.")
+        for entry in track["artists"] + album["artists"]:
+            artists.setdefault(entry["id"], {"id": entry["id"], "name": entry["name"]})
+        explicit = track.get("explicit")
+        if explicit is not None and type(explicit) is not bool:
+            raise ValueError("Invalid Spotify explicit flag.")
+        tracks.setdefault(track["id"], {
+            "id": track["id"], "name": track["name"],
+            "duration_ms": track["duration_ms"], "album_id": album["id"],
+            "album_track": track.get("track_number"),
+            "artists_ids": [artist["id"] for artist in track["artists"]],
+            "explicit": int(explicit) if explicit is not None else None,
+            "popularity": track.get("popularity"), "disc_number": track.get("disc_number"),
+        })
+        release_year = None
+        if album.get("release_date") is not None:
+            formats = {"year": "%Y", "month": "%Y-%m", "day": "%Y-%m-%d"}
+            precision = album.get("release_date_precision")
+            if precision not in formats:
+                raise ValueError("Invalid Spotify release-date precision.")
+            release_year = datetime.strptime(album["release_date"], formats[precision]).year
+        record = albums.setdefault(album["id"], {
+            "id": album["id"], "name": album["name"],
+            "artists": [artist["id"] for artist in album["artists"]],
+            "tracks": [], "total_tracks": album["total_tracks"],
+            "images": [image["url"] for image in album.get("images", [])],
+            "release_year": release_year,
+        })
+        if track["id"] not in record["tracks"]:
+            record["tracks"].append(track["id"])
+    return {"tracks": list(tracks.values()), "artists": list(artists.values()), "albums": list(albums.values())}

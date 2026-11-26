@@ -1,0 +1,282 @@
+id,name,introduced_by,created_at
+rock,Rock,seed:1,2026-10-16 13:42:04.263301+00
+pop,Pop,seed:1,2026-10-16 13:42:04.263301+00
+electronic,Electronic,seed:1,2026-10-16 13:42:04.263301+00
+hip-hop,Hip-Hop,seed:1,2026-10-16 13:42:04.263301+00
+soul-rnb,Soul / R&B,seed:1,2026-10-16 13:42:04.263301+00
+jazz,Jazz,seed:1,2026-10-16 13:42:04.263301+00
+blues,Blues,seed:1,2026-10-16 13:42:04.263301+00
+folk,Folk,seed:1,2026-10-16 13:42:04.263301+00
+country,Country,seed:1,2026-10-16 13:42:04.263301+00
+classical,Classical,seed:1,2026-10-16 13:42:04.263301+00
+reggae,Reggae,seed:1,2026-10-16 13:42:04.263301+00
+metal,Metal,seed:1,2026-10-16 13:42:04.263301+00
+funk,Funk,seed:1,2026-10-16 13:42:04.263301+00
+alternative-rock,Alternative Rock,seed:1,2026-10-16 13:42:04.263301+00
+indie-rock,Indie Rock,seed:1,2026-10-16 13:42:04.263301+00
+grunge,Grunge,seed:1,2026-10-16 13:42:04.263301+00
+punk-rock,Punk Rock,seed:1,2026-10-16 13:42:04.263301+00
+hard-rock,Hard Rock,seed:1,2026-10-16 13:42:04.263301+00
+classic-rock,Classic Rock,seed:1,2026-10-16 13:42:04.263301+00
+progressive-rock,Progressive Rock,seed:1,2026-10-16 13:42:04.263301+00
+folk-rock,Folk Rock,seed:1,2026-10-16 13:42:04.263301+00
+pop-rock,Pop Rock,seed:1,2026-10-16 13:42:04.263301+00
+indie-pop,Indie Pop,seed:1,2026-10-16 13:42:04.263301+00
+synthpop,Synthpop,seed:1,2026-10-16 13:42:04.263301+00
+house,House,seed:1,2026-10-16 13:42:04.263301+00
+techno,Techno,seed:1,2026-10-16 13:42:04.263301+00
+ambient,Ambient,seed:1,2026-10-16 13:42:04.263301+00
+neo-soul,Neo Soul,seed:1,2026-10-16 13:42:04.263301+00
+retro-soul,Retro Soul,seed:1,2026-10-16 13:42:04.263301+00
+heavy-metal,Heavy Metal,seed:1,2026-10-16 13:42:04.263301+00
+alternative-metal,Alternative Metal,seed:1,2026-10-16 13:42:04.263301+00
+latin,Latin / Ibero-American,seed:1,2026-10-16 14:14:14.055532+00
+african,African,seed:1,2026-10-16 14:14:14.055532+00
+caribbean,Caribbean,seed:1,2026-10-16 14:14:14.055532+00
+regional-traditional,Regional / Traditional,seed:1,2026-10-16 14:14:14.055532+00
+flamenco,Flamenco,seed:1,2026-10-16 14:14:14.055532+00
+religious,Gospel / Religious,seed:1,2026-10-16 14:14:14.055532+00
+stage-screen,Stage / Screen,seed:1,2026-10-16 14:14:14.055532+00
+contextual,Transversal / Contextual,seed:1,2026-10-16 14:14:14.055532+00
+experimental,Experimental,seed:1,2026-10-16 14:14:14.055532+00
+urbano-latino,Urbano Latino,seed:1,2026-10-16 14:14:14.055532+00
+reggaeton,Reggaeton,seed:1,2026-10-16 14:14:14.055532+00
+christian-reggaeton,Christian Reggaeton,seed:1,2026-10-16 14:14:14.055532+00
+neoperreo,Neoperreo,seed:1,2026-10-16 14:14:14.055532+00
+dembow,Dembow,seed:1,2026-10-16 14:14:14.055532+00
+latin-trap,Latin Trap,seed:1,2026-10-16 14:14:14.055532+00
+latin-hip-hop,Latin Hip-Hop,seed:1,2026-10-16 14:14:14.055532+00
+latin-rnb,Latin R&B,seed:1,2026-10-16 14:14:14.055532+00
+latin-pop,Latin Pop,seed:1,2026-10-16 14:14:14.055532+00
+latin-alternative,Latin Alternative,seed:1,2026-10-16 14:14:14.055532+00
+latin-rock,Latin Rock,seed:1,2026-10-16 14:14:14.055532+00
+latin-folk,Latin Folk,seed:1,2026-10-16 14:14:14.055532+00
+trova,Trova,seed:1,2026-10-16 14:14:14.055532+00
+tropical-latin,Tropical Latin,seed:1,2026-10-16 14:14:14.055532+00
+salsa,Salsa,seed:1,2026-10-16 14:14:14.055532+00
+son-cubano,Son Cubano / Timba,seed:1,2026-10-16 14:14:14.055532+00
+mambo,Mambo / Cha-Cha-Cha,seed:1,2026-10-16 14:14:14.055532+00
+merengue,Merengue,seed:1,2026-10-16 14:14:14.055532+00
+bachata,Bachata,seed:1,2026-10-16 14:14:14.055532+00
+cumbia,Cumbia,seed:1,2026-10-16 14:14:14.055532+00
+electrocumbia,Electrocumbia,seed:1,2026-10-16 14:14:14.055532+00
+vallenato,Vallenato,seed:1,2026-10-16 14:14:14.055532+00
+cuarteto,Cuarteto,seed:1,2026-10-16 14:14:14.055532+00
+rioplatense,Tango / Rioplatense,seed:1,2026-10-16 14:14:14.055532+00
+bolero,Bolero,seed:1,2026-10-16 14:14:14.055532+00
+mexican-regional,Regional Mexican,seed:1,2026-10-16 14:14:14.055532+00
+banda,Banda,seed:1,2026-10-16 14:14:14.055532+00
+corrido,Corrido,seed:1,2026-10-16 14:14:14.055532+00
+corridos-tumbados,Corridos Tumbados,seed:1,2026-10-16 14:14:14.055532+00
+sierreno,Sierreno,seed:1,2026-10-16 14:14:14.055532+00
+norteno,Norteno,seed:1,2026-10-16 14:14:14.055532+00
+mariachi-ranchera,Mariachi / Ranchera,seed:1,2026-10-16 14:14:14.055532+00
+colombian-popular,Colombian Popular,seed:1,2026-10-16 14:14:14.055532+00
+latin-club,Latin Club,seed:1,2026-10-16 14:14:14.055532+00
+guaracha,Guaracha Electronica,seed:1,2026-10-16 14:14:14.055532+00
+electro-corridos,Electro Corridos,seed:1,2026-10-16 14:14:14.055532+00
+flamenco-pop,Flamenco Pop,seed:1,2026-10-16 14:14:14.055532+00
+flamenco-urbano,Flamenco Urbano,seed:1,2026-10-16 14:14:14.055532+00
+brazilian,Brazilian,seed:1,2026-10-16 14:14:14.055532+00
+brazilian-pop,Brazilian Pop / MPB,seed:1,2026-10-16 14:14:14.055532+00
+samba,Samba,seed:1,2026-10-16 14:14:14.055532+00
+bossa-nova,Bossa Nova,seed:1,2026-10-16 14:14:14.055532+00
+forro,Forro / Piseiro,seed:1,2026-10-16 14:14:14.055532+00
+brega,Brega / Seresta,seed:1,2026-10-16 14:14:14.055532+00
+sertanejo,Sertanejo,seed:1,2026-10-16 14:14:14.055532+00
+brazilian-hip-hop,Brazilian Hip-Hop,seed:1,2026-10-16 14:14:14.055532+00
+funk-carioca,Brazilian Funk / Funk Carioca,seed:1,2026-10-16 14:14:14.055532+00
+funk-gospel,Brazilian Funk Gospel,seed:1,2026-10-16 14:14:14.055532+00
+afrobeat,Afrobeat,seed:1,2026-10-16 14:14:14.055532+00
+afrobeats,Afrobeats,seed:1,2026-10-16 14:14:14.055532+00
+afropop,Afropop,seed:1,2026-10-16 14:14:14.055532+00
+afro-adura,Afro Adura,seed:1,2026-10-16 14:14:14.055532+00
+alte,Alte,seed:1,2026-10-16 14:14:14.055532+00
+afrogospel,Afrogospel,seed:1,2026-10-16 14:14:14.055532+00
+afroswing,Afroswing,seed:1,2026-10-16 14:14:14.055532+00
+latin-afrobeats,Latin Afrobeats,seed:1,2026-10-16 14:14:14.055532+00
+highlife,Highlife,seed:1,2026-10-16 14:14:14.055532+00
+hiplife,Hiplife,seed:1,2026-10-16 14:14:14.055532+00
+bikutsi,Bikutsi,seed:1,2026-10-16 14:14:14.055532+00
+african-dance,African Dance,seed:1,2026-10-16 14:14:14.055532+00
+kizomba,Kizomba,seed:1,2026-10-16 14:14:14.055532+00
+caribbean-traditional,Caribbean Traditional / Dance,seed:1,2026-10-16 14:14:14.055532+00
+regional-hip-hop,Regional Hip-Hop,seed:1,2026-10-16 14:14:14.055532+00
+alternative-hip-hop,Alternative Hip-Hop,seed:1,2026-10-16 14:14:14.055532+00
+experimental-hip-hop,Experimental Hip-Hop,seed:1,2026-10-16 14:14:14.055532+00
+boom-bap,Boom Bap / Old School,seed:1,2026-10-16 14:14:14.055532+00
+west-coast-hip-hop,West Coast Hip-Hop,seed:1,2026-10-16 14:14:14.055532+00
+gangsta-rap,Gangsta / Hardcore Rap,seed:1,2026-10-16 14:14:14.055532+00
+southern-hip-hop,Southern Hip-Hop,seed:1,2026-10-16 14:14:14.055532+00
+g-funk,G-Funk,seed:1,2026-10-16 14:14:14.055532+00
+trap,Trap,seed:1,2026-10-16 14:14:14.055532+00
+drill,Drill,seed:1,2026-10-16 14:14:14.055532+00
+grime,Grime,seed:1,2026-10-16 14:14:14.055532+00
+melodic-rap,Melodic / Emo Rap,seed:1,2026-10-16 14:14:14.055532+00
+jazz-rap,Jazz Rap,seed:1,2026-10-16 14:14:14.055532+00
+lofi-hip-hop,Lo-Fi Hip-Hop / Beats,seed:1,2026-10-16 14:14:14.055532+00
+jazz-beats,Jazz Beats,seed:1,2026-10-16 14:14:14.055532+00
+phonk,Phonk,seed:1,2026-10-16 14:14:14.055532+00
+christian-hip-hop,Christian Hip-Hop,seed:1,2026-10-16 14:14:14.055532+00
+anime-rap,Anime Rap,seed:1,2026-10-16 14:14:14.055532+00
+rap-rock,Rap Rock,seed:1,2026-10-16 14:14:14.055532+00
+rap-metal,Rap Metal,seed:1,2026-10-16 14:14:14.055532+00
+regional-pop,Regional Pop,seed:1,2026-10-16 14:14:14.055532+00
+acoustic-pop,Acoustic Pop,seed:1,2026-10-16 14:14:14.055532+00
+k-pop,K-Pop,seed:1,2026-10-16 14:14:14.055532+00
+art-pop,Art / Baroque Pop,seed:1,2026-10-16 14:14:14.055532+00
+bedroom-pop,Bedroom Pop,seed:1,2026-10-16 14:14:14.055532+00
+regional-indie-pop,Regional Indie Pop,seed:1,2026-10-16 14:14:14.055532+00
+dream-pop,Dream Pop,seed:1,2026-10-16 14:14:14.055532+00
+jangle-power-pop,Jangle / Power Pop,seed:1,2026-10-16 14:14:14.055532+00
+dance-pop,Dance Pop,seed:1,2026-10-16 14:14:14.055532+00
+electropop,Electropop / Hyperpop,seed:1,2026-10-16 14:14:14.055532+00
+folk-pop,Folk Pop,seed:1,2026-10-16 14:14:14.055532+00
+pop-soul,Pop Soul,seed:1,2026-10-16 14:14:14.055532+00
+retro-pop,Retro / Soft Pop,seed:1,2026-10-16 14:14:14.055532+00
+chanson,Chanson / Variete,seed:1,2026-10-16 14:14:14.055532+00
+pop-urbaine,Pop Urbaine,seed:1,2026-10-16 14:14:14.055532+00
+christian-pop,Christian Pop,seed:1,2026-10-16 14:14:14.055532+00
+regional-rnb,Regional R&B / Soul,seed:1,2026-10-16 14:14:14.055532+00
+african-rnb,African R&B / Soul,seed:1,2026-10-16 14:14:14.055532+00
+alternative-rnb,Alternative / Indie R&B,seed:1,2026-10-16 14:14:14.055532+00
+classic-soul,Classic Soul / Motown,seed:1,2026-10-16 14:14:14.055532+00
+contemporary-rnb,Contemporary R&B,seed:1,2026-10-16 14:14:14.055532+00
+christian-rnb,Christian R&B,seed:1,2026-10-16 14:14:14.055532+00
+gospel,Gospel,seed:1,2026-10-16 14:14:14.055532+00
+bhajan,Bhajan,seed:1,2026-10-16 14:14:14.055532+00
+sufi,Sufi,seed:1,2026-10-16 14:14:14.055532+00
+acid-jazz,Acid Jazz,seed:1,2026-10-16 14:14:14.055532+00
+nu-jazz,Nu Jazz,seed:1,2026-10-16 14:14:14.055532+00
+jazz-funk,Jazz Funk,seed:1,2026-10-16 14:14:14.055532+00
+jazz-fusion,Jazz Fusion,seed:1,2026-10-16 14:14:14.055532+00
+latin-jazz,Latin Jazz,seed:1,2026-10-16 14:14:14.055532+00
+brazilian-jazz,Brazilian Jazz,seed:1,2026-10-16 14:14:14.055532+00
+regional-jazz,Regional Jazz,seed:1,2026-10-16 14:14:14.055532+00
+bebop,Bebop / Hard Bop,seed:1,2026-10-16 14:14:14.055532+00
+cool-jazz,Cool / Smooth Jazz,seed:1,2026-10-16 14:14:14.055532+00
+swing,Swing / Big Band,seed:1,2026-10-16 14:14:14.055532+00
+vocal-jazz,Vocal Jazz / Ballads,seed:1,2026-10-16 14:14:14.055532+00
+soul-jazz,Soul Jazz,seed:1,2026-10-16 14:14:14.055532+00
+jazz-pop,Jazz Pop,seed:1,2026-10-16 14:14:14.055532+00
+indie-jazz,Indie Jazz,seed:1,2026-10-16 14:14:14.055532+00
+free-jazz,Free / Experimental Jazz,seed:1,2026-10-16 14:14:14.055532+00
+ragtime,Ragtime,seed:1,2026-10-16 14:14:14.055532+00
+brass-band,Brass Band,seed:1,2026-10-16 14:14:14.055532+00
+christian-jazz,Christian Jazz,seed:1,2026-10-16 14:14:14.055532+00
+classic-blues,Classic / Country Blues,seed:1,2026-10-16 14:14:14.055532+00
+modern-blues,Modern Blues,seed:1,2026-10-16 14:14:14.055532+00
+soul-blues,Soul Blues,seed:1,2026-10-16 14:14:14.055532+00
+blues-rock,Blues Rock,seed:1,2026-10-16 14:14:14.055532+00
+funk-rock,Funk Rock,seed:1,2026-10-16 14:14:14.055532+00
+funk-pop,Funk Pop,seed:1,2026-10-16 14:14:14.055532+00
+boogie,Boogie / Post-Disco,seed:1,2026-10-16 14:14:14.055532+00
+disco,Disco,seed:1,2026-10-16 14:14:14.055532+00
+psychedelic-rock,Psychedelic Rock,seed:1,2026-10-16 14:14:14.055532+00
+art-rock,Art Rock,seed:1,2026-10-16 14:14:14.055532+00
+garage-rock,Garage Rock,seed:1,2026-10-16 14:14:14.055532+00
+glam-rock,Glam Rock,seed:1,2026-10-16 14:14:14.055532+00
+soft-rock,Soft Rock / AOR,seed:1,2026-10-16 14:14:14.055532+00
+roots-rock,Roots / Southern Rock,seed:1,2026-10-16 14:14:14.055532+00
+rock-and-roll,Rock and Roll,seed:1,2026-10-16 14:14:14.055532+00
+surf-rock,Surf Rock,seed:1,2026-10-16 14:14:14.055532+00
+stoner-rock,Stoner Rock,seed:1,2026-10-16 14:14:14.055532+00
+post-grunge,Post-Grunge,seed:1,2026-10-16 14:14:14.055532+00
+britpop,Britpop,seed:1,2026-10-16 14:14:14.055532+00
+madchester,Madchester,seed:1,2026-10-16 14:14:14.055532+00
+shoegaze,Shoegaze,seed:1,2026-10-16 14:14:14.055532+00
+post-rock,Post-Rock / Math Rock,seed:1,2026-10-16 14:14:14.055532+00
+slowcore,Slowcore,seed:1,2026-10-16 14:14:14.055532+00
+post-punk,Post-Punk / Gothic Rock,seed:1,2026-10-16 14:14:14.055532+00
+new-wave,New Wave,seed:1,2026-10-16 14:14:14.055532+00
+darkwave,Darkwave / Cold Wave,seed:1,2026-10-16 14:14:14.055532+00
+hardcore-punk,Hardcore Punk,seed:1,2026-10-16 14:14:14.055532+00
+proto-punk,Proto-Punk,seed:1,2026-10-16 14:14:14.055532+00
+pop-punk,Pop Punk,seed:1,2026-10-16 14:14:14.055532+00
+emo,Emo / Post-Hardcore,seed:1,2026-10-16 14:14:14.055532+00
+ska-punk,Ska Punk,seed:1,2026-10-16 14:14:14.055532+00
+regional-rock,Regional / Folk Rock,seed:1,2026-10-16 14:14:14.055532+00
+country-rock,Country Rock,seed:1,2026-10-16 14:14:14.055532+00
+nu-metal,Nu Metal,seed:1,2026-10-16 14:14:14.055532+00
+progressive-metal,Progressive Metal / Djent,seed:1,2026-10-16 14:14:14.055532+00
+doom-metal,Doom Metal,seed:1,2026-10-16 14:14:14.055532+00
+thrash-metal,Thrash Metal,seed:1,2026-10-16 14:14:14.055532+00
+glam-metal,Glam Metal,seed:1,2026-10-16 14:14:14.055532+00
+metalcore,Metalcore,seed:1,2026-10-16 14:14:14.055532+00
+indie-folk,Indie / Alternative Folk,seed:1,2026-10-16 14:14:14.055532+00
+traditional-folk,Traditional Folk,seed:1,2026-10-16 14:14:14.055532+00
+christian-folk,Christian Folk,seed:1,2026-10-16 14:14:14.055532+00
+americana,Americana / Alt-Country,seed:1,2026-10-16 14:14:14.055532+00
+traditional-country,Traditional Country,seed:1,2026-10-16 14:14:14.055532+00
+bluegrass,Bluegrass,seed:1,2026-10-16 14:14:14.055532+00
+christian-country,Christian Country / Bluegrass,seed:1,2026-10-16 14:14:14.055532+00
+fado,Fado,seed:1,2026-10-16 14:14:14.055532+00
+mediterranean,Mediterranean Regional,seed:1,2026-10-16 14:14:14.055532+00
+ghazal,Ghazal,seed:1,2026-10-16 14:14:14.055532+00
+rai,Rai,seed:1,2026-10-16 14:14:14.055532+00
+zydeco,Zydeco,seed:1,2026-10-16 14:14:14.055532+00
+ska,Ska / Rocksteady,seed:1,2026-10-16 14:14:14.055532+00
+roots-reggae,Roots Reggae,seed:1,2026-10-16 14:14:14.055532+00
+lovers-rock,Lovers Rock,seed:1,2026-10-16 14:14:14.055532+00
+regional-reggae,Regional Reggae,seed:1,2026-10-16 14:14:14.055532+00
+dancehall,Dancehall / Ragga,seed:1,2026-10-16 14:14:14.055532+00
+dub,Dub,seed:1,2026-10-16 14:14:14.055532+00
+reggae-rock,Reggae Rock,seed:1,2026-10-16 14:14:14.055532+00
+christian-reggae,Christian Reggae,seed:1,2026-10-16 14:14:14.055532+00
+early-music,Early / Renaissance Music,seed:1,2026-10-16 14:14:14.055532+00
+baroque,Baroque,seed:1,2026-10-16 14:14:14.055532+00
+orchestral,Orchestral / Concerto,seed:1,2026-10-16 14:14:14.055532+00
+chamber-music,Chamber / Piano Music,seed:1,2026-10-16 14:14:14.055532+00
+vocal-classical,Opera / Choral,seed:1,2026-10-16 14:14:14.055532+00
+modern-classical,Modern / Contemporary Classical,seed:1,2026-10-16 14:14:14.055532+00
+classical-crossover,Classical Crossover,seed:1,2026-10-16 14:14:14.055532+00
+electroacoustic,Electroacoustic / Concrete,seed:1,2026-10-16 14:14:14.055532+00
+edm,EDM,seed:1,2026-10-16 14:14:14.055532+00
+acid-house,Acid / Chicago House,seed:1,2026-10-16 14:14:14.055532+00
+afro-house,Afro House / Afro Tech,seed:1,2026-10-16 14:14:14.055532+00
+amapiano,Amapiano / Afropiano,seed:1,2026-10-16 14:14:14.055532+00
+bass-house,Bass / G-House,seed:1,2026-10-16 14:14:14.055532+00
+deep-house,Deep / Organic House,seed:1,2026-10-16 14:14:14.055532+00
+disco-house,Disco / Funky House,seed:1,2026-10-16 14:14:14.055532+00
+electro-house,Electro / Future House,seed:1,2026-10-16 14:14:14.055532+00
+hard-house,Hard / Rally House,seed:1,2026-10-16 14:14:14.055532+00
+hip-house,Hip House,seed:1,2026-10-16 14:14:14.055532+00
+jazz-house,Jazz House,seed:1,2026-10-16 14:14:14.055532+00
+latin-house,Latin House,seed:1,2026-10-16 14:14:14.055532+00
+tribal-house,Tribal House,seed:1,2026-10-16 14:14:14.055532+00
+melodic-house,Melodic / Progressive House,seed:1,2026-10-16 14:14:14.055532+00
+tech-house,Tech House,seed:1,2026-10-16 14:14:14.055532+00
+tropical-house,Tropical House,seed:1,2026-10-16 14:14:14.055532+00
+acid-techno,Acid Techno,seed:1,2026-10-16 14:14:14.055532+00
+hard-techno,Hard / Hypertechno,seed:1,2026-10-16 14:14:14.055532+00
+melodic-techno,Melodic / Minimal Techno,seed:1,2026-10-16 14:14:14.055532+00
+trance,Trance,seed:1,2026-10-16 14:14:14.055532+00
+hard-dance,Hard Dance,seed:1,2026-10-16 14:14:14.055532+00
+bass-music,Bass Music,seed:1,2026-10-16 14:14:14.055532+00
+dubstep,Dubstep,seed:1,2026-10-16 14:14:14.055532+00
+drum-and-bass,Drum and Bass,seed:1,2026-10-16 14:14:14.055532+00
+breakbeat,Breakbeat / Big Beat,seed:1,2026-10-16 14:14:14.055532+00
+uk-garage,UK Garage / Funky,seed:1,2026-10-16 14:14:14.055532+00
+club,Club / Ballroom,seed:1,2026-10-16 14:14:14.055532+00
+downtempo,Downtempo,seed:1,2026-10-16 14:14:14.055532+00
+trip-hop,Trip-Hop,seed:1,2026-10-16 14:14:14.055532+00
+electro,Electro,seed:1,2026-10-16 14:14:14.055532+00
+electro-swing,Electro Swing,seed:1,2026-10-16 14:14:14.055532+00
+nu-disco,Nu Disco / Italo Disco,seed:1,2026-10-16 14:14:14.055532+00
+alternative-dance,Alternative / Indie Dance,seed:1,2026-10-16 14:14:14.055532+00
+moombahton,Moombahton,seed:1,2026-10-16 14:14:14.055532+00
+synthwave,Synthwave / Chillwave,seed:1,2026-10-16 14:14:14.055532+00
+dark-ambient,Dark Ambient / Drone,seed:1,2026-10-16 14:14:14.055532+00
+idm,IDM / Glitch,seed:1,2026-10-16 14:14:14.055532+00
+noise,Noise / Plunderphonics,seed:1,2026-10-16 14:14:14.055532+00
+soundtrack,Soundtrack / Score,seed:1,2026-10-16 14:14:14.055532+00
+musicals,Musicals,seed:1,2026-10-16 14:14:14.055532+00
+indie-context,Indie (Unspecified Style),seed:1,2026-10-16 14:14:14.055532+00
+lofi-context,Lo-Fi (Unspecified Style),seed:1,2026-10-16 14:14:14.055532+00
+christian-lofi,Christian Lo-Fi,seed:1,2026-10-16 14:14:14.055532+00
+songwriter-context,Singer-Songwriter,seed:1,2026-10-16 14:14:14.055532+00
+lounge-context,Lounge / Exotica / New Age,seed:1,2026-10-16 14:14:14.055532+00
+seasonal-context,Seasonal / Christmas,seed:1,2026-10-16 14:14:14.055532+00
+performance-context,Spoken Word / Comedy,seed:1,2026-10-16 14:14:14.055532+00
+jam-band-context,Jam Band,seed:1,2026-10-16 14:14:14.055532+00
+regional-context,Regional (Unspecified Style),seed:1,2026-10-16 14:14:14.055532+00

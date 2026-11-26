@@ -1,0 +1,5 @@
+/old/listening_event_sources_20261111/neon_current_20261111T083643Z/schema-public/table-acousticbrainz_analysis_metadata.csv filter=lfs diff=lfs merge=lfs -text
+/old/listening_event_sources_20261111/neon_current_20261111T083643Z/schema-public/table-musicbrainz_recording_metadata.csv filter=lfs diff=lfs merge=lfs -text
+/old/listening_event_sources_20261111/neon_current_20261111T083643Z/schema-public/table-smarterplaylists_album_metadata.csv filter=lfs diff=lfs merge=lfs -text
+/old/listening_event_sources_20261111/neon_current_20261111T083643Z/schema-public/table-smarterplaylists_artist_metadata.csv filter=lfs diff=lfs merge=lfs -text
+/old/listening_event_sources_20261111/neon_current_20261111T083643Z/schema-public/table-smarterplaylists_track_metadata.csv filter=lfs diff=lfs merge=lfs -text
